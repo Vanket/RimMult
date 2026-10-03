@@ -2,6 +2,7 @@ using System;
 using RimMult.Shared.Net;
 using Steamworks;
 using UnityEngine;
+using Verse;
 
 namespace RimMult.Steam;
 
@@ -10,6 +11,11 @@ internal sealed class SteamClientTransport : IClientTransport
 {
     /// <summary>How long to wait for the host to accept before giving up (the host may be mid-load).</summary>
     private const float ConnectTimeout = 60f;
+
+    /// <summary>Connect is repeated until accepted: a first packet can be lost while Steam sets up the route.</summary>
+    private const float ConnectResendInterval = 2f;
+
+    private readonly uint _nonce = (uint)UnityEngine.Random.Range(int.MinValue, int.MaxValue);
 
     private readonly CSteamID _host;
     private Callback<P2PSessionRequest_t>? _sessionRequest;
@@ -25,6 +31,7 @@ internal sealed class SteamClientTransport : IClientTransport
     private ushort _inSequence;
     private bool _hasInSequence;
     private string? _pendingFailure;
+    private readonly P2PReassembler _parts = new();
 
     public SteamClientTransport(ulong hostSteamId)
     {
@@ -46,13 +53,14 @@ internal sealed class SteamClientTransport : IClientTransport
         _connectFail = Callback<P2PSessionConnectFail_t>.Create(fail =>
         {
             // Steam callbacks fire outside our Poll; report the failure from the next Poll instead.
-            if (fail.m_steamIDRemote == _host)
-                _pendingFailure = "Steam could not connect to the host";
+            // While still connecting we keep retrying until the timeout (the host may just be loading).
+            if (fail.m_steamIDRemote == _host && _connected)
+                _pendingFailure = "RimMult.ErrorSteamConnect".Translate();
         });
 
         _connecting = true;
         _startedAt = Time.realtimeSinceStartup;
-        SendFrame(P2PFrame.Control(P2PFrameKind.Connect), reliable: true);
+        SendFrame(P2PFrame.Connect(_nonce), reliable: true);
     }
 
     public void Send(byte[] data, DeliveryMode mode)
@@ -61,7 +69,10 @@ internal sealed class SteamClientTransport : IClientTransport
             return;
 
         if (mode == DeliveryMode.ReliableOrdered)
-            SendFrame(P2PFrame.Reliable(data), reliable: true);
+        {
+            foreach (var frame in P2PFrame.ReliableFrames(data))
+                SendFrame(frame, reliable: true);
+        }
         else
             SendFrame(P2PFrame.Sequenced(data, _outSequence++), reliable: false);
     }
@@ -84,9 +95,11 @@ internal sealed class SteamClientTransport : IClientTransport
         if (_pendingFailure != null)
             Fail(_pendingFailure);
         else if (_connecting && now - _startedAt > ConnectTimeout)
-            Fail("The host did not respond");
+            Fail("RimMult.ErrorHostNoResponse".Translate());
+        else if (_connecting && now - _lastSent > ConnectResendInterval)
+            SendFrame(P2PFrame.Connect(_nonce), reliable: true);
         else if (_connected && now - _lastHeard > SteamP2P.Timeout)
-            Fail("Connection timed out");
+            Fail("RimMult.ErrorTimeout".Translate());
         else if (_connected && now - _lastSent > SteamP2P.HeartbeatInterval)
             SendFrame(P2PFrame.Control(P2PFrameKind.Heartbeat), reliable: false);
     }
@@ -119,10 +132,24 @@ internal sealed class SteamClientTransport : IClientTransport
                 Connected?.Invoke();
                 break;
             case P2PFrameKind.Disconnect:
-                Fail("The host closed the connection");
+                Fail("RimMult.ErrorHostClosed".Translate());
                 break;
             case P2PFrameKind.Reliable when _connected:
                 Received?.Invoke(payload);
+                break;
+            case P2PFrameKind.ReliablePart when _connected:
+                byte[]? message;
+                try
+                {
+                    message = _parts.Add(payload, last: sequence == 1);
+                }
+                catch (Shared.Serialization.ProtocolException)
+                {
+                    Fail("RimMult.ErrorTimeout".Translate());
+                    return;
+                }
+                if (message != null)
+                    Received?.Invoke(message);
                 break;
             case P2PFrameKind.Sequenced when _connected:
                 if (!_hasInSequence || P2PFrame.IsNewer(sequence, _inSequence))

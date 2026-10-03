@@ -128,6 +128,18 @@ public sealed class GameServer
             case MyColonies colonies:
                 HandleMyColonies(player, colonies);
                 break;
+            case ParcelSend parcel:
+                HandleParcelSend(player, parcel);
+                break;
+            case ParcelAck ack:
+                HandleParcelAck(player, ack);
+                break;
+            case SettlementDestroyed destroyed:
+                HandleSettlementDestroyed(player, destroyed);
+                break;
+            case PlayerRelay relay:
+                HandleRelay(player, relay);
+                break;
             default:
                 Kick(session, KickReason.BadData, $"Unexpected packet {packet.Type}");
                 break;
@@ -170,16 +182,18 @@ public sealed class GameServer
             return;
         }
 
+        // The same Steam account again: their old connection is dead but hasn't timed out yet (game restarted,
+        // network switched). The newcomer wins; refusing it would lock them out for the whole timeout.
+        // SteamId 0 means "no Steam" and is only seen in local development builds.
+        if (hello.SteamId != 0
+            && _sessions.Values.FirstOrDefault(s => s.Player?.SteamId == hello.SteamId) is { } stale)
+        {
+            Kick(stale, KickReason.AlreadyConnected, "Replaced by a new connection from the same Steam account");
+        }
+
         if (PlayerCount >= Settings.MaxPlayers)
         {
             Kick(session, KickReason.ServerFull, $"Server is full ({Settings.MaxPlayers} players)");
-            return;
-        }
-
-        // SteamId 0 means "no Steam" and is only seen in local development builds.
-        if (hello.SteamId != 0 && Players.Any(p => p.SteamId == hello.SteamId))
-        {
-            Kick(session, KickReason.AlreadyConnected, "This Steam account is already connected");
             return;
         }
 
@@ -220,6 +234,7 @@ public sealed class GameServer
             IsHost = PlayerCount == 0,
         };
         session.Player = player;
+        player.ColorIndex = ColorFor(OwnerKey(player));
         if (player.IsHost)
             Time.HostPlayerId = player.Id;
 
@@ -269,6 +284,59 @@ public sealed class GameServer
         Time.ReportAuthority(player.Id, tick, float.MaxValue);
         Send(session, new WorldClock { Tick = tick });
         BroadcastPlayerList();
+
+        // Parcels that arrived while they were away.
+        var key = OwnerKey(player);
+        foreach (var item in World.Mail.Where(m => m.ToOwner == key))
+            Send(session, new ParcelDeliver { Item = item });
+    }
+
+    private void HandleParcelSend(PlayerInfo player, ParcelSend parcel)
+    {
+        if (World.Definition == null || !player.InWorld)
+            return;
+        if (parcel.Payload.Length > MailItem.MaxPayloadBytes)
+        {
+            _log($"{player.Name} sent a parcel of {parcel.Payload.Length} bytes; over the limit, dropped");
+            return;
+        }
+
+        var from = OwnerKey(player);
+        var item = new MailItem
+        {
+            Id = World.NextMailId++,
+            FromOwner = from,
+            FromName = player.Name,
+            ToOwner = parcel.ToOwner,
+            ToTile = Truncate(parcel.ToTile, 64),
+            Summary = Truncate(parcel.Summary, 1000),
+            Payload = parcel.Payload,
+        };
+
+        // Nobody has a colony there anymore (abandoned, or a stale target): send it back rather than lose it.
+        if (!World.Colonies.Any(c => c.OwnerSteamId == parcel.ToOwner))
+        {
+            item.ToOwner = from;
+            item.ToTile = "";
+            item.Returned = true;
+        }
+
+        World.Mail.Add(item);
+        WorldChanged?.Invoke();
+        _log($"Parcel {item.Id} from {player.Name}{(item.Returned ? " returned to sender" : "")}: {item.Summary}");
+
+        foreach (var session in _sessions.Values)
+        {
+            if (session.Player is { InWorld: true } target && OwnerKey(target) == item.ToOwner)
+                Send(session, new ParcelDeliver { Item = item });
+        }
+    }
+
+    private void HandleParcelAck(PlayerInfo player, ParcelAck ack)
+    {
+        var key = OwnerKey(player);
+        if (World.Mail.RemoveAll(m => m.Id == ack.Id && m.ToOwner == key) > 0)
+            WorldChanged?.Invoke();
     }
 
     private void HandleMyColonies(PlayerInfo player, MyColonies packet)
@@ -287,6 +355,7 @@ public sealed class GameServer
                 OwnerName = player.Name,
                 Name = Truncate(colony.Name.Trim(), 64),
                 Tile = Truncate(colony.Tile, 64),
+                ColorIndex = player.ColorIndex,
             });
         }
 
@@ -305,7 +374,51 @@ public sealed class GameServer
             World.Tick = slowest;
     }
 
-    private WorldUpdate WorldUpdatePacket() => new() { Definition = World.Definition, Colonies = World.Colonies };
+    private WorldUpdate WorldUpdatePacket() => new()
+    {
+        Definition = World.Definition,
+        Colonies = World.Colonies,
+        DestroyedSettlements = World.DestroyedSettlements,
+    };
+
+    /// <summary>A player's color: kept from earlier sessions, otherwise the first one nobody has yet.</summary>
+    private byte ColorFor(ulong owner)
+    {
+        if (World.PlayerColors.TryGetValue(owner, out var existing))
+            return existing;
+
+        // netstandard2.0 has no FirstOrDefault(predicate, default); all colors taken → reuse in order.
+        var used = new HashSet<byte>(World.PlayerColors.Values);
+        var free = Enumerable.Range(0, ProtocolInfo.PlayerPaletteSize).Where(i => !used.Contains((byte)i)).ToList();
+        var color = (byte)(free.Count > 0 ? free[0] : World.PlayerColors.Count % ProtocolInfo.PlayerPaletteSize);
+        World.PlayerColors[owner] = color;
+        WorldChanged?.Invoke();
+        return color;
+    }
+
+    private void HandleSettlementDestroyed(PlayerInfo player, SettlementDestroyed destroyed)
+    {
+        const int maxDestroyed = 10_000;
+        if (World.Definition == null || !player.InWorld || World.DestroyedSettlements.Count >= maxDestroyed)
+            return;
+        var tile = Truncate(destroyed.Tile, 64);
+        if (World.DestroyedSettlements.Contains(tile))
+            return;
+
+        World.DestroyedSettlements.Add(tile);
+        Broadcast(PacketCodec.Encode(WorldUpdatePacket()), DeliveryMode.ReliableOrdered);
+        WorldChanged?.Invoke();
+    }
+
+    /// <summary>Passes a message to another player in the world, stamped with the real sender.</summary>
+    private void HandleRelay(PlayerInfo sender, PlayerRelay relay)
+    {
+        if (!sender.InWorld || relay.PlayerId == sender.Id)
+            return;
+        var target = _sessions.Values.FirstOrDefault(s => s.Player is { InWorld: true } p && p.Id == relay.PlayerId);
+        if (target != null)
+            Send(target, new PlayerRelay { PlayerId = sender.Id, Channel = relay.Channel, Data = relay.Data });
+    }
 
     private void HandleChat(PlayerInfo sender, ChatMessage chat)
     {

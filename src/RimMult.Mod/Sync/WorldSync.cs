@@ -45,6 +45,7 @@ internal static class WorldSync
         WorldCreatePending = false;
         TimeSync.End();
         RemoteColonies.Clear();
+        SharedSettlements.Reset();
     }
 
     /// <summary>Whether the loaded save belongs to the server's world.</summary>
@@ -88,6 +89,8 @@ internal static class WorldSync
         {
             TimeSync.Update(session);
             ReportColonies(session);
+            Parcels.Update(session);
+            SharedSettlements.Apply(session);
         }
 
         // Show other players' colonies while playing this world, and on the planet picked for a new colony.

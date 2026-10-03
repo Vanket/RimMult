@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using RimMult.ClientCore;
 using RimMult.Net.LiteNet;
 using RimMult.ServerCore;
@@ -37,6 +38,12 @@ internal static class Multiplayer
     private static GameServer? _server;
 
     public static ClientSession? Session { get; private set; }
+
+    /// <summary>Trades with other players over the current session.</summary>
+    public static TradeManager? Trades { get; private set; }
+
+    /// <summary>How the server keys a player's colonies and parcels: SteamID, or the session id without Steam.</summary>
+    public static ulong OwnerKey(PlayerInfo player) => player.SteamId != 0 ? player.SteamId : (ulong)player.Id;
 
     /// <summary>Where the last join went (host SteamID or address), for "try again".</summary>
     private static ulong? _lastSteamHost;
@@ -155,6 +162,7 @@ internal static class Multiplayer
     {
         Session?.Disconnect();
         Session = null;
+        Trades = null;
         WorldSync.Reset();
 
         if (_server != null)
@@ -169,8 +177,31 @@ internal static class Multiplayer
     }
 
     /// <summary>Called every frame.</summary>
+    /// <summary>Host with these options as soon as the save picked in the main menu has finished loading.</summary>
+    public static void HostAfterLoad(HostOptions options) => _hostAfterLoad = options;
+
+    private static HostOptions? _hostAfterLoad;
+
     public static void Update()
     {
+        if (_hostAfterLoad != null && !LongEventHandler.AnyEventNowOrWaiting)
+        {
+            if (Current.ProgramState == ProgramState.Playing)
+            {
+                var options = _hostAfterLoad;
+                _hostAfterLoad = null;
+                if (Host(options, out var error))
+                    OpenDialog();
+                else
+                    Messages.Message(error, MessageTypeDefOf.RejectInput, historical: false);
+            }
+            else if (!Find.WindowStack.Windows.Any(w => w is Dialog_SaveFileList_Load or Dialog_MessageBox))
+            {
+                // The load dialog (or the game's "mods changed" warning after it) was closed without loading.
+                _hostAfterLoad = null;
+            }
+        }
+
         _hub?.Poll();
         _server?.Update(Time.realtimeSinceStartupAsDouble);
         Session?.Poll();
@@ -237,8 +268,39 @@ internal static class Multiplayer
         var session = new ClientSession(transport, hello);
         session.ChatReceived += OnChat;
         WorldSync.Attach(session);
+        Parcels.Attach(session);
+        Trades = new TradeManager(session);
+        Trades.Invited += OnTradeInvited;
         Session = session;
         session.Start();
+    }
+
+    /// <summary>Opens a trade with the owner of a colony (from the colony's button on the globe).</summary>
+    public static void StartTrade(int partnerId)
+    {
+        if (Trades == null)
+            return;
+        if (Trades.Busy)
+        {
+            Messages.Message("RimMult.TradeBusy".Translate(), MessageTypeDefOf.RejectInput, historical: false);
+            return;
+        }
+        if (Trades.Invite(partnerId) is { } trade)
+            Find.WindowStack.Add(new Dialog_PlayerTrade(trade));
+    }
+
+    private static void OnTradeInvited(PlayerTrade trade)
+    {
+        Find.WindowStack.Add(new Dialog_MessageBox(
+            "RimMult.TradeInvite".Translate(trade.PartnerName),
+            "RimMult.TradeOpen".Translate(),
+            () =>
+            {
+                trade.Join();
+                Find.WindowStack.Add(new Dialog_PlayerTrade(trade));
+            },
+            "RimMult.TradeDecline".Translate(),
+            trade.Cancel));
     }
 
     private static void OnChat(ChatLine line)

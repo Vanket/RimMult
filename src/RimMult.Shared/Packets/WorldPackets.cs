@@ -36,6 +36,9 @@ public sealed class WorldUpdate : IPacket
     public WorldDefinition? Definition { get; set; }
     public List<ColonyInfo> Colonies { get; set; } = new();
 
+    /// <summary>NPC settlements destroyed by any player (their tiles); removed on everyone's globe.</summary>
+    public List<string> DestroyedSettlements { get; set; } = new();
+
     public PacketType Type => PacketType.WorldUpdate;
 
     public void Write(ByteWriter writer)
@@ -43,13 +46,68 @@ public sealed class WorldUpdate : IPacket
         writer.WriteBool(Definition != null);
         Definition?.Write(writer);
         ColonyInfo.WriteList(writer, Colonies);
+        WorldState.WriteStrings(writer, DestroyedSettlements);
     }
 
     public static WorldUpdate Read(ByteReader reader) => new()
     {
         Definition = reader.ReadBool() ? WorldDefinition.Read(reader) : null,
         Colonies = ColonyInfo.ReadList(reader),
+        DestroyedSettlements = WorldState.ReadStrings(reader),
     };
+}
+
+/// <summary>Client → server: an NPC settlement on this tile was destroyed in my game.</summary>
+public sealed class SettlementDestroyed : IPacket
+{
+    public string Tile { get; set; } = "";
+
+    public PacketType Type => PacketType.SettlementDestroyed;
+
+    public void Write(ByteWriter writer) => writer.WriteString(Tile);
+
+    public static SettlementDestroyed Read(ByteReader reader) => new() { Tile = reader.ReadRequiredString() };
+}
+
+/// <summary>
+/// A message between two players, passed through the server unchanged (trade negotiation and the like).
+/// Client → server: <see cref="PlayerId"/> is the recipient; server → client: the sender. Only between players
+/// who are both in the world.
+/// </summary>
+public sealed class PlayerRelay : IPacket
+{
+    public const int MaxDataBytes = 256 * 1024;
+
+    public int PlayerId { get; set; }
+    public RelayChannel Channel { get; set; }
+    public byte[] Data { get; set; } = System.Array.Empty<byte>();
+
+    public PacketType Type => PacketType.PlayerRelay;
+
+    public void Write(ByteWriter writer)
+    {
+        writer.WriteVarInt(PlayerId);
+        writer.WriteByte((byte)Channel);
+        writer.WriteBytes(Data);
+    }
+
+    public static PlayerRelay Read(ByteReader reader)
+    {
+        var relay = new PlayerRelay
+        {
+            PlayerId = (int)reader.ReadVarInt(),
+            Channel = (RelayChannel)reader.ReadByte(),
+            Data = reader.ReadBytes(),
+        };
+        if (relay.Data.Length > MaxDataBytes)
+            throw new ProtocolException("Relay message too large");
+        return relay;
+    }
+}
+
+public enum RelayChannel : byte
+{
+    Trade = 1,
 }
 
 /// <summary>

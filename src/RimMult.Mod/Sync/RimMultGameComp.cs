@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Verse;
 
 namespace RimMult.Sync;
@@ -15,6 +16,15 @@ public sealed class RimMultGameComp : GameComponent
     /// </summary>
     public string? HostedWorld;
 
+    /// <summary>Parcels packed (pods landed, caravan unloaded) but not yet handed to the server.</summary>
+    public List<ParcelRecord> Outbox = new();
+
+    /// <summary>Parcels received but not yet dropped on a map.</summary>
+    public List<ParcelRecord> Inbox = new();
+
+    /// <summary>Ids of parcels already received, to ignore the server's repeats.</summary>
+    public List<long> ReceivedParcels = new();
+
     public RimMultGameComp(Game game)
     {
     }
@@ -28,6 +38,12 @@ public sealed class RimMultGameComp : GameComponent
 
         Scribe_Values.Look(ref WorldId, "worldId");
         Scribe_Values.Look(ref HostedWorld, "hostedWorld");
+        Scribe_Collections.Look(ref Outbox, "parcelOutbox", LookMode.Deep);
+        Scribe_Collections.Look(ref Inbox, "parcelInbox", LookMode.Deep);
+        Scribe_Collections.Look(ref ReceivedParcels, "receivedParcels", LookMode.Value);
+        Outbox ??= new List<ParcelRecord>();
+        Inbox ??= new List<ParcelRecord>();
+        ReceivedParcels ??= new List<long>();
     }
 
     public override void StartedNewGame() => WorldSync.OnStartedNewGame(this);

@@ -168,17 +168,23 @@ internal sealed class Dialog_Multiplayer : Window
             list.TextFieldNumericLabeled("RimMult.Port".Translate(), ref Settings.HostPort, ref _hostPortBuffer, 1, 65535);
 
         list.Gap();
-        if (list.ButtonText("RimMult.HostButton".Translate()))
+        var options = new HostOptions
         {
-            var options = new HostOptions
-            {
-                ServerName = Settings.HostServerName,
-                MaxPlayers = Settings.HostMaxPlayers,
-                Password = _hostPassword,
-                OpenPort = Settings.HostOpenPort,
-                Port = Settings.HostPort,
-            };
+            ServerName = Settings.HostServerName,
+            MaxPlayers = Settings.HostMaxPlayers,
+            Password = _hostPassword,
+            OpenPort = Settings.HostOpenPort,
+            Port = Settings.HostPort,
+        };
+        if (list.ButtonText("RimMult.HostButton".Translate()))
             _error = Multiplayer.Host(options, out var error) ? null : error;
+
+        // From the main menu: pick a save, and the game is hosted as soon as it has loaded.
+        if (Current.ProgramState == ProgramState.Entry && list.ButtonText("RimMult.LoadAndHost".Translate()))
+        {
+            Multiplayer.HostAfterLoad(options);
+            Close();
+            Find.WindowStack.Add(new Dialog_SaveFileList_Load());
         }
 
         list.Gap();
@@ -307,7 +313,7 @@ internal sealed class Dialog_Multiplayer : Window
         var online = new HashSet<ulong>();
         foreach (var player in session.Players)
         {
-            var label = player.Name;
+            var label = PlayerPalette.Colorize("■ " + player.Name, player.ColorIndex);
             if (player.IsHost)
                 label += " " + "RimMult.HostMark".Translate();
             label += player.InWorld ? " " + "RimMult.PlayingMark".Translate() : " " + "RimMult.LobbyMark".Translate();
@@ -323,7 +329,7 @@ internal sealed class Dialog_Multiplayer : Window
         if (offline.Count > 0)
         {
             rows.Add("<color=#999999>" + "RimMult.OfflineColonies".Translate() + "</color>");
-            rows.AddRange(offline.Select(c => $"<color=#999999>    · {c.Name} ({c.OwnerName})</color>"));
+            rows.AddRange(offline.Select(c => $"    {PlayerPalette.Colorize("■", c.ColorIndex)} <color=#999999>{c.Name} ({c.OwnerName})</color>"));
         }
 
         var view = new Rect(0f, 0f, inner.width - 16f, Mathf.Max(rows.Count * 24f, inner.height));
@@ -341,7 +347,7 @@ internal sealed class Dialog_Multiplayer : Window
         var canRetry = Multiplayer.CanRetry;
         var headline = new Rect(inner.x, inner.y, inner.width - (canRetry ? 320f : 110f), RowHeight);
         GUI.color = ColorLibrary.RedReadable;
-        Widgets.Label(headline, "RimMult.ConnectionEnded".Translate(session.DisconnectReason ?? ""));
+        Widgets.Label(headline, "RimMult.ConnectionEnded".Translate(EndReason(session)));
         GUI.color = Color.white;
         if (Widgets.ButtonText(new Rect(inner.xMax - 100f, inner.y, 100f, RowHeight - 4f), "RimMult.Dismiss".Translate()))
         {
@@ -368,6 +374,16 @@ internal sealed class Dialog_Multiplayer : Window
             DrawModDiff(new Rect(inner.x, inner.y + RowHeight, inner.width, inner.height - RowHeight), diff);
     }
 
+    /// <summary>The server's kick reasons come in English; show known ones in the player's language.</summary>
+    private static string EndReason(ClientSession session)
+    {
+        var detail = session.DisconnectReason ?? "";
+        if (session.KickReason is not { } reason || reason == KickReason.Unspecified)
+            return detail;
+        var key = "RimMult.Kick" + reason;
+        return key.CanTranslate() ? key.Translate(detail).ToString() : detail;
+    }
+
     private void DrawModDiff(Rect rect, ModListDiff diff)
     {
         var rows = new List<(string Text, ulong WorkshopId)>();
@@ -381,6 +397,8 @@ internal sealed class Dialog_Multiplayer : Window
             rows.Add(("RimMult.ModOrder".Translate(), 0UL));
         if (rows.Count == 0)
             rows.Add(("RimMult.ModSettingsDiffer".Translate(), 0UL));
+        else if (diff.Missing.Count > 0 || diff.Extra.Count > 0)
+            rows.Add(("<color=#999999>" + "RimMult.ClientOnlyDiffHint".Translate() + "</color>", 0UL));
 
         var view = new Rect(0f, 0f, rect.width - 16f, rows.Count * 26f);
         Widgets.BeginScrollView(rect, ref _diffScroll, view);

@@ -115,14 +115,18 @@ public class GameServerTests
     }
 
     [Fact]
-    public void SameSteamAccountCannotJoinTwice()
+    public void SameSteamAccountReplacesItsStaleConnection()
     {
-        var (server, transport) = Create();
+        var (server, transport) = Create(new ServerSettings { MaxPlayers = 1 });
         server.OnConnected(1);
-        Receive(server, 1, Hello(42));
+        Receive(server, 1, Hello(42, "Old"));
         server.OnConnected(2);
-        Receive(server, 2, Hello(42));
-        Assert.Equal(KickReason.AlreadyConnected, Assert.Single(transport.To<Kick>(2)).Reason);
+        Receive(server, 2, Hello(42, "New"));
+
+        // The old connection is dropped (even on a full server) and the new one is let in.
+        Assert.Equal(KickReason.AlreadyConnected, Assert.Single(transport.To<Kick>(1)).Reason);
+        Assert.Single(transport.To<ServerWelcome>(2));
+        Assert.Equal("New", Assert.Single(server.Players).Name);
     }
 
     [Fact]
