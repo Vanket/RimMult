@@ -36,7 +36,16 @@ internal static class OwnSettlementMaterialPatch
 {
     private static void Postfix(Settlement __instance, ref Material __result)
     {
-        if (OwnColors.TryGet(__instance, out var index))
-            __result = PlayerPalette.WorldMaterial(__instance.def.texture, index);
+        // Never let coloring break the globe: an exception here stops the whole world interface from drawing
+        // (that is what made "Form caravan" unusable).
+        try
+        {
+            if (OwnColors.TryGet(__instance, out var index))
+                __result = PlayerPalette.Tint(__result, index);
+        }
+        catch (System.Exception e)
+        {
+            Verse.Log.ErrorOnce($"[RimMult] Could not color the settlement: {e}", 0x52434F4C);
+        }
     }
 }

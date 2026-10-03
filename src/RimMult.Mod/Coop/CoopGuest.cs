@@ -49,6 +49,12 @@ internal static class CoopGuest
     /// <summary>Latest known position per pawn (map id → pawn id → position), applied once per frame.</summary>
     private static readonly Dictionary<int, Dictionary<int, PawnPosition>> PendingPositions = new();
     private static int _positionsTick = -1;
+
+    /// <summary>
+    /// Fresh copies of pawns held back while a right-click menu is open: swapping a pawn under an open menu breaks the
+    /// menu (and with it the whole interface). Applied as soon as the menu closes.
+    /// </summary>
+    private static readonly Dictionary<int, Dictionary<int, XmlNode>> Deferred = new();
     private static readonly HashSet<Thing> Expected = new();
     private static readonly List<Thing> Strays = new();
     private static Game? _game;
@@ -78,8 +84,10 @@ internal static class CoopGuest
         State = Phase.None;
         Pending.Clear();
         PendingPositions.Clear();
+        Deferred.Clear();
         _positionsTick = -1;
         ScribeMemory.ResetCache();
+        CoopVisuals.Reset();
         Expected.Clear();
         Strays.Clear();
         _game = null;
@@ -289,6 +297,7 @@ internal static class CoopGuest
         public List<DesignationEntry>? Designations;
         public string? Grids;
         public string? Zones;
+        public readonly List<CoopShot> Shots = new();
     }
 
     private static void QueuePositions(byte[] data)
@@ -344,6 +353,8 @@ internal static class CoopGuest
                         pawn.Position = cell;
                         pawn.Notify_Teleported(endCurrentJob: false, resetTweenedPos: snap);
                     }
+                    // Drawn where the host draws it, gliding there (see CoopVisuals): no snapping from cell to cell.
+                    CoopVisuals.OnPosition(pawn.thingIDNumber, new Vector3(position.DrawX / 100f, 0f, position.DrawZ / 100f));
                     var rotation = new Rot4(position.Rotation & 3);
                     if (pawn.Rotation != rotation)
                         pawn.Rotation = rotation;
@@ -364,7 +375,8 @@ internal static class CoopGuest
     /// <summary>Merges all batches received since the last frame and applies the result once.</summary>
     private static void ApplyPending()
     {
-        if (Pending.Count == 0 || !ScribeMemory.Idle)
+        var menuOpen = Find.WindowStack.IsOpen<FloatMenu>();
+        if ((Pending.Count == 0 && (Deferred.Count == 0 || menuOpen)) || !ScribeMemory.Idle)
             return;
 
         var merged = new Dictionary<int, MergedDelta>();
@@ -415,9 +427,26 @@ internal static class CoopGuest
                 m.Designations = delta.Designations ?? m.Designations;
                 m.Grids = delta.Grids ?? m.Grids;
                 m.Zones = delta.Zones ?? m.Zones;
+                m.Shots.AddRange(delta.Shots);
             }
         }
         Pending.Clear();
+
+        // Pawn copies held back for a menu: older than anything that just arrived, so they only fill gaps.
+        if (!menuOpen)
+        {
+            foreach (var mapPair in Deferred)
+            {
+                if (!merged.TryGetValue(mapPair.Key, out var m))
+                    merged[mapPair.Key] = m = new MergedDelta();
+                foreach (var pawnPair in mapPair.Value)
+                {
+                    if (!m.Fragments.ContainsKey(pawnPair.Key) && !m.Despawned.Contains(pawnPair.Key))
+                        m.Fragments[pawnPair.Key] = pawnPair.Value;
+                }
+            }
+            Deferred.Clear();
+        }
 
         Applying = true;
         try
@@ -458,6 +487,20 @@ internal static class CoopGuest
         {
             if (byId.TryGetValue(id, out var gone) && gone.Spawned)
                 gone.DeSpawn(DestroyMode.Vanish);
+        }
+
+        foreach (var shot in delta.Shots)
+            CoopVisuals.OnShot(map, shot);
+
+        if (Find.WindowStack.IsOpen<FloatMenu>())
+        {
+            foreach (var id in delta.Fragments.Keys.Where(id => byId.TryGetValue(id, out var t) && t is Pawn).ToList())
+            {
+                if (!Deferred.TryGetValue(map.uniqueID, out var held))
+                    Deferred[map.uniqueID] = held = new Dictionary<int, XmlNode>();
+                held[id] = delta.Fragments[id];
+                delta.Fragments.Remove(id);
+            }
         }
 
         if (delta.Fragments.Count > 0)
@@ -520,6 +563,13 @@ internal static class CoopGuest
 
             nodes.Add(li);
             replacedIds.Add(loadId);
+            // Things inside the fragment (a corpse's pawn, gear, a minified building, what is carried) are loaded
+            // anew too: the old objects with those ids must not be offered as references, or loading fails.
+            foreach (XmlNode inner in li.SelectNodes(".//id")!)
+            {
+                if (inner.InnerText.Length > 0)
+                    replacedIds.Add("Thing_" + inner.InnerText);
+            }
             // A pawn comes with its gear: the old pawn's gear gives way too.
             if (byId.TryGetValue(id, out var old) && old is Pawn oldPawn)
                 foreach (var gear in ScribeMemory.PawnGear(oldPawn))

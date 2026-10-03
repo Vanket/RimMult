@@ -26,6 +26,7 @@ internal static class PlayerPalette
     };
 
     private static readonly Dictionary<(string, int), Material> Materials = new();
+    private static readonly Dictionary<(Material, int), Material> Tinted = new();
 
     static PlayerPalette()
     {
@@ -46,6 +47,23 @@ internal static class PlayerPalette
         {
             material = MaterialPool.MatFrom(texturePath, ShaderDatabase.WorldOverlayTransparentLit, Get(index), WorldMaterials.WorldObjectRenderQueue);
             Materials[(texturePath, index)] = material;
+        }
+        return material;
+    }
+
+    /// <summary>
+    /// The same world-object material tinted with a player's color (cached). Works from the material itself: in 1.6
+    /// settlements take their texture from the faction, their def has none.
+    /// </summary>
+    public static Material Tint(Material original, byte index)
+    {
+        if (original == null || original.mainTexture == null)
+            return original!;
+        if (!Tinted.TryGetValue((original, index), out var material))
+        {
+            var request = new MaterialRequest(original.mainTexture, original.shader, Get(index)) { renderQueue = original.renderQueue };
+            material = MaterialPool.MatFrom(request);
+            Tinted[(original, index)] = material;
         }
         return material;
     }

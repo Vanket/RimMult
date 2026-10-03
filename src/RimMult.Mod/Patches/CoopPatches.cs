@@ -143,6 +143,10 @@ internal static class CoopGizmoPatch
 {
     public static bool Prefix(Command __instance)
     {
+        // Host: whatever the button changes on the selection goes to the guests at once (medical bed, forbid, …).
+        if (CoopHost.Active && __instance is not Designator)
+            foreach (var thing in Find.Selector.SelectedObjects.OfType<Thing>())
+                CoopHost.Touch(thing);
         if (!CoopGuest.Active || CoopGuest.Applying || __instance is Designator)
             return true;
         if (__instance is Command_Target or Command_VerbTarget)

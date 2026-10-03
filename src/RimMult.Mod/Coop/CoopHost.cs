@@ -42,6 +42,7 @@ internal static class CoopHost
     private static readonly HashSet<int> Guests = new();
     private static readonly HashSet<Thing> Spawned = new();
     private static readonly Dictionary<int, List<int>> Despawned = new();
+    private static readonly Dictionary<int, List<CoopShot>> Shots = new();
 
     /// <summary>Things (mostly pawns) waiting for a full copy, oldest first; capped per batch.</summary>
     private static readonly List<Thing> Pending = new();
@@ -101,19 +102,38 @@ internal static class CoopHost
 
     public static void NotifySpawned(Thing thing)
     {
-        if (Active)
+        // Projectiles go out as shots (guests only draw them), not as things.
+        if (Active && thing is not Projectile)
             Spawned.Add(thing);
     }
 
     public static void NotifyDespawned(Thing thing)
     {
-        if (!Active || thing.Map == null || thing.thingIDNumber < 0)
+        if (!Active || thing.Map == null || thing.thingIDNumber < 0 || thing is Projectile)
             return;
         Spawned.Remove(thing);
         Pending.Remove(thing);
         if (!Despawned.TryGetValue(thing.Map.uniqueID, out var list))
             Despawned[thing.Map.uniqueID] = list = new List<int>();
         list.Add(thing.thingIDNumber);
+    }
+
+    /// <summary>A shot was fired on the host: guests draw the projectile flying and play the weapon's sound.</summary>
+    public static void NotifyShot(Projectile projectile, Vector3 origin, Vector3 destination, int ticks, SoundDef? sound)
+    {
+        if (!Active || Guests.Count == 0 || projectile.Map == null)
+            return;
+        if (!Shots.TryGetValue(projectile.Map.uniqueID, out var list))
+            Shots[projectile.Map.uniqueID] = list = new List<CoopShot>();
+        if (list.Count < 200)
+            list.Add(new CoopShot(projectile.def.defName, origin.x, origin.z, destination.x, destination.z, ticks, sound?.defName ?? ""));
+    }
+
+    /// <summary>Something whose state a click just changed (a guest's order, the host's button): sent in full right away.</summary>
+    public static void Touch(Thing thing)
+    {
+        if (Active && Guests.Count > 0 && thing.Spawned && thing.thingIDNumber >= 0 && thing is not Projectile)
+            Queue(thing);
     }
 
     public static void Update(ClientSession session)
@@ -123,6 +143,7 @@ internal static class CoopHost
         {
             Spawned.Clear();
             Despawned.Clear();
+            Shots.Clear();
             Pending.Clear();
             return;
         }
@@ -161,12 +182,13 @@ internal static class CoopHost
         }
         Spawned.Clear();
         Despawned.Clear();
+        Shots.Clear();
         if (batch.Maps.Count > 0)
             session.SendCoop(CoopChannel.State, Compress(batch.Encode()));
     }
 
     private static bool IsEmpty(MapDelta delta) =>
-        delta.Despawned.Count == 0 && delta.Things.Count == 0 && delta.Patches.Count == 0
+        delta.Despawned.Count == 0 && delta.Things.Count == 0 && delta.Patches.Count == 0 && delta.Shots.Count == 0
         && delta.Designations == null && delta.Grids == null && delta.Zones == null;
 
     /// <summary>Where every pawn stands; sent when something moved (and now and then anyway, the channel may drop).</summary>
@@ -174,7 +196,13 @@ internal static class CoopHost
     {
         var maps = Find.Maps.Select(map => (map.uniqueID, map.mapPawns.AllPawnsSpawned
                 .Where(p => p.thingIDNumber >= 0)
-                .Select(p => new PawnPosition(p.thingIDNumber, p.Position.x, p.Position.z, (byte)p.Rotation.AsInt))
+                .Select(p =>
+                {
+                    // Where the pawn is drawn, between cells while it walks: guests glide it along the same path.
+                    var draw = p.DrawPos;
+                    return new PawnPosition(p.thingIDNumber, p.Position.x, p.Position.z, (byte)p.Rotation.AsInt,
+                        Mathf.RoundToInt(draw.x * 100f), Mathf.RoundToInt(draw.z * 100f));
+                })
                 .ToList()))
             .ToList();
         var key = new PositionsFrame { Maps = maps }.Encode();
@@ -192,6 +220,8 @@ internal static class CoopHost
 
         if (Despawned.TryGetValue(map.uniqueID, out var gone))
             delta.Despawned.AddRange(gone);
+        if (Shots.TryGetValue(map.uniqueID, out var shots))
+            delta.Shots.AddRange(shots);
 
         // New things always go out right away (they are small and the guest must see them).
         foreach (var thing in Spawned.Where(t => t.Spawned && t.Map == map))
@@ -223,7 +253,7 @@ internal static class CoopHost
             {
                 cursor = (cursor + 1) % things.Count;
                 var thing = things[cursor];
-                if (thing is Pawn || thing.thingIDNumber < 0)
+                if (thing is Pawn or Projectile || thing.thingIDNumber < 0)
                     continue;
                 var signature = Signature(thing);
                 if (CheapSignature.TryGetValue(thing.thingIDNumber, out var old) && old != signature)
@@ -238,16 +268,18 @@ internal static class CoopHost
             {
                 xmlCursor = (xmlCursor + 1) % things.Count;
                 var thing = things[xmlCursor];
-                if (thing is Pawn or Plant || thing.thingIDNumber < 0)
+                if (thing is Pawn or Plant or Projectile || thing.thingIDNumber < 0)
                     continue;
-                if (Save(thing) is not { } xml)
-                    continue;
-                var hash = Hash(xml);
-                if (XmlHash.TryGetValue(thing.thingIDNumber, out var old) && old != hash)
-                    Queue(thing);
-                XmlHash[thing.thingIDNumber] = hash;
+                CheckXml(thing);
             }
             XmlCursor[map.uniqueID] = xmlCursor;
+        }
+
+        // What the host has selected is looked at every batch: their clicks (medical bed, forbid, settings) show at once.
+        foreach (var selected in Find.Selector.SelectedObjects.OfType<Thing>())
+        {
+            if (selected.Map == map && selected.Spawned && selected is not Pawn && selected.thingIDNumber >= 0)
+                CheckXml(selected);
         }
 
         foreach (var thing in Pending.Where(t => t.Map == map).ToList())
@@ -307,6 +339,16 @@ internal static class CoopHost
         }
 
         return delta;
+    }
+
+    private static void CheckXml(Thing thing)
+    {
+        if (Save(thing) is not { } xml)
+            return;
+        var hash = Hash(xml);
+        if (XmlHash.TryGetValue(thing.thingIDNumber, out var old) && old != hash)
+            Queue(thing);
+        XmlHash[thing.thingIDNumber] = hash;
     }
 
     private static void Queue(Thing thing)

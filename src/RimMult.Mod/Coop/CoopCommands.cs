@@ -273,6 +273,8 @@ internal static class CoopCommands
         var options = FloatMenuMakerMap.GetOptions(pawns, new Vector3(command.X, 0f, command.Z), out _);
         var option = options.FirstOrDefault(o => o.Label == command.Name && !o.Disabled);
         option?.Chosen(colonistOrdering: true, floatMenu: null);
+        foreach (var pawn in pawns)
+            CoopHost.Touch(pawn);
     }
 
     private static void Gizmo(CoopCommand command)
@@ -286,6 +288,8 @@ internal static class CoopCommands
                 .FirstOrDefault(g => g.GetType().FullName == command.Name && g.Label == command.Detail);
             if (gizmo != null && !gizmo.Disabled)
                 gizmo.ProcessInput(new Event());
+            // The guest wants to see the result right away (a bed made medical, a door held open, …).
+            CoopHost.Touch(thing);
         }
     }
 
@@ -300,7 +304,10 @@ internal static class CoopCommands
             foreach (var id in command.ThingIds)
             {
                 if (byId.TryGetValue(id, out var thing) && thing is Pawn { workSettings: not null } pawn)
+                {
                     pawn.workSettings.SetPriority(work, command.Number);
+                    CoopHost.Touch(pawn);
+                }
             }
         }
     }

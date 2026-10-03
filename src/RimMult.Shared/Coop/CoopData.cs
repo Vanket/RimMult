@@ -102,12 +102,7 @@ public sealed class PositionsFrame
             writer.WriteVarInt(mapId);
             writer.WriteVarUInt((ulong)positions.Count);
             foreach (var p in positions)
-            {
-                writer.WriteVarInt(p.ThingId);
-                writer.WriteVarInt(p.X);
-                writer.WriteVarInt(p.Z);
-                writer.WriteByte(p.Rotation);
-            }
+                p.Write(writer);
         }
         return writer.ToArray();
     }
@@ -123,7 +118,7 @@ public sealed class PositionsFrame
             var count = MapDelta.Count(reader, 100_000);
             var positions = new List<PawnPosition>(count);
             for (var j = 0; j < count; j++)
-                positions.Add(new PawnPosition((int)reader.ReadVarInt(), (int)reader.ReadVarInt(), (int)reader.ReadVarInt(), reader.ReadByte()));
+                positions.Add(PawnPosition.Read(reader));
             frame.Maps.Add((mapId, positions));
         }
         reader.EnsureFullyRead();
@@ -136,8 +131,8 @@ public sealed class PositionsFrame
     /// </summary>
     public static List<byte[]> Split(int tick, IEnumerable<(int MapId, List<PawnPosition> Positions)> maps, int maxBytes)
     {
-        // Worst case per entry: 4 varints of up to 5 bytes + rotation; map header ~10 bytes.
-        const int entryBytes = 16;
+        // Worst case per entry: id (5) + cell (2×3) + rotation (1) + draw offsets (2×3); map header ~10 bytes.
+        const int entryBytes = 18;
         var perFrame = System.Math.Max(1, (maxBytes - 24) / entryBytes);
         var frames = new List<byte[]>();
         var current = new PositionsFrame { Tick = tick };
@@ -169,17 +164,91 @@ public sealed class PositionsFrame
 public readonly struct PawnPosition
 {
     public PawnPosition(int thingId, int x, int z, byte rotation)
+        : this(thingId, x, z, rotation, x * 100 + 50, z * 100 + 50)
+    {
+    }
+
+    public PawnPosition(int thingId, int x, int z, byte rotation, int drawX, int drawZ)
     {
         ThingId = thingId;
         X = x;
         Z = z;
         Rotation = rotation;
+        DrawX = drawX;
+        DrawZ = drawZ;
     }
 
     public int ThingId { get; }
+
+    /// <summary>The cell the pawn stands on.</summary>
     public int X { get; }
     public int Z { get; }
     public byte Rotation { get; }
+
+    /// <summary>Where the host draws the pawn, in hundredths of a cell (between cells while walking).</summary>
+    public int DrawX { get; }
+    public int DrawZ { get; }
+
+    public void Write(ByteWriter writer)
+    {
+        writer.WriteVarInt(ThingId);
+        writer.WriteVarInt(X);
+        writer.WriteVarInt(Z);
+        writer.WriteByte(Rotation);
+        writer.WriteVarInt(DrawX - X * 100);
+        writer.WriteVarInt(DrawZ - Z * 100);
+    }
+
+    public static PawnPosition Read(ByteReader reader)
+    {
+        var id = (int)reader.ReadVarInt();
+        var x = (int)reader.ReadVarInt();
+        var z = (int)reader.ReadVarInt();
+        var rotation = reader.ReadByte();
+        return new PawnPosition(id, x, z, rotation, x * 100 + (int)reader.ReadVarInt(), z * 100 + (int)reader.ReadVarInt());
+    }
+}
+
+/// <summary>A projectile the host fired: guests draw it flying (and play the shot) without simulating it.</summary>
+public readonly struct CoopShot
+{
+    public CoopShot(string projectileDef, float fromX, float fromZ, float toX, float toZ, int ticks, string sound)
+    {
+        ProjectileDef = projectileDef;
+        FromX = fromX;
+        FromZ = fromZ;
+        ToX = toX;
+        ToZ = toZ;
+        Ticks = ticks;
+        Sound = sound;
+    }
+
+    public string ProjectileDef { get; }
+    public float FromX { get; }
+    public float FromZ { get; }
+    public float ToX { get; }
+    public float ToZ { get; }
+
+    /// <summary>Flight time in game ticks.</summary>
+    public int Ticks { get; }
+
+    /// <summary>The weapon's firing sound def, or "".</summary>
+    public string Sound { get; }
+
+    public void Write(ByteWriter writer)
+    {
+        writer.WriteString(ProjectileDef);
+        writer.WriteFloat(FromX);
+        writer.WriteFloat(FromZ);
+        writer.WriteFloat(ToX);
+        writer.WriteFloat(ToZ);
+        writer.WriteVarInt(Ticks);
+        writer.WriteString(Sound);
+    }
+
+    public static CoopShot Read(ByteReader reader) => new(
+        reader.ReadRequiredString(), reader.ReadFloat(), reader.ReadFloat(), reader.ReadFloat(), reader.ReadFloat(),
+        (int)reader.ReadVarInt(), reader.ReadRequiredString());
 }
 
 public readonly struct DesignationEntry
@@ -213,6 +282,9 @@ public sealed class MapDelta
     /// <summary>Small changes to things the guest already has, applied in place.</summary>
     public List<ThingPatch> Patches { get; set; } = new();
 
+    /// <summary>Shots fired since the last batch (drawn by guests, never simulated there).</summary>
+    public List<CoopShot> Shots { get; set; } = new();
+
     /// <summary>The full designation list of the map, when it changed; null otherwise.</summary>
     public List<DesignationEntry>? Designations { get; set; }
 
@@ -227,12 +299,7 @@ public sealed class MapDelta
         writer.WriteVarInt(MapId);
         writer.WriteVarUInt((ulong)Positions.Count);
         foreach (var p in Positions)
-        {
-            writer.WriteVarInt(p.ThingId);
-            writer.WriteVarInt(p.X);
-            writer.WriteVarInt(p.Z);
-            writer.WriteByte(p.Rotation);
-        }
+            p.Write(writer);
         writer.WriteVarUInt((ulong)Despawned.Count);
         foreach (var id in Despawned)
             writer.WriteVarInt(id);
@@ -242,6 +309,9 @@ public sealed class MapDelta
         writer.WriteVarUInt((ulong)Patches.Count);
         foreach (var patch in Patches)
             patch.Write(writer);
+        writer.WriteVarUInt((ulong)Shots.Count);
+        foreach (var shot in Shots)
+            shot.Write(writer);
         writer.WriteBool(Designations != null);
         if (Designations != null)
         {
@@ -264,7 +334,7 @@ public sealed class MapDelta
         var delta = new MapDelta { MapId = (int)reader.ReadVarInt() };
         var positions = Count(reader, maxEntries);
         for (var i = 0; i < positions; i++)
-            delta.Positions.Add(new PawnPosition((int)reader.ReadVarInt(), (int)reader.ReadVarInt(), (int)reader.ReadVarInt(), reader.ReadByte()));
+            delta.Positions.Add(PawnPosition.Read(reader));
         var despawned = Count(reader, maxEntries);
         for (var i = 0; i < despawned; i++)
             delta.Despawned.Add((int)reader.ReadVarInt());
@@ -274,6 +344,9 @@ public sealed class MapDelta
         var patches = Count(reader, maxEntries);
         for (var i = 0; i < patches; i++)
             delta.Patches.Add(ThingPatch.Read(reader));
+        var shots = Count(reader, 10_000);
+        for (var i = 0; i < shots; i++)
+            delta.Shots.Add(CoopShot.Read(reader));
         if (reader.ReadBool())
         {
             var designations = Count(reader, maxEntries);
