@@ -368,13 +368,135 @@ public sealed class MapDelta
     }
 }
 
-/// <summary>One frame of co-op state from the host: a delta per map.</summary>
+/// <summary>A letter the host received (an event, a raid, a quest offer): guests get the same letter.</summary>
+public sealed class CoopLetter
+{
+    public string Label { get; set; } = "";
+    public string Text { get; set; } = "";
+    public string Def { get; set; } = "";
+
+    /// <summary>Where the letter points: a cell on a map, or -1 for none.</summary>
+    public int MapId { get; set; } = -1;
+    public int X { get; set; }
+    public int Z { get; set; }
+
+    public void Write(ByteWriter writer)
+    {
+        writer.WriteString(Label);
+        writer.WriteString(Text);
+        writer.WriteString(Def);
+        writer.WriteVarInt(MapId);
+        writer.WriteVarInt(X);
+        writer.WriteVarInt(Z);
+    }
+
+    public static CoopLetter Read(ByteReader reader) => new()
+    {
+        Label = reader.ReadRequiredString(),
+        Text = reader.ReadRequiredString(),
+        Def = reader.ReadRequiredString(),
+        MapId = (int)reader.ReadVarInt(),
+        X = (int)reader.ReadVarInt(),
+        Z = (int)reader.ReadVarInt(),
+    };
+}
+
+/// <summary>The colony's relation with one NPC faction (by load id), as the host has it.</summary>
+public readonly struct FactionStanding
+{
+    public FactionStanding(string factionId, int goodwill, byte kind)
+    {
+        FactionId = factionId;
+        Goodwill = goodwill;
+        Kind = kind;
+    }
+
+    public string FactionId { get; }
+    public int Goodwill { get; }
+
+    /// <summary>RimWorld's FactionRelationKind (hostile / neutral / ally).</summary>
+    public byte Kind { get; }
+}
+
+/// <summary>One NPC-world part of the shared game in co-op: relations, research, letters.</summary>
+public sealed class CoopWorld
+{
+    /// <summary>All faction relations, when one changed; null otherwise.</summary>
+    public List<FactionStanding>? Factions { get; set; }
+
+    /// <summary>Research progress that changed (project def → points); null when nothing did.</summary>
+    public List<(string Project, float Progress)>? Research { get; set; }
+
+    /// <summary>The current research project ("" for none), when it changed; null otherwise.</summary>
+    public string? CurrentResearch { get; set; }
+
+    public List<CoopLetter> Letters { get; set; } = new();
+
+    public bool IsEmpty => Factions == null && Research == null && CurrentResearch == null && Letters.Count == 0;
+
+    public void Write(ByteWriter writer)
+    {
+        writer.WriteBool(Factions != null);
+        if (Factions != null)
+        {
+            writer.WriteVarUInt((ulong)Factions.Count);
+            foreach (var f in Factions)
+            {
+                writer.WriteString(f.FactionId);
+                writer.WriteVarInt(f.Goodwill);
+                writer.WriteByte(f.Kind);
+            }
+        }
+        writer.WriteBool(Research != null);
+        if (Research != null)
+        {
+            writer.WriteVarUInt((ulong)Research.Count);
+            foreach (var (project, progress) in Research)
+            {
+                writer.WriteString(project);
+                writer.WriteFloat(progress);
+            }
+        }
+        writer.WriteString(CurrentResearch);
+        writer.WriteVarUInt((ulong)Letters.Count);
+        foreach (var letter in Letters)
+            letter.Write(writer);
+    }
+
+    public static CoopWorld Read(ByteReader reader)
+    {
+        var world = new CoopWorld();
+        if (reader.ReadBool())
+        {
+            var count = MapDelta.Count(reader, 10_000);
+            world.Factions = new List<FactionStanding>(count);
+            for (var i = 0; i < count; i++)
+                world.Factions.Add(new FactionStanding(reader.ReadRequiredString(), (int)reader.ReadVarInt(), reader.ReadByte()));
+        }
+        if (reader.ReadBool())
+        {
+            var count = MapDelta.Count(reader, 100_000);
+            world.Research = new List<(string, float)>(count);
+            for (var i = 0; i < count; i++)
+                world.Research.Add((reader.ReadRequiredString(), reader.ReadFloat()));
+        }
+        world.CurrentResearch = reader.ReadString();
+        var letters = MapDelta.Count(reader, 1000);
+        for (var i = 0; i < letters; i++)
+            world.Letters.Add(CoopLetter.Read(reader));
+        return world;
+    }
+}
+
+/// <summary>One frame of co-op state from the host: a delta per map, plus the world-wide parts.</summary>
 public sealed class CoopBatch
 {
     /// <summary>The host's game tick (TicksGame), so the guest's clock and date follow the host's.</summary>
     public int Tick { get; set; }
 
     public List<MapDelta> Maps { get; set; } = new();
+
+    public CoopWorld World { get; set; } = new();
 
     public byte[] Encode()
     {
@@ -383,6 +505,7 @@ public sealed class CoopBatch
         writer.WriteVarUInt((ulong)Maps.Count);
         foreach (var map in Maps)
             map.Write(writer);
+        World.Write(writer);
         return writer.ToArray();
     }
 
@@ -393,6 +516,7 @@ public sealed class CoopBatch
         var count = MapDelta.Count(reader, 1000);
         for (var i = 0; i < count; i++)
             batch.Maps.Add(MapDelta.Read(reader));
+        batch.World = CoopWorld.Read(reader);
         reader.EnsureFullyRead();
         return batch;
     }

@@ -152,6 +152,37 @@ public class CoopTests
     }
 
     [Fact]
+    public void WorldPartsRoundTrip()
+    {
+        var batch = new CoopBatch
+        {
+            Tick = 5,
+            World = new CoopWorld
+            {
+                Factions = [new FactionStanding("Faction_3", -80, 0), new FactionStanding("Faction_7", 45, 2)],
+                Research = [("Electricity", 812.5f)],
+                CurrentResearch = "",
+                Letters = { new CoopLetter { Label = "Raid", Text = "Pirates!", Def = "ThreatBig", MapId = 1, X = 4, Z = 9 } },
+            },
+        };
+
+        var world = CoopBatch.Decode(batch.Encode()).World;
+
+        Assert.Equal(2, world.Factions!.Count);
+        Assert.Equal(("Faction_3", -80, (byte)0), (world.Factions[0].FactionId, world.Factions[0].Goodwill, world.Factions[0].Kind));
+        Assert.Equal([("Electricity", 812.5f)], world.Research!);
+        Assert.Equal("", world.CurrentResearch);
+        var letter = Assert.Single(world.Letters);
+        Assert.Equal(("Raid", "Pirates!", "ThreatBig", 1, 4, 9), (letter.Label, letter.Text, letter.Def, letter.MapId, letter.X, letter.Z));
+
+        // Nothing changed: nothing but the header goes out.
+        var empty = CoopBatch.Decode(new CoopBatch { Tick = 6 }.Encode()).World;
+        Assert.True(empty.IsEmpty);
+        Assert.Null(empty.Factions);
+        Assert.Null(empty.CurrentResearch);
+    }
+
+    [Fact]
     public void CommandRoundTrips()
     {
         var command = new CoopCommand
