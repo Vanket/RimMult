@@ -4,6 +4,7 @@ using RimMult.Shared.Mods;
 using RimMult.Shared.Net;
 using RimMult.Shared.Packets;
 using RimMult.Shared.Time;
+using RimMult.Shared.World;
 
 namespace RimMult.Tests;
 
@@ -181,9 +182,13 @@ public class GameServerTests
     [Fact]
     public void UpdateBroadcastsSharedClock()
     {
-        var (server, transport) = Create();
+        var transport = new FakeTransport();
+        var world = new WorldState { Definition = new WorldDefinition { WorldId = "w" }, Tick = 100 };
+        var server = new GameServer(new ServerSettings(), transport, world: world);
+        transport.Server = server;
         server.OnConnected(1);
         Receive(server, 1, Hello(1));
+        Receive(server, 1, new EnterWorld { WorldId = "w" });
         Receive(server, 1, new SpeedVote { Speed = GameSpeed.Fast });
         Receive(server, 1, new AuthorityReport { Tick = 500, SustainableTicksPerSecond = 1000 });
 

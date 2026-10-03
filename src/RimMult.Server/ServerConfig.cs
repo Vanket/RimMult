@@ -20,6 +20,9 @@ public sealed class ServerConfig
 
     public int Port { get; set; } = ProtocolInfo.DefaultPort;
 
+    /// <summary>Where the shared world (planet, colonies, world time) is kept between restarts.</summary>
+    public string WorldFile { get; set; } = "world.dat";
+
     public ServerSettings Server { get; set; } = new();
 
     public static ServerConfig Load(string path)

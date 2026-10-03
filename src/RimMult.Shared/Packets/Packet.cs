@@ -13,6 +13,12 @@ public enum PacketType : ushort
     SpeedVote = 20,
     AuthorityReport = 21,
     TickGrant = 22,
+    WorldCreate = 30,
+    WorldUpdate = 31,
+    EnterWorld = 32,
+    LeaveWorld = 33,
+    WorldClock = 34,
+    MyColonies = 35,
 }
 
 /// <summary>A message body. <see cref="PacketCodec"/> adds the type header.</summary>

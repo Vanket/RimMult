@@ -1,6 +1,8 @@
 {
   // UDP port. Open/forward it on the router for players outside your LAN.
   "Port": 26480,
+  // The shared world (planet, colonies, world time) is kept here between restarts.
+  "WorldFile": "world.dat",
   "Server": {
     "Name": "RimMult server",
     "MaxPlayers": 10,

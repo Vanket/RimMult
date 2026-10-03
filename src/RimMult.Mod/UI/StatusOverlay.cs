@@ -1,5 +1,6 @@
 using RimMult.ClientCore;
 using RimMult.Shared.Time;
+using RimMult.Sync;
 using UnityEngine;
 using Verse;
 
@@ -11,7 +12,7 @@ namespace RimMult.UI;
 /// </summary>
 internal static class StatusOverlay
 {
-    private const float Width = 300f;
+    private const float Width = 420f;
     private const float Height = 24f;
 
     public static void OnGUI()
@@ -38,14 +39,36 @@ internal static class StatusOverlay
             Multiplayer.OpenDialog();
     }
 
-    private static string Describe(ClientSession session) => session.State switch
+    private static string Describe(ClientSession session)
     {
-        ClientState.Connecting => "RimMult.StatusConnecting".Translate(),
-        ClientState.Handshaking => "RimMult.StatusHandshaking".Translate(),
-        ClientState.Connected => "RimMult.StatusConnected".Translate(
-            session.Players.Count, SpeedLabel(session.LastGrant?.Speed ?? GameSpeed.Paused)),
-        _ => "RimMult.StatusDisconnected".Translate(),
-    };
+        switch (session.State)
+        {
+            case ClientState.Connecting:
+                return "RimMult.StatusConnecting".Translate();
+            case ClientState.Handshaking:
+                return "RimMult.StatusHandshaking".Translate();
+            case ClientState.Connected:
+                break;
+            default:
+                return "RimMult.StatusDisconnected".Translate();
+        }
+
+        var speed = session.LastGrant?.Speed ?? GameSpeed.Paused;
+        string text = "RimMult.StatusConnected".Translate(session.Players.Count, SpeedLabel(speed));
+        if (!WorldSync.InWorld)
+            return text;
+
+        if (TimeSync.MyVote is { } vote && vote != speed)
+            text += " " + "RimMult.StatusMyVote".Translate(SpeedLabel(vote));
+        if (TimeSync.BlockedByHorizon && speed != GameSpeed.Paused)
+        {
+            var bottleneck = session.LastGrant?.BottleneckPlayerId ?? -1;
+            text += bottleneck >= 0 && bottleneck != session.PlayerId
+                ? " " + "RimMult.StatusWaitingFor".Translate(session.NameOf(bottleneck))
+                : " " + "RimMult.StatusWaiting".Translate();
+        }
+        return text;
+    }
 
     public static string SpeedLabel(GameSpeed speed) => ("RimMult.Speed" + speed).Translate();
 

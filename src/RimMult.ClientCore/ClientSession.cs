@@ -6,6 +6,7 @@ using RimMult.Shared.Net;
 using RimMult.Shared.Packets;
 using RimMult.Shared.Serialization;
 using RimMult.Shared.Time;
+using RimMult.Shared.World;
 
 namespace RimMult.ClientCore;
 
@@ -56,6 +57,10 @@ public sealed class ClientSession
     public event Action? StateChanged;
     public event Action<ChatLine>? ChatReceived;
     public event Action? PlayersChanged;
+    public event Action? WorldChanged;
+
+    /// <summary>The server's answer to <see cref="EnterWorld"/>: the world tick to align the local calendar to.</summary>
+    public event Action<long>? ClockReceived;
 
     public ClientState State { get; private set; } = ClientState.Connecting;
 
@@ -68,6 +73,11 @@ public sealed class ClientSession
 
     public IReadOnlyList<PlayerInfo> Players => _players;
     public IReadOnlyList<ChatLine> Chat => _chat;
+
+    /// <summary>The shared planet; null until the first player creates it.</summary>
+    public WorldDefinition? World { get; private set; }
+
+    public IReadOnlyList<ColonyInfo> Colonies { get; private set; } = Array.Empty<ColonyInfo>();
 
     /// <summary>Why the session ended; set once <see cref="State"/> is <see cref="ClientState.Disconnected"/>.</summary>
     public string? DisconnectReason { get; private set; }
@@ -100,6 +110,36 @@ public sealed class ClientSession
     {
         if (State == ClientState.Connected)
             Send(new SpeedVote { Speed = speed });
+    }
+
+    public void CreateWorld(WorldDefinition definition, long tick)
+    {
+        if (State == ClientState.Connected)
+            Send(new WorldCreate { Definition = definition, Tick = tick });
+    }
+
+    public void EnterWorld(string worldId)
+    {
+        if (State == ClientState.Connected)
+            Send(new EnterWorld { WorldId = worldId });
+    }
+
+    public void LeaveWorld()
+    {
+        if (State == ClientState.Connected)
+            Send(new LeaveWorld());
+    }
+
+    public void ReportAuthority(long tick, float sustainableTicksPerSecond)
+    {
+        if (State == ClientState.Connected)
+            Send(new AuthorityReport { Tick = tick, SustainableTicksPerSecond = sustainableTicksPerSecond });
+    }
+
+    public void SendColonies(List<ColonyInfo> colonies)
+    {
+        if (State == ClientState.Connected)
+            Send(new MyColonies { Colonies = colonies });
     }
 
     public void Disconnect()
@@ -149,6 +189,14 @@ public sealed class ClientSession
                 break;
             case TickGrant grant:
                 LastGrant = grant;
+                break;
+            case WorldUpdate world:
+                World = world.Definition;
+                Colonies = world.Colonies;
+                WorldChanged?.Invoke();
+                break;
+            case WorldClock clock:
+                ClockReceived?.Invoke(clock.Tick);
                 break;
             case Kick kick:
                 KickReason = kick.Reason;

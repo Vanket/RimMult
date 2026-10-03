@@ -7,11 +7,13 @@ using RimMult.Shared.Net;
 using RimMult.Shared.Packets;
 using RimMult.Shared.Serialization;
 using RimMult.Shared.Time;
+using RimMult.Shared.World;
 
 namespace RimMult.ServerCore;
 
 /// <summary>
-/// Session layer of a RimMult server: handshake, roster, chat, speed votes and the shared clock.
+/// Session layer of a RimMult server: handshake, roster, chat, speed votes, the shared clock and the shared world
+/// (planet definition, everyone's colonies, world time).
 /// Single-threaded: the owner calls every method from one thread (the transport's poll loop).
 /// </summary>
 public sealed class GameServer
@@ -23,17 +25,25 @@ public sealed class GameServer
     private int _nextPlayerId = 1;
     private double _lastGrantTime = double.NegativeInfinity;
 
-    public GameServer(ServerSettings settings, IServerTransport transport, Action<string>? log = null)
+    public GameServer(ServerSettings settings, IServerTransport transport, Action<string>? log = null, WorldState? world = null)
     {
         Settings = settings;
         _transport = transport;
         _log = log ?? (_ => { });
         Time = new TimeCoordinator(settings.Time);
+        World = world ?? new WorldState();
+        Settings.ModListHash ??= World.ModListHash;
+        Settings.GameVersion ??= World.GameVersion;
     }
+
+    /// <summary>Raised when the world definition or the colonies change (not on every clock tick); a cue to persist.</summary>
+    public event Action? WorldChanged;
 
     public ServerSettings Settings { get; }
 
     public TimeCoordinator Time { get; }
+
+    public WorldState World { get; }
 
     public IEnumerable<PlayerInfo> Players => _sessions.Values.Where(s => s.Player != null).Select(s => s.Player!);
 
@@ -55,6 +65,7 @@ public sealed class GameServer
 
         _log($"{player.Name} ({player.Id}) left");
         Time.RemovePlayer(player.Id);
+        UpdateWorldTick();
         if (player.IsHost)
             PromoteNextHost();
         BroadcastPlayerList();
@@ -95,7 +106,27 @@ public sealed class GameServer
                 Time.SetVote(player.Id, vote.Speed);
                 break;
             case AuthorityReport report:
-                Time.ReportAuthority(player.Id, report.Tick, report.SustainableTicksPerSecond);
+                // Reports from the lobby are meaningless (no colony is running there); only in-world clients drive time.
+                if (player.InWorld)
+                    Time.ReportAuthority(player.Id, report.Tick, report.SustainableTicksPerSecond);
+                break;
+            case WorldCreate create:
+                HandleWorldCreate(session, player, create);
+                break;
+            case EnterWorld enter:
+                HandleEnterWorld(session, player, enter);
+                break;
+            case LeaveWorld:
+                if (player.InWorld)
+                {
+                    player.InWorld = false;
+                    Time.RemoveAuthority(player.Id);
+                    UpdateWorldTick();
+                    BroadcastPlayerList();
+                }
+                break;
+            case MyColonies colonies:
+                HandleMyColonies(player, colonies);
                 break;
             default:
                 Kick(session, KickReason.BadData, $"Unexpected packet {packet.Type}");
@@ -115,6 +146,7 @@ public sealed class GameServer
 
         var grant = PacketCodec.Encode(TickGrant.From(Time.ComputeGrant()));
         Broadcast(grant, DeliveryMode.UnreliableSequenced);
+        UpdateWorldTick();
     }
 
     public void Shutdown()
@@ -199,8 +231,79 @@ public sealed class GameServer
             IsHost = player.IsHost,
             Time = Settings.Time,
         });
+        Send(session, WorldUpdatePacket());
         BroadcastPlayerList();
     }
+
+    private void HandleWorldCreate(Session session, PlayerInfo player, WorldCreate create)
+    {
+        if (World.Definition != null)
+        {
+            // Someone was faster; tell the late creator what the world really is.
+            Send(session, WorldUpdatePacket());
+            return;
+        }
+
+        World.Definition = create.Definition;
+        World.Tick = create.Tick;
+        World.ModListHash = Settings.ModListHash;
+        World.GameVersion = Settings.GameVersion;
+        _log($"{player.Name} created the world (seed '{create.Definition.SeedString}')");
+        Broadcast(PacketCodec.Encode(WorldUpdatePacket()), DeliveryMode.ReliableOrdered);
+        WorldChanged?.Invoke();
+    }
+
+    private void HandleEnterWorld(Session session, PlayerInfo player, EnterWorld enter)
+    {
+        if (World.Definition == null || enter.WorldId != World.Definition.WorldId)
+        {
+            Send(session, WorldUpdatePacket());
+            return;
+        }
+
+        // The newcomer adopts the clock of whoever is furthest behind, so nobody has to wait for them.
+        var tick = Time.SlowestTick ?? World.Tick;
+        player.InWorld = true;
+        Time.ReportAuthority(player.Id, tick, float.MaxValue);
+        Send(session, new WorldClock { Tick = tick });
+        BroadcastPlayerList();
+    }
+
+    private void HandleMyColonies(PlayerInfo player, MyColonies packet)
+    {
+        if (World.Definition == null || !player.InWorld)
+            return;
+
+        // Colonies are keyed by owner, so a player who reconnects (new player id) keeps their colonies.
+        var key = OwnerKey(player);
+        World.Colonies.RemoveAll(c => c.OwnerSteamId == key);
+        foreach (var colony in packet.Colonies)
+        {
+            World.Colonies.Add(new ColonyInfo
+            {
+                OwnerSteamId = key,
+                OwnerName = player.Name,
+                Name = Truncate(colony.Name.Trim(), 64),
+                Tile = Truncate(colony.Tile, 64),
+            });
+        }
+
+        Broadcast(PacketCodec.Encode(WorldUpdatePacket()), DeliveryMode.ReliableOrdered);
+        WorldChanged?.Invoke();
+    }
+
+    /// <summary>Steam id identifies a player across sessions; without Steam (tests, dev builds) fall back to the session's player id.</summary>
+    private static ulong OwnerKey(PlayerInfo player) => player.SteamId != 0 ? player.SteamId : (ulong)player.Id;
+
+    private static string Truncate(string text, int length) => text.Length <= length ? text : text.Substring(0, length);
+
+    private void UpdateWorldTick()
+    {
+        if (Time.SlowestTick is { } slowest && slowest > World.Tick)
+            World.Tick = slowest;
+    }
+
+    private WorldUpdate WorldUpdatePacket() => new() { Definition = World.Definition, Colonies = World.Colonies };
 
     private void HandleChat(PlayerInfo sender, ChatMessage chat)
     {

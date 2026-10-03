@@ -66,4 +66,5 @@ public sealed class RimMultSettings : ModSettings
 public static class RimMultDefOf
 {
     public static KeyBindingDef RimMult_ToggleChat = null!;
+    public static WorldObjectDef RimMult_RemoteColony = null!;
 }

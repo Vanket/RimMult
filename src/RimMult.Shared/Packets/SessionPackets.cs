@@ -117,12 +117,16 @@ public sealed class PlayerInfo
     public string Name { get; set; } = "";
     public bool IsHost { get; set; }
 
+    /// <summary>Playing a colony in the shared world (as opposed to sitting in the lobby).</summary>
+    public bool InWorld { get; set; }
+
     public void Write(ByteWriter writer)
     {
         writer.WriteVarInt(Id);
         writer.WriteUInt64(SteamId);
         writer.WriteString(Name);
         writer.WriteBool(IsHost);
+        writer.WriteBool(InWorld);
     }
 
     public static PlayerInfo Read(ByteReader reader) => new()
@@ -131,6 +135,7 @@ public sealed class PlayerInfo
         SteamId = reader.ReadUInt64(),
         Name = reader.ReadRequiredString(),
         IsHost = reader.ReadBool(),
+        InWorld = reader.ReadBool(),
     };
 }
 

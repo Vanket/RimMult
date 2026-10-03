@@ -4,6 +4,8 @@ using RimMult.ClientCore;
 using RimMult.Shared.Mods;
 using RimMult.Shared.Packets;
 using RimMult.Steam;
+using RimMult.Sync;
+using RimWorld;
 using UnityEngine;
 using Verse;
 
@@ -193,9 +195,12 @@ internal sealed class Dialog_Multiplayer : Window
         Text.Font = GameFont.Small;
 
         var bottom = new Rect(rect.x, rect.yMax - RowHeight - 4f, rect.width, RowHeight + 4f);
-        var body = new Rect(rect.x, header.yMax + Gap, rect.width, bottom.y - header.yMax - 2 * Gap);
+        var worldRect = new Rect(rect.x, header.yMax + Gap, rect.width, 76f);
+        if (session.State == ClientState.Connected)
+            DrawWorld(worldRect, session);
+        var body = new Rect(rect.x, worldRect.yMax + Gap, rect.width, bottom.y - worldRect.yMax - 2 * Gap);
 
-        var playersRect = body.LeftPartPixels(220f);
+        var playersRect = body.LeftPartPixels(260f);
         var chatRect = new Rect(playersRect.xMax + Gap, body.y, body.width - playersRect.width - Gap, body.height);
         DrawPlayers(playersRect, session);
         if (session.State == ClientState.Connected)
@@ -218,23 +223,89 @@ internal sealed class Dialog_Multiplayer : Window
             Multiplayer.Stop();
     }
 
+    /// <summary>State of the shared world and what this player can do about it right now.</summary>
+    private void DrawWorld(Rect rect, ClientSession session)
+    {
+        Widgets.DrawMenuSection(rect);
+        var inner = rect.ContractedBy(8f);
+        var textRect = new Rect(inner.x, inner.y, inner.width - 230f, inner.height);
+        var buttons = new Rect(inner.xMax - 220f, inner.y, 220f, inner.height);
+        var world = session.World;
+        var comp = RimMultGameComp.Instance;
+        var playing = Current.ProgramState == ProgramState.Playing;
+
+        string status;
+        if (world == null)
+            status = "RimMult.WorldNone".Translate();
+        else
+            status = "RimMult.WorldInfo".Translate(world.SeedString, session.Colonies.Count);
+
+        if (WorldSync.InWorld)
+        {
+            status += "\n" + "RimMult.InWorld".Translate();
+        }
+        else if (playing && world != null && comp?.WorldId != world.WorldId)
+        {
+            status += "\n" + "RimMult.OtherSave".Translate();
+        }
+        else if (playing && world == null && comp != null)
+        {
+            status += "\n" + "RimMult.CanShareWorld".Translate();
+            if (Widgets.ButtonText(new Rect(buttons.x, buttons.y, buttons.width, RowHeight), "RimMult.ShareWorld".Translate()))
+                WorldSync.ShareCurrentWorld(session, comp);
+        }
+        else if (!playing)
+        {
+            if (Widgets.ButtonText(new Rect(buttons.x, buttons.y, buttons.width, RowHeight), "RimMult.CreateColony".Translate()))
+            {
+                WorldSync.NewColonyFlowActive = true;
+                Close();
+                Find.WindowStack.Add(new Page_SelectScenario());
+            }
+            if (world != null
+                && Widgets.ButtonText(new Rect(buttons.x, buttons.y + RowHeight + 4f, buttons.width, RowHeight), "RimMult.LoadColony".Translate()))
+            {
+                Close();
+                Find.WindowStack.Add(new Dialog_SaveFileList_Load());
+            }
+        }
+
+        Widgets.Label(textRect, status);
+    }
+
     private void DrawPlayers(Rect rect, ClientSession session)
     {
         Widgets.DrawMenuSection(rect);
         var inner = rect.ContractedBy(6f);
-        var players = session.Players;
-        var view = new Rect(0f, 0f, inner.width - 16f, Mathf.Max(players.Count * 26f, inner.height));
-        Widgets.BeginScrollView(inner, ref _playersScroll, view);
-        for (var i = 0; i < players.Count; i++)
+
+        // Each player, with their colonies underneath; colonies of players who are offline at the end.
+        var rows = new List<string>();
+        var online = new HashSet<ulong>();
+        foreach (var player in session.Players)
         {
-            var player = players[i];
             var label = player.Name;
             if (player.IsHost)
                 label += " " + "RimMult.HostMark".Translate();
+            label += player.InWorld ? " " + "RimMult.PlayingMark".Translate() : " " + "RimMult.LobbyMark".Translate();
             if (player.Id == session.PlayerId)
                 label = $"<b>{label}</b>";
-            Widgets.Label(new Rect(0f, i * 26f, view.width, 26f), label);
+            rows.Add(label);
+
+            var key = player.SteamId != 0 ? player.SteamId : (ulong)player.Id;
+            online.Add(key);
+            rows.AddRange(session.Colonies.Where(c => c.OwnerSteamId == key).Select(c => "    · " + c.Name));
         }
+        var offline = session.Colonies.Where(c => !online.Contains(c.OwnerSteamId)).ToList();
+        if (offline.Count > 0)
+        {
+            rows.Add("<color=#999999>" + "RimMult.OfflineColonies".Translate() + "</color>");
+            rows.AddRange(offline.Select(c => $"<color=#999999>    · {c.Name} ({c.OwnerName})</color>"));
+        }
+
+        var view = new Rect(0f, 0f, inner.width - 16f, Mathf.Max(rows.Count * 24f, inner.height));
+        Widgets.BeginScrollView(inner, ref _playersScroll, view);
+        for (var i = 0; i < rows.Count; i++)
+            Widgets.Label(new Rect(0f, i * 24f, view.width, 24f), rows[i]);
         Widgets.EndScrollView();
     }
 
