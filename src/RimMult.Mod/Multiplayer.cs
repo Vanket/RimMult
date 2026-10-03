@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using RimMult.ClientCore;
+using RimMult.Coop;
 using RimMult.Net.LiteNet;
 using RimMult.ServerCore;
 using RimMult.Shared;
@@ -26,6 +27,9 @@ internal sealed class HostOptions
     /// <summary>Also listen on a UDP port, for players joining by address instead of through Steam.</summary>
     public bool OpenPort;
     public int Port = ProtocolInfo.DefaultPort;
+
+    /// <summary>Separate colonies on one planet, or everyone in the host's colony.</summary>
+    public Shared.Coop.GameMode Mode;
 }
 
 /// <summary>
@@ -76,6 +80,7 @@ internal static class Multiplayer
             Password = options.Password.NullOrEmpty() ? null : options.Password,
             // Hosting from inside the game: the host's planet is the world, friends don't get to pick another.
             HostCreatesWorld = true,
+            Mode = options.Mode,
         };
 
         // Hosting from a loaded game shares its planet right away; from the main menu the first colony decides.
@@ -165,6 +170,8 @@ internal static class Multiplayer
         Session = null;
         Trades = null;
         WorldSync.Reset();
+        CoopHost.Reset();
+        CoopGuest.Leave("");
 
         if (_server != null)
         {
@@ -177,12 +184,12 @@ internal static class Multiplayer
         HostedPort = null;
     }
 
-    /// <summary>Called every frame.</summary>
     /// <summary>Host with these options as soon as the save picked in the main menu has finished loading.</summary>
     public static void HostAfterLoad(HostOptions options) => _hostAfterLoad = options;
 
     private static HostOptions? _hostAfterLoad;
 
+    /// <summary>Called every frame.</summary>
     public static void Update()
     {
         if (_hostAfterLoad != null && !LongEventHandler.AnyEventNowOrWaiting)
@@ -207,6 +214,9 @@ internal static class Multiplayer
         _server?.Update(Time.realtimeSinceStartupAsDouble);
         Session?.Poll();
         WorldSync.Update(Session);
+        if (Session != null)
+            CoopHost.Update(Session);
+        CoopGuest.Update(Session);
     }
 
     public static void OpenDialog()
@@ -270,6 +280,8 @@ internal static class Multiplayer
         session.ChatReceived += OnChat;
         WorldSync.Attach(session);
         Parcels.Attach(session);
+        CoopHost.Attach(session);
+        CoopGuest.Attach(session);
         Trades = new TradeManager(session);
         Trades.Invited += OnTradeInvited;
         Session = session;

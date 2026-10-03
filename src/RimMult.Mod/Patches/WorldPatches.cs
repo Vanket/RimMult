@@ -99,7 +99,7 @@ internal static class TimePatches
     /// </summary>
     [HarmonyPrefix]
     [HarmonyPatch(nameof(TickManager.Pause))]
-    private static bool NoAutoPause() => !TimeSync.Active;
+    private static bool NoAutoPause() => !TimeSync.Active && !Coop.CoopGuest.Active;
 }
 
 /// <summary>
@@ -111,7 +111,7 @@ internal static class WindowsForcePausePatch
 {
     private static void Postfix(ref bool __result)
     {
-        if (__result && TimeSync.Active)
+        if (__result && (TimeSync.Active || Coop.CoopGuest.Active))
             __result = false;
     }
 }

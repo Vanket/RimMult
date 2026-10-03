@@ -44,6 +44,7 @@ public sealed class TimeCoordinator
 
     private readonly Dictionary<int, GameSpeed> _votes = new();
     private readonly Dictionary<int, AuthorityState> _authorities = new();
+    private readonly HashSet<int> _holds = new();
     private long _horizon;
 
     public TimeCoordinator(TimeSettings settings)
@@ -61,7 +62,7 @@ public sealed class TimeCoordinator
     {
         // "Anyone can pause" goes both ways: choosing a speed while paused lifts the others' pause votes,
         // otherwise only the player who paused could ever resume.
-        if (speed is { } chosen && chosen != GameSpeed.Paused && Settings.AnyoneCanPause && ResolveSpeed() == GameSpeed.Paused)
+        if (speed is { } chosen && chosen != GameSpeed.Paused && Settings.AnyoneCanPause)
         {
             foreach (var other in _votes.Where(v => v.Value == GameSpeed.Paused && v.Key != playerId).Select(v => v.Key).ToList())
                 _votes.Remove(other);
@@ -90,7 +91,22 @@ public sealed class TimeCoordinator
     {
         _votes.Remove(playerId);
         _authorities.Remove(playerId);
+        _holds.Remove(playerId);
     }
+
+    /// <summary>
+    /// Keeps the world paused for <paramref name="playerId"/> regardless of votes (a co-op guest loading the game:
+    /// time must not run away from the copy they are loading). Unlike a pause vote, nobody else can lift it.
+    /// </summary>
+    public void SetHold(int playerId, bool hold)
+    {
+        if (hold)
+            _holds.Add(playerId);
+        else
+            _holds.Remove(playerId);
+    }
+
+    public bool AnyHold => _holds.Count > 0;
 
     public bool HasAuthorities => _authorities.Count > 0;
 
@@ -110,6 +126,9 @@ public sealed class TimeCoordinator
 
     public GameSpeed ResolveSpeed()
     {
+        if (_holds.Count > 0)
+            return GameSpeed.Paused;
+
         // Nobody has expressed an opinion yet (fresh world, everyone loading): stay paused.
         if (_votes.Count == 0)
             return GameSpeed.Paused;

@@ -191,4 +191,26 @@ public class TimeCoordinatorTests
         time.SetVote(3, GameSpeed.Fast);
         Assert.Equal(GameSpeed.Paused, time.ResolveSpeed());
     }
+
+    [Fact]
+    public void HoldPausesUntilReleasedOrPlayerGone()
+    {
+        var time = Create();
+        time.SetVote(1, GameSpeed.Fast);
+        time.SetHold(2, true);
+        Assert.True(time.AnyHold);
+        Assert.Equal(GameSpeed.Paused, time.ResolveSpeed());
+
+        // Voting a speed doesn't lift a hold the way it lifts a pause vote.
+        time.SetVote(1, GameSpeed.Superfast);
+        Assert.Equal(GameSpeed.Paused, time.ResolveSpeed());
+
+        time.SetHold(2, false);
+        Assert.Equal(GameSpeed.Superfast, time.ResolveSpeed());
+
+        time.SetHold(3, true);
+        time.RemovePlayer(3);
+        Assert.False(time.AnyHold);
+        Assert.Equal(GameSpeed.Superfast, time.ResolveSpeed());
+    }
 }

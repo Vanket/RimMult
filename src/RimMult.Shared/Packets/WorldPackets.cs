@@ -172,3 +172,31 @@ public sealed class MyColonies : IPacket
         return packet;
     }
 }
+
+/// <summary>
+/// Co-op traffic between the host (who simulates) and its guests. Guest → server: always to the host,
+/// <see cref="PlayerId"/> ignored. Host → server: to <see cref="PlayerId"/>, or every guest when -1.
+/// Server → client: <see cref="PlayerId"/> is the sender.
+/// </summary>
+public sealed class CoopMessage : IPacket
+{
+    public int PlayerId { get; set; } = -1;
+    public Coop.CoopChannel Channel { get; set; }
+    public byte[] Data { get; set; } = System.Array.Empty<byte>();
+
+    public PacketType Type => PacketType.CoopMessage;
+
+    public void Write(ByteWriter writer)
+    {
+        writer.WriteVarInt(PlayerId);
+        writer.WriteByte((byte)Channel);
+        writer.WriteBytes(Data);
+    }
+
+    public static CoopMessage Read(ByteReader reader) => new()
+    {
+        PlayerId = (int)reader.ReadVarInt(),
+        Channel = (Coop.CoopChannel)reader.ReadByte(),
+        Data = reader.ReadBytes(),
+    };
+}

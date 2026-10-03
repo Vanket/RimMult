@@ -70,7 +70,9 @@ internal static class WorldSync
             NewColonyFlowActive = false;
         }
 
-        var shouldBeIn = CurrentGameIsInWorld(session);
+        // A co-op guest plays a copy of the host's game (its save says it is in the world): only the host is.
+        var coopGuest = Coop.CoopGuest.IsGuest(session);
+        var shouldBeIn = !coopGuest && CurrentGameIsInWorld(session);
         if (shouldBeIn && !InWorld && !_entering)
         {
             _entering = true;
@@ -94,7 +96,7 @@ internal static class WorldSync
         }
 
         // Show other players' colonies while playing this world, and on the planet picked for a new colony.
-        var showColonies = shouldBeIn || (NewColonyFlowActive && session.World != null && Current.Game?.World != null);
+        var showColonies = shouldBeIn || (!coopGuest && NewColonyFlowActive && session.World != null && Current.Game?.World != null);
         RemoteColonies.Reconcile(session, showColonies);
     }
 

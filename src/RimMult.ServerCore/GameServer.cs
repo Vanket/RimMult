@@ -117,6 +117,7 @@ public sealed class GameServer
                 HandleEnterWorld(session, player, enter);
                 break;
             case LeaveWorld:
+                Time.SetHold(player.Id, false);
                 if (player.InWorld)
                 {
                     player.InWorld = false;
@@ -139,6 +140,9 @@ public sealed class GameServer
                 break;
             case PlayerRelay relay:
                 HandleRelay(player, relay);
+                break;
+            case CoopMessage coop:
+                HandleCoop(player, coop);
                 break;
             default:
                 Kick(session, KickReason.BadData, $"Unexpected packet {packet.Type}");
@@ -246,6 +250,7 @@ public sealed class GameServer
             IsHost = player.IsHost,
             Time = Settings.Time,
             HostCreatesWorld = Settings.HostCreatesWorld,
+            Mode = Settings.Mode,
         });
         Send(session, WorldUpdatePacket());
         BroadcastPlayerList();
@@ -408,6 +413,43 @@ public sealed class GameServer
         World.DestroyedSettlements.Add(tile);
         Broadcast(PacketCodec.Encode(WorldUpdatePacket()), DeliveryMode.ReliableOrdered);
         WorldChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Co-op traffic: guests talk only to the host, the host to one guest or all of them. While a guest loads the
+    /// game the world is held paused, so it doesn't run away from the copy being loaded.
+    /// </summary>
+    private void HandleCoop(PlayerInfo sender, CoopMessage message)
+    {
+        if (Settings.Mode != Shared.Coop.GameMode.Coop)
+            return;
+
+        if (sender.IsHost)
+        {
+            var data = PacketCodec.Encode(new CoopMessage { PlayerId = sender.Id, Channel = message.Channel, Data = message.Data });
+            foreach (var session in _sessions.Values)
+            {
+                if (session.Player is { } guest && !guest.IsHost && (message.PlayerId == -1 || guest.Id == message.PlayerId))
+                    _transport.Send(session.ConnectionId, data, DeliveryMode.ReliableOrdered);
+            }
+            return;
+        }
+
+        switch (message.Channel)
+        {
+            case Shared.Coop.CoopChannel.JoinRequest:
+                Time.SetHold(sender.Id, true);
+                break;
+            case Shared.Coop.CoopChannel.Ready:
+                Time.SetHold(sender.Id, false);
+                sender.InWorld = true;
+                BroadcastPlayerList();
+                break;
+        }
+
+        var host = _sessions.Values.FirstOrDefault(s => s.Player is { IsHost: true });
+        if (host != null)
+            Send(host, new CoopMessage { PlayerId = sender.Id, Channel = message.Channel, Data = message.Data });
     }
 
     /// <summary>Passes a message to another player in the world, stamped with the real sender.</summary>

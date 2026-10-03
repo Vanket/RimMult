@@ -52,6 +52,8 @@ public sealed class ServerWelcome : IPacket
     /// <summary>Only the host may create the shared world (game hosted from inside RimWorld).</summary>
     public bool HostCreatesWorld { get; set; }
 
+    public Coop.GameMode Mode { get; set; }
+
     public PacketType Type => PacketType.ServerWelcome;
 
     public void Write(ByteWriter writer)
@@ -61,6 +63,7 @@ public sealed class ServerWelcome : IPacket
         writer.WriteBool(IsHost);
         Time.Write(writer);
         writer.WriteBool(HostCreatesWorld);
+        writer.WriteByte((byte)Mode);
     }
 
     public static ServerWelcome Read(ByteReader reader) => new()
@@ -70,6 +73,7 @@ public sealed class ServerWelcome : IPacket
         IsHost = reader.ReadBool(),
         Time = TimeSettings.Read(reader),
         HostCreatesWorld = reader.ReadBool(),
+        Mode = (Coop.GameMode)reader.ReadByte(),
     };
 }
 

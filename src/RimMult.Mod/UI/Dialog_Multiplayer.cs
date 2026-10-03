@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using RimMult.ClientCore;
+using RimMult.Coop;
+using RimMult.Shared.Coop;
 using RimMult.Shared.Mods;
 using RimMult.Shared.Packets;
 using RimMult.Steam;
@@ -163,6 +165,8 @@ internal sealed class Dialog_Multiplayer : Window
             "RimMult.MaxPlayers".Translate(Settings.HostMaxPlayers), Settings.HostMaxPlayers, 2f, 10f));
         _hostPassword = list.TextEntryLabeled("RimMult.HostPassword".Translate(), _hostPassword);
 
+        DrawModeChoice(list);
+
         list.CheckboxLabeled("RimMult.OpenPort".Translate(), ref Settings.HostOpenPort, "RimMult.OpenPortTip".Translate());
         if (Settings.HostOpenPort)
             list.TextFieldNumericLabeled("RimMult.Port".Translate(), ref Settings.HostPort, ref _hostPortBuffer, 1, 65535);
@@ -175,6 +179,7 @@ internal sealed class Dialog_Multiplayer : Window
             Password = _hostPassword,
             OpenPort = Settings.HostOpenPort,
             Port = Settings.HostPort,
+            Mode = Settings.HostMode,
         };
         if (list.ButtonText("RimMult.HostButton".Translate()))
             _error = Multiplayer.Host(options, out var error) ? null : error;
@@ -192,6 +197,31 @@ internal sealed class Dialog_Multiplayer : Window
         list.Label("RimMult.HostHint".Translate());
         GUI.color = Color.white;
         list.End();
+    }
+
+    /// <summary>How the friends play: each their own colony, or all together in the host's.</summary>
+    private static void DrawModeChoice(Listing_Standard list)
+    {
+        list.Gap(4f);
+        list.Label("RimMult.GameMode".Translate());
+        DrawMode(list, GameMode.SeparateColonies, "RimMult.ModeSeparate", "RimMult.ModeSeparateDesc");
+        DrawMode(list, GameMode.Coop, "RimMult.ModeCoop", "RimMult.ModeCoopDesc");
+        list.Gap(4f);
+    }
+
+    private static void DrawMode(Listing_Standard list, GameMode mode, string labelKey, string descriptionKey)
+    {
+        if (list.RadioButton(labelKey.Translate(), Settings.HostMode == mode))
+            Settings.HostMode = mode;
+        var font = Text.Font;
+        Text.Font = GameFont.Tiny;
+        GUI.color = Color.gray;
+        var description = descriptionKey.Translate();
+        var rect = list.GetRect(Text.CalcHeight(description, list.ColumnWidth - 24f));
+        Widgets.Label(new Rect(rect.x + 24f, rect.y, rect.width - 24f, rect.height), description);
+        GUI.color = Color.white;
+        Text.Font = font;
+        list.Gap(2f);
     }
 
     private void DrawLobby(Rect rect, ClientSession session)
@@ -244,6 +274,12 @@ internal sealed class Dialog_Multiplayer : Window
         var playing = Current.ProgramState == ProgramState.Playing;
 
         var firstButton = new Rect(buttons.x, buttons.y, buttons.width, RowHeight);
+        if (CoopGuest.IsGuest(session))
+        {
+            DrawCoopGuest(textRect, firstButton, session);
+            return;
+        }
+
         var waitingForHost = world == null && session.HostCreatesWorld && !session.IsHost;
 
         string status;
@@ -300,6 +336,35 @@ internal sealed class Dialog_Multiplayer : Window
             }
         }
 
+        if (session.Mode == GameMode.Coop)
+            status = "RimMult.ModeCoopHostInfo".Translate() + "\n" + status;
+        Widgets.Label(textRect, status);
+    }
+
+    /// <summary>Co-op guest: no world of their own, just the way into the host's colony.</summary>
+    private void DrawCoopGuest(Rect textRect, Rect button, ClientSession session)
+    {
+        var host = session.Players.FirstOrDefault(p => p.IsHost);
+        string status = "RimMult.ModeCoopGuestInfo".Translate(host?.Name ?? "?");
+        switch (CoopGuest.State)
+        {
+            case CoopGuest.Phase.None:
+                status += "\n" + "RimMult.CoopJoinHint".Translate();
+                if (Widgets.ButtonText(button, "RimMult.CoopJoin".Translate()))
+                    CoopGuest.RequestJoin(session);
+                break;
+            case CoopGuest.Phase.Requested:
+                status += "\n" + "RimMult.CoopRequested".Translate();
+                if (Widgets.ButtonText(button, "RimMult.CoopCancel".Translate()))
+                    CoopGuest.CancelJoin(session);
+                break;
+            case CoopGuest.Phase.Loading:
+                status += "\n" + "RimMult.CoopLoading".Translate();
+                break;
+            case CoopGuest.Phase.Active:
+                status += "\n" + "RimMult.CoopPlaying".Translate();
+                break;
+        }
         Widgets.Label(textRect, status);
     }
 

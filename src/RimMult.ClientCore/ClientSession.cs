@@ -76,6 +76,11 @@ public sealed class ClientSession
 
     /// <summary>Only the host may create the shared world (the server is hosted from inside RimWorld).</summary>
     public bool HostCreatesWorld { get; private set; }
+
+    public Shared.Coop.GameMode Mode { get; private set; }
+
+    /// <summary>Co-op traffic: (sender id, channel, data).</summary>
+    public event Action<int, Shared.Coop.CoopChannel, byte[]>? CoopReceived;
     public TickGrant? LastGrant { get; private set; }
 
     public bool IsHost => _players.Any(p => p.Id == PlayerId && p.IsHost);
@@ -160,6 +165,13 @@ public sealed class ClientSession
             Send(new PlayerRelay { PlayerId = playerId, Channel = channel, Data = data });
     }
 
+    /// <summary>Co-op: as a guest always to the host; as the host to <paramref name="playerId"/> or all guests (-1).</summary>
+    public void SendCoop(Shared.Coop.CoopChannel channel, byte[] data, int playerId = -1)
+    {
+        if (State == ClientState.Connected)
+            Send(new CoopMessage { PlayerId = playerId, Channel = channel, Data = data });
+    }
+
     public void ReportSettlementDestroyed(string tile)
     {
         if (State == ClientState.Connected)
@@ -218,6 +230,7 @@ public sealed class ClientSession
                 ServerName = welcome.ServerName;
                 TimeSettings = welcome.Time;
                 HostCreatesWorld = welcome.HostCreatesWorld;
+                Mode = welcome.Mode;
                 SetState(ClientState.Connected);
                 break;
             case PlayerList list:
@@ -244,6 +257,9 @@ public sealed class ClientSession
                 break;
             case PlayerRelay relay:
                 RelayReceived?.Invoke(relay.PlayerId, relay.Channel, relay.Data);
+                break;
+            case CoopMessage coop:
+                CoopReceived?.Invoke(coop.PlayerId, coop.Channel, coop.Data);
                 break;
             case Kick kick:
                 KickReason = kick.Reason;
