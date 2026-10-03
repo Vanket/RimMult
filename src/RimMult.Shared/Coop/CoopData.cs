@@ -37,6 +37,51 @@ public enum CoopChannel : byte
     /// a lost frame is simply replaced by the next one, and big state never holds it up.
     /// </summary>
     Positions = 7,
+
+    /// <summary>Guest → host: these things (ids) didn't load here, send them again in full.</summary>
+    Resync = 8,
+}
+
+/// <summary>A pawn aiming at something (the warm-up before a shot): guests draw the aim pie and, when selected, the line.</summary>
+public readonly struct AimMark
+{
+    public AimMark(int mapId, int shooterId, int targetX, int targetZ, int degrees)
+    {
+        MapId = mapId;
+        ShooterId = shooterId;
+        TargetX = targetX;
+        TargetZ = targetZ;
+        Degrees = degrees;
+    }
+
+    public int MapId { get; }
+    public int ShooterId { get; }
+
+    /// <summary>Where the target is drawn, in hundredths of a cell.</summary>
+    public int TargetX { get; }
+    public int TargetZ { get; }
+
+    /// <summary>Width of the aim pie (shrinks as the shot comes).</summary>
+    public int Degrees { get; }
+}
+
+/// <summary>A work progress bar (doctoring, building, mining…): guests draw it where the host does.</summary>
+public readonly struct ProgressMark
+{
+    public ProgressMark(int mapId, int x, int z, byte percent)
+    {
+        MapId = mapId;
+        X = x;
+        Z = z;
+        Percent = percent;
+    }
+
+    public int MapId { get; }
+
+    /// <summary>Bar center in hundredths of a cell.</summary>
+    public int X { get; }
+    public int Z { get; }
+    public byte Percent { get; }
 }
 
 /// <summary>
@@ -92,10 +137,40 @@ public sealed class PositionsFrame
 
     public List<(int MapId, List<PawnPosition> Positions)> Maps { get; set; } = new();
 
+    /// <summary>
+    /// Whether this frame carries the aim and progress marks (the first frame of a send does): the guest replaces
+    /// its marks only then, the other frames of the same send leave them alone.
+    /// </summary>
+    public bool HasMarks { get; set; }
+
+    public List<AimMark> Aims { get; set; } = new();
+    public List<ProgressMark> Bars { get; set; } = new();
+
     public byte[] Encode()
     {
         var writer = new ByteWriter(256);
         writer.WriteVarInt(Tick);
+        writer.WriteBool(HasMarks);
+        if (HasMarks)
+        {
+            writer.WriteVarUInt((ulong)Aims.Count);
+            foreach (var a in Aims)
+            {
+                writer.WriteVarInt(a.MapId);
+                writer.WriteVarInt(a.ShooterId);
+                writer.WriteVarInt(a.TargetX);
+                writer.WriteVarInt(a.TargetZ);
+                writer.WriteVarInt(a.Degrees);
+            }
+            writer.WriteVarUInt((ulong)Bars.Count);
+            foreach (var b in Bars)
+            {
+                writer.WriteVarInt(b.MapId);
+                writer.WriteVarInt(b.X);
+                writer.WriteVarInt(b.Z);
+                writer.WriteByte(b.Percent);
+            }
+        }
         writer.WriteVarUInt((ulong)Maps.Count);
         foreach (var (mapId, positions) in Maps)
         {
@@ -110,7 +185,16 @@ public sealed class PositionsFrame
     public static PositionsFrame Decode(byte[] data)
     {
         var reader = new ByteReader(data);
-        var frame = new PositionsFrame { Tick = (int)reader.ReadVarInt() };
+        var frame = new PositionsFrame { Tick = (int)reader.ReadVarInt(), HasMarks = reader.ReadBool() };
+        if (frame.HasMarks)
+        {
+            var aims = MapDelta.Count(reader, 1000);
+            for (var i = 0; i < aims; i++)
+                frame.Aims.Add(new AimMark((int)reader.ReadVarInt(), (int)reader.ReadVarInt(), (int)reader.ReadVarInt(), (int)reader.ReadVarInt(), (int)reader.ReadVarInt()));
+            var bars = MapDelta.Count(reader, 1000);
+            for (var i = 0; i < bars; i++)
+                frame.Bars.Add(new ProgressMark((int)reader.ReadVarInt(), (int)reader.ReadVarInt(), (int)reader.ReadVarInt(), reader.ReadByte()));
+        }
         var maps = MapDelta.Count(reader, 1000);
         for (var i = 0; i < maps; i++)
         {
@@ -129,12 +213,17 @@ public sealed class PositionsFrame
     /// Splits positions into frames of at most about <paramref name="maxBytes"/> each (an unreliable packet must
     /// stay small); every frame stands on its own.
     /// </summary>
-    public static List<byte[]> Split(int tick, IEnumerable<(int MapId, List<PawnPosition> Positions)> maps, int maxBytes)
+    public static List<byte[]> Split(int tick, IEnumerable<(int MapId, List<PawnPosition> Positions)> maps, int maxBytes,
+        List<AimMark>? aims = null, List<ProgressMark>? bars = null)
     {
+        // The marks ride in a frame of their own: a handful of entries, never worth splitting.
+        var frames = new List<byte[]>
+        {
+            new PositionsFrame { Tick = tick, HasMarks = true, Aims = aims ?? new List<AimMark>(), Bars = bars ?? new List<ProgressMark>() }.Encode(),
+        };
         // Worst case per entry: id (5) + cell (2×3) + rotation (1) + draw offsets (2×3); map header ~10 bytes.
         const int entryBytes = 18;
         var perFrame = System.Math.Max(1, (maxBytes - 24) / entryBytes);
-        var frames = new List<byte[]>();
         var current = new PositionsFrame { Tick = tick };
         var inCurrent = 0;
         foreach (var (mapId, positions) in maps)
@@ -605,5 +694,29 @@ public sealed class CoopCommand
         command.Z = reader.ReadFloat();
         reader.EnsureFullyRead();
         return command;
+    }
+}
+
+/// <summary>A plain list of thing ids (resync requests).</summary>
+public static class CoopIds
+{
+    public static byte[] Encode(IReadOnlyCollection<int> ids)
+    {
+        var writer = new ByteWriter();
+        writer.WriteVarUInt((ulong)ids.Count);
+        foreach (var id in ids)
+            writer.WriteVarInt(id);
+        return writer.ToArray();
+    }
+
+    public static List<int> Decode(byte[] data)
+    {
+        var reader = new ByteReader(data);
+        var count = MapDelta.Count(reader, 100_000);
+        var ids = new List<int>(count);
+        for (var i = 0; i < count; i++)
+            ids.Add((int)reader.ReadVarInt());
+        reader.EnsureFullyRead();
+        return ids;
     }
 }

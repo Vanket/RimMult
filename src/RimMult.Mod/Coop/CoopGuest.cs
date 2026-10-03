@@ -314,6 +314,8 @@ internal static class CoopGuest
         }
         if (frame.Tick > _positionsTick)
             _positionsTick = frame.Tick;
+        if (frame.HasMarks)
+            CoopVisuals.OnMarks(frame.Aims, frame.Bars);
         foreach (var (mapId, positions) in frame.Maps)
         {
             if (!PendingPositions.TryGetValue(mapId, out var byPawn))
@@ -525,6 +527,20 @@ internal static class CoopGuest
             ApplyZones(map, delta.Zones);
     }
 
+    private static readonly Dictionary<int, float> ResyncAsked = new();
+
+    /// <summary>Asks the host to send these things again (at most every few seconds per thing).</summary>
+    private static void RequestResync(List<int> ids)
+    {
+        var now = Time.realtimeSinceStartup;
+        var ask = ids.Where(id => !ResyncAsked.TryGetValue(id, out var at) || now - at > 5f).ToList();
+        if (ask.Count == 0)
+            return;
+        foreach (var id in ask)
+            ResyncAsked[id] = now;
+        Multiplayer.Session?.SendCoop(CoopChannel.Resync, CoopIds.Encode(ask));
+    }
+
     /// <summary>Small changes in place: no reload, no respawn, only a redraw of that cell when the look changed.</summary>
     private static void ApplyPatch(Map map, Thing thing, ThingPatch patch)
     {
@@ -585,10 +601,27 @@ internal static class CoopGuest
         {
             loaded = ScribeMemory.LoadThings(nodes, replacedIds);
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            Log.WarningOnce($"[RimMult] Co-op: could not load things from the host: {e.Message}", 0x434F4C44);
-            return;
+            // One bad fragment must not take the others down with it: load them one by one, and ask the host again
+            // for the ones that still fail.
+            loaded = new List<Thing>();
+            var failed = new List<int>();
+            foreach (var node in nodes)
+            {
+                try
+                {
+                    loaded.AddRange(ScribeMemory.LoadThings(new[] { node }, replacedIds));
+                }
+                catch (Exception e)
+                {
+                    var id = ScribeMemory.FragmentThingId(node) ?? -1;
+                    Log.WarningOnce($"[RimMult] Co-op: could not load thing {node["def"]?.InnerText} #{id} from the host: {e}", id ^ 0x434F4C44);
+                    if (id >= 0)
+                        failed.Add(id);
+                }
+            }
+            RequestResync(failed);
         }
 
         var anyPawn = false;

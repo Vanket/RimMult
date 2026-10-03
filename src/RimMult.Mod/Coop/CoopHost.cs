@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using HarmonyLib;
 using RimMult.ClientCore;
 using RimMult.Shared.Coop;
 using RimWorld;
@@ -207,13 +208,46 @@ internal static class CoopHost
                 })
                 .ToList()))
             .ToList();
-        var key = new PositionsFrame { Maps = maps }.Encode();
+        var aims = new List<AimMark>();
+        var bars = new List<ProgressMark>();
+        foreach (var map in Find.Maps)
+            CollectMarks(map, aims, bars);
+
+        var key = new PositionsFrame { Maps = maps, HasMarks = true, Aims = aims, Bars = bars }.Encode();
         if (key.SequenceEqual(_lastPositionsData) && now - _lastPositionsSent < PositionsKeepAlive)
             return;
         _lastPositionsData = key;
         _lastPositionsSent = now;
-        foreach (var frame in PositionsFrame.Split(Find.TickManager.TicksGame, maps, PositionsFrameBytes))
+        foreach (var frame in PositionsFrame.Split(Find.TickManager.TicksGame, maps, PositionsFrameBytes, aims, bars))
             session.SendCoop(CoopChannel.Positions, frame);
+    }
+
+    private static readonly AccessTools.FieldRef<Stance_Warmup, float>? PieSize =
+        AccessTools.Field(typeof(Stance_Warmup), "pieSizeFactor") != null ? AccessTools.FieldRefAccess<Stance_Warmup, float>("pieSizeFactor") : null;
+
+    /// <summary>Who is aiming at what, and the work progress bars on the map: what the host sees over the pawns.</summary>
+    private static void CollectMarks(Map map, List<AimMark> aims, List<ProgressMark> bars)
+    {
+        foreach (var pawn in map.mapPawns.AllPawnsSpawned)
+        {
+            if (aims.Count >= 200 || pawn.stances?.curStance is not Stance_Warmup warmup || !warmup.focusTarg.IsValid)
+                continue;
+            var target = warmup.focusTarg.HasThing ? warmup.focusTarg.Thing.DrawPos : warmup.focusTarg.CenterVector3;
+            var degrees = (int)(warmup.ticksLeft * (PieSize?.Invoke(warmup) ?? 1f));
+            aims.Add(new AimMark(map.uniqueID, pawn.thingIDNumber, Mathf.RoundToInt(target.x * 100f), Mathf.RoundToInt(target.z * 100f), degrees));
+        }
+
+        foreach (var thing in map.spawnedThings)
+        {
+            if (bars.Count >= 200)
+                break;
+            if (thing is MoteProgressBar bar)
+            {
+                var at = bar.DrawPos;
+                bars.Add(new ProgressMark(map.uniqueID, Mathf.RoundToInt(at.x * 100f), Mathf.RoundToInt((at.z + bar.offsetZ) * 100f),
+                    (byte)Mathf.Clamp(Mathf.RoundToInt(bar.progress * 100f), 0, 100)));
+            }
+        }
     }
 
     private static MapDelta BuildDelta(Map map, bool checkZones, bool fullZones, bool grids, bool rollPawn, ref int budget)
@@ -491,7 +525,28 @@ internal static class CoopHost
             case CoopChannel.Command:
                 CoopCommands.Execute(guestId, data);
                 break;
+            case CoopChannel.Resync:
+                Resync(data);
+                break;
         }
+    }
+
+    /// <summary>A guest couldn't load some things: they go out in full again.</summary>
+    private static void Resync(byte[] data)
+    {
+        HashSet<int> ids;
+        try
+        {
+            ids = new HashSet<int>(CoopIds.Decode(data));
+        }
+        catch (Exception)
+        {
+            return;
+        }
+        foreach (var map in Find.Maps)
+            foreach (var thing in map.listerThings.AllThings)
+                if (ids.Contains(thing.thingIDNumber))
+                    Touch(thing);
     }
 
     /// <summary>The whole game, saved the normal way and gzipped.</summary>

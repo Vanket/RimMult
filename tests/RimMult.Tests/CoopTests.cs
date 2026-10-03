@@ -130,6 +130,23 @@ public class CoopTests
     }
 
     [Fact]
+    public void AimsAndProgressBarsTravelInTheirOwnFrame()
+    {
+        var frames = PositionsFrame.Split(7, [(1, [new PawnPosition(3, 4, 5, 1)])], 900,
+            [new AimMark(1, 3, 1050, 2025, 90)], [new ProgressMark(1, 450, 560, 42)]);
+
+        var decoded = frames.Select(PositionsFrame.Decode).ToList();
+        var marks = Assert.Single(decoded, f => f.HasMarks);
+        var aim = Assert.Single(marks.Aims);
+        Assert.Equal((1, 3, 1050, 2025, 90), (aim.MapId, aim.ShooterId, aim.TargetX, aim.TargetZ, aim.Degrees));
+        var bar = Assert.Single(marks.Bars);
+        Assert.Equal((450, 560, (byte)42), (bar.X, bar.Z, bar.Percent));
+        Assert.Single(decoded.Where(f => !f.HasMarks).SelectMany(f => f.Maps));
+
+        Assert.Equal([5, 9, -3], CoopIds.Decode(CoopIds.Encode([5, 9, -3])));
+    }
+
+    [Fact]
     public void HostPositionsReachGuests()
     {
         var host = new Host(GameMode.Coop);
