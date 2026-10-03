@@ -394,6 +394,8 @@ internal static class CoopGuest
                 continue;
             }
             tick = Math.Max(tick, batch.Tick);
+            // Relations, research and letters don't depend on the maps: applied in order as they come.
+            CoopWorldSync.Apply(batch.World);
             foreach (var delta in batch.Maps)
             {
                 if (!merged.TryGetValue(delta.MapId, out var m))

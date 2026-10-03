@@ -88,11 +88,13 @@ internal static class CoopHost
         XmlCursor.Clear();
         PawnCursor.Clear();
         ForgetSentState();
+        CoopWorldSync.Reset();
     }
 
     /// <summary>Designations, zones and grids go out in full again (a guest just loaded the game).</summary>
     private static void ForgetSentState()
     {
+        CoopWorldSync.Forget();
         DesignationHash.Clear();
         ZoneCheapHash.Clear();
         ZoneHash.Clear();
@@ -172,7 +174,7 @@ internal static class CoopHost
         if (rollPawn)
             _lastPawnRoll = now;
 
-        var batch = new CoopBatch { Tick = Find.TickManager.TicksGame };
+        var batch = new CoopBatch { Tick = Find.TickManager.TicksGame, World = CoopWorldSync.Build() };
         var budget = MaxFragmentsPerBatch;
         foreach (var map in Find.Maps)
         {
@@ -183,7 +185,7 @@ internal static class CoopHost
         Spawned.Clear();
         Despawned.Clear();
         Shots.Clear();
-        if (batch.Maps.Count > 0)
+        if (batch.Maps.Count > 0 || !batch.World.IsEmpty)
             session.SendCoop(CoopChannel.State, Compress(batch.Encode()));
     }
 
