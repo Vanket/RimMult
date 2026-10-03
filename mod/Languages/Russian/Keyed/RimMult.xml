@@ -12,7 +12,6 @@
   <RimMult.NoFriendsHosting>Сейчас никто из друзей не создал игру.</RimMult.NoFriendsHosting>
   <RimMult.JoinButton>Войти</RimMult.JoinButton>
   <RimMult.Address>Адрес сервера</RimMult.Address>
-  <RimMult.Password>Пароль</RimMult.Password>
   <RimMult.JoinByAddress>Подключиться по адресу</RimMult.JoinByAddress>
   <RimMult.JoinHint>К другу можно зайти и из списка друзей Steam: правый клик → «Присоединиться к игре».</RimMult.JoinHint>
 
@@ -35,7 +34,7 @@
 
   <RimMult.ConnectionEnded>Соединение закрыто: {0}</RimMult.ConnectionEnded>
   <RimMult.Dismiss>OK</RimMult.Dismiss>
-  <RimMult.WrongPasswordHint>Введите пароль в поле «Пароль» и подключитесь снова.</RimMult.WrongPasswordHint>
+  <RimMult.WrongPasswordHint>Введите пароль сервера слева и нажмите «Повторить».</RimMult.WrongPasswordHint>
   <RimMult.ModMissing>Нет мода: {0} ({1}) — включите или подпишитесь</RimMult.ModMissing>
   <RimMult.ModDifferent>Другая версия: {0} ({1}) — обновите</RimMult.ModDifferent>
   <RimMult.ModExtra>Нет на сервере: {0} ({1}) — выключите</RimMult.ModExtra>
@@ -73,4 +72,12 @@
   <RimMult.StatusMyVote>(ваш голос: {0})</RimMult.StatusMyVote>
   <RimMult.StatusWaitingFor>· ждём {0}</RimMult.StatusWaitingFor>
   <RimMult.StatusWaiting>· синхронизация</RimMult.StatusWaiting>
+  <RimMult.ServerPassword>Пароль сервера (если есть)</RimMult.ServerPassword>
+  <RimMult.HostPassword>Пароль для вашей игры (необязательно)</RimMult.HostPassword>
+  <RimMult.Retry>Повторить</RimMult.Retry>
+  <RimMult.WorldCreating>Отправляем вашу планету на сервер…</RimMult.WorldCreating>
+  <RimMult.WaitingForHostWorld>Ждём, пока хост создаст мир (начнёт или загрузит свою колонию).</RimMult.WaitingForHostWorld>
+  <RimMult.SameWorldSave>Этот сейв на той же планете, что и общий мир. Подключите его, чтобы играть им в мультиплеере.</RimMult.SameWorldSave>
+  <RimMult.AttachSave>Подключить этот сейв</RimMult.AttachSave>
+  <RimMult.StatusLobby>RimMult: игроков {0} · в лобби</RimMult.StatusLobby>
 </LanguageData>

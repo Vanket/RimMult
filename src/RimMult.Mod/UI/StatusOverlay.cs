@@ -53,10 +53,12 @@ internal static class StatusOverlay
                 return "RimMult.StatusDisconnected".Translate();
         }
 
+        // The shared speed only applies to someone playing in the world.
+        if (!WorldSync.InWorld)
+            return "RimMult.StatusLobby".Translate(session.Players.Count);
+
         var speed = session.LastGrant?.Speed ?? GameSpeed.Paused;
         string text = "RimMult.StatusConnected".Translate(session.Players.Count, SpeedLabel(speed));
-        if (!WorldSync.InWorld)
-            return text;
 
         if (TimeSync.MyVote is { } vote && vote != speed)
             text += " " + "RimMult.StatusMyVote".Translate(SpeedLabel(vote));

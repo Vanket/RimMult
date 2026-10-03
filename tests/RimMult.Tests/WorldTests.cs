@@ -17,9 +17,9 @@ public class WorldTests
         public int WorldChanges;
         private double _time;
 
-        public Host(WorldState? world = null)
+        public Host(WorldState? world = null, ServerSettings? settings = null)
         {
-            Server = new GameServer(new ServerSettings(), Hub, world: world);
+            Server = new GameServer(settings ?? new ServerSettings(), Hub, world: world);
             Server.WorldChanged += () => WorldChanges++;
             Hub.Attach(Server);
             Loopback = new LoopbackEndpoint(Hub);
@@ -260,5 +260,43 @@ public class WorldTests
 
         Assert.Equal("1.6", host.Server.World.GameVersion);
         Assert.Equal(ModListHash.Compute([new ModEntry("ludeon.rimworld", "Core", "1.6", 0)]), host.Server.World.ModListHash);
+    }
+
+    [Fact]
+    public void WithHostCreatesWorldOnlyTheHostPicksThePlanet()
+    {
+        var host = new Host(settings: new ServerSettings { HostCreatesWorld = true });
+        var me = host.Join("Host", 1);
+        host.Pump(me);
+        var friend = host.Join("Friend", 2);
+        host.Pump(me, friend);
+        Assert.True(friend.HostCreatesWorld);
+
+        var answered = false;
+        friend.WorldChanged += () => answered = true;
+        friend.CreateWorld(Planet("friends-planet"), 5);
+        host.Pump(me, friend);
+        Assert.Null(host.Server.World.Definition);
+        Assert.True(answered); // the refusal is answered, so the client stops waiting
+
+        me.CreateWorld(Planet("hosts-planet"), 7);
+        host.Pump(me, friend);
+        Assert.Equal("hosts-planet", friend.World?.WorldId);
+    }
+
+    [Fact]
+    public void RepeatedCreateWithTheSameIdKeepsTheWorld()
+    {
+        var host = new Host();
+        var a = host.Join("A", 1);
+        host.Pump(a);
+
+        a.CreateWorld(Planet("same"), 100);
+        a.CreateWorld(Planet("same"), 200);
+        host.Pump(a);
+
+        Assert.Equal("same", a.World?.WorldId);
+        Assert.Equal(100, host.Server.World.Tick);
+        Assert.Equal(1, host.WorldChanges);
     }
 }

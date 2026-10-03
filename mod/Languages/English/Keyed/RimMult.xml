@@ -12,7 +12,6 @@
   <RimMult.NoFriendsHosting>None of your friends is hosting right now.</RimMult.NoFriendsHosting>
   <RimMult.JoinButton>Join</RimMult.JoinButton>
   <RimMult.Address>Server address</RimMult.Address>
-  <RimMult.Password>Password</RimMult.Password>
   <RimMult.JoinByAddress>Join by address</RimMult.JoinByAddress>
   <RimMult.JoinHint>You can also join a friend from the Steam friends list: right-click them → "Join game".</RimMult.JoinHint>
 
@@ -35,7 +34,7 @@
 
   <RimMult.ConnectionEnded>Connection ended: {0}</RimMult.ConnectionEnded>
   <RimMult.Dismiss>OK</RimMult.Dismiss>
-  <RimMult.WrongPasswordHint>Enter the password in the "Password" field and join again.</RimMult.WrongPasswordHint>
+  <RimMult.WrongPasswordHint>Enter the server password on the left and press "Try again".</RimMult.WrongPasswordHint>
   <RimMult.ModMissing>Missing: {0} ({1}) — enable or subscribe</RimMult.ModMissing>
   <RimMult.ModDifferent>Different version: {0} ({1}) — update it</RimMult.ModDifferent>
   <RimMult.ModExtra>Not on the server: {0} ({1}) — disable it</RimMult.ModExtra>
@@ -73,4 +72,12 @@
   <RimMult.StatusMyVote>(your vote: {0})</RimMult.StatusMyVote>
   <RimMult.StatusWaitingFor>· waiting for {0}</RimMult.StatusWaitingFor>
   <RimMult.StatusWaiting>· syncing</RimMult.StatusWaiting>
+  <RimMult.ServerPassword>Server password (if it has one)</RimMult.ServerPassword>
+  <RimMult.HostPassword>Password for your game (optional)</RimMult.HostPassword>
+  <RimMult.Retry>Try again</RimMult.Retry>
+  <RimMult.WorldCreating>Sending your planet to the server…</RimMult.WorldCreating>
+  <RimMult.WaitingForHostWorld>Waiting for the host to create the world (start or load their colony).</RimMult.WaitingForHostWorld>
+  <RimMult.SameWorldSave>This save is on the same planet as the shared world. Attach it to play it in multiplayer.</RimMult.SameWorldSave>
+  <RimMult.AttachSave>Attach this save</RimMult.AttachSave>
+  <RimMult.StatusLobby>RimMult: {0} players · in lobby</RimMult.StatusLobby>
 </LanguageData>

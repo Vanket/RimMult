@@ -53,7 +53,7 @@ public sealed class LiteNetServerEndpoint : IServerEndpoint
         {
             AutoRecycle = false,
             UpdateTime = 5,
-            DisconnectTimeout = 15_000,
+            DisconnectTimeout = ProtocolInfo.ConnectionTimeoutSeconds * 1000,
         };
     }
 

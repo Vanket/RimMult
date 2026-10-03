@@ -8,8 +8,8 @@ namespace RimMult.Steam;
 /// <summary>Connects to a host over Steam P2P, addressed by the host's SteamID.</summary>
 internal sealed class SteamClientTransport : IClientTransport
 {
-    /// <summary>How long to wait for the host to accept before giving up.</summary>
-    private const float ConnectTimeout = 20f;
+    /// <summary>How long to wait for the host to accept before giving up (the host may be mid-load).</summary>
+    private const float ConnectTimeout = 60f;
 
     private readonly CSteamID _host;
     private Callback<P2PSessionRequest_t>? _sessionRequest;
