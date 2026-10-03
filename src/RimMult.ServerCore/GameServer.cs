@@ -128,6 +128,12 @@ public sealed class GameServer
             case MyColonies colonies:
                 HandleMyColonies(player, colonies);
                 break;
+            case ParcelSend parcel:
+                HandleParcelSend(player, parcel);
+                break;
+            case ParcelAck ack:
+                HandleParcelAck(player, ack);
+                break;
             default:
                 Kick(session, KickReason.BadData, $"Unexpected packet {packet.Type}");
                 break;
@@ -271,6 +277,59 @@ public sealed class GameServer
         Time.ReportAuthority(player.Id, tick, float.MaxValue);
         Send(session, new WorldClock { Tick = tick });
         BroadcastPlayerList();
+
+        // Parcels that arrived while they were away.
+        var key = OwnerKey(player);
+        foreach (var item in World.Mail.Where(m => m.ToOwner == key))
+            Send(session, new ParcelDeliver { Item = item });
+    }
+
+    private void HandleParcelSend(PlayerInfo player, ParcelSend parcel)
+    {
+        if (World.Definition == null || !player.InWorld)
+            return;
+        if (parcel.Payload.Length > MailItem.MaxPayloadBytes)
+        {
+            _log($"{player.Name} sent a parcel of {parcel.Payload.Length} bytes; over the limit, dropped");
+            return;
+        }
+
+        var from = OwnerKey(player);
+        var item = new MailItem
+        {
+            Id = World.NextMailId++,
+            FromOwner = from,
+            FromName = player.Name,
+            ToOwner = parcel.ToOwner,
+            ToTile = Truncate(parcel.ToTile, 64),
+            Summary = Truncate(parcel.Summary, 1000),
+            Payload = parcel.Payload,
+        };
+
+        // Nobody has a colony there anymore (abandoned, or a stale target): send it back rather than lose it.
+        if (!World.Colonies.Any(c => c.OwnerSteamId == parcel.ToOwner))
+        {
+            item.ToOwner = from;
+            item.ToTile = "";
+            item.Returned = true;
+        }
+
+        World.Mail.Add(item);
+        WorldChanged?.Invoke();
+        _log($"Parcel {item.Id} from {player.Name}{(item.Returned ? " returned to sender" : "")}: {item.Summary}");
+
+        foreach (var session in _sessions.Values)
+        {
+            if (session.Player is { InWorld: true } target && OwnerKey(target) == item.ToOwner)
+                Send(session, new ParcelDeliver { Item = item });
+        }
+    }
+
+    private void HandleParcelAck(PlayerInfo player, ParcelAck ack)
+    {
+        var key = OwnerKey(player);
+        if (World.Mail.RemoveAll(m => m.Id == ack.Id && m.ToOwner == key) > 0)
+            WorldChanged?.Invoke();
     }
 
     private void HandleMyColonies(PlayerInfo player, MyColonies packet)

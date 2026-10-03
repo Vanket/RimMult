@@ -97,4 +97,18 @@
   <RimMult.KickKicked>вас выгнали.</RimMult.KickKicked>
   <RimMult.KickServerShutdown>хост закрыл игру.</RimMult.KickServerShutdown>
   <RimMult.KickBadData>ошибка соединения ({0}).</RimMult.KickBadData>
+  <RimMult.PodsSendTo>Отправить в колонию {0} (только предметы)</RimMult.PodsSendTo>
+  <RimMult.CaravanGive>Передать груз игроку {0}</RimMult.CaravanGive>
+  <RimMult.CaravanGiveReport>Везёт груз игроку {0}.</RimMult.CaravanGiveReport>
+  <RimMult.CaravanNothingToGive>у каравана нет груза для передачи</RimMult.CaravanNothingToGive>
+  <RimMult.ParcelItemsOnlyReason>только предметы</RimMult.ParcelItemsOnlyReason>
+  <RimMult.ParcelItemsOnly>Другому игроку пока можно отправлять только предметы — не людей, животных или трупы.</RimMult.ParcelItemsOnly>
+  <RimMult.ParcelSent>Посылка для {0} в пути: {1}.</RimMult.ParcelSent>
+  <RimMult.ParcelTooLarge>Посылка слишком большая. Разделите её на несколько.</RimMult.ParcelTooLarge>
+  <RimMult.ParcelLabel>Посылка от {0}</RimMult.ParcelLabel>
+  <RimMult.ParcelText>{0} прислал вам посылку. Она спускается в капсуле:\n\n{1}</RimMult.ParcelText>
+  <RimMult.ParcelReturnedLabel>Посылка вернулась</RimMult.ParcelReturnedLabel>
+  <RimMult.ParcelReturnedText>Колонии, куда вы отправили посылку, больше нет, поэтому она вернулась:\n\n{0}</RimMult.ParcelReturnedText>
+  <RimMult.ParcelBrokenLabel>Повреждённая посылка</RimMult.ParcelBrokenLabel>
+  <RimMult.ParcelBrokenText>Посылку от {0} не удалось распаковать (вероятно, разные моды). Подробности в логе.</RimMult.ParcelBrokenText>
 </LanguageData>

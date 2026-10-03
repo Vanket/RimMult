@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using RimMult.Shared.Serialization;
 
 namespace RimMult.Shared.Net;
 
@@ -23,6 +25,12 @@ public enum P2PFrameKind : byte
 
     /// <summary>Unreliable payload with a sequence number; older ones are dropped on arrival.</summary>
     Sequenced = 6,
+
+    /// <summary>
+    /// A piece of a reliable message too large for one Steam packet (Steam caps reliable P2P packets at 1 MB).
+    /// One flag byte (1 = last piece) then data; pieces arrive in order on the reliable channel.
+    /// </summary>
+    ReliablePart = 7,
 }
 
 /// <summary>
@@ -52,6 +60,28 @@ public static class P2PFrame
         frame[0] = (byte)P2PFrameKind.Reliable;
         Buffer.BlockCopy(payload, 0, frame, 1, payload.Length);
         return frame;
+    }
+
+    /// <summary>Largest reliable chunk per Steam packet, well under Steam's 1 MB limit.</summary>
+    public const int MaxReliableChunk = 512 * 1024;
+
+    /// <summary>One <see cref="P2PFrameKind.Reliable"/> frame, or a series of parts for large payloads.</summary>
+    public static List<byte[]> ReliableFrames(byte[] payload, int maxChunk = MaxReliableChunk)
+    {
+        if (payload.Length <= maxChunk)
+            return new List<byte[]> { Reliable(payload) };
+
+        var frames = new List<byte[]>();
+        for (var offset = 0; offset < payload.Length; offset += maxChunk)
+        {
+            var count = Math.Min(maxChunk, payload.Length - offset);
+            var frame = new byte[count + 2];
+            frame[0] = (byte)P2PFrameKind.ReliablePart;
+            frame[1] = offset + count >= payload.Length ? (byte)1 : (byte)0;
+            Buffer.BlockCopy(payload, offset, frame, 2, count);
+            frames.Add(frame);
+        }
+        return frames;
     }
 
     public static byte[] Sequenced(byte[] payload, ushort sequence)
@@ -88,6 +118,12 @@ public static class P2PFrame
             case P2PFrameKind.Reliable:
                 payload = Slice(frame, 1, length - 1);
                 return true;
+            case P2PFrameKind.ReliablePart:
+                if (length < 2 || frame[1] > 1)
+                    return false;
+                sequence = frame[1]; // 1 = last part
+                payload = Slice(frame, 2, length - 2);
+                return true;
             case P2PFrameKind.Sequenced:
                 if (length < SequencedHeaderSize)
                     return false;
@@ -107,5 +143,45 @@ public static class P2PFrame
         var result = new byte[count];
         Buffer.BlockCopy(source, offset, result, 0, count);
         return result;
+    }
+}
+
+/// <summary>Collects <see cref="P2PFrameKind.ReliablePart"/> frames back into one message.</summary>
+public sealed class P2PReassembler
+{
+    public const int MaxMessageBytes = ByteReader.MaxBlobLength;
+
+    private readonly List<byte[]> _parts = new();
+    private int _size;
+
+    /// <summary>Adds a part; returns the whole message after the last one, otherwise null.</summary>
+    public byte[]? Add(byte[] part, bool last)
+    {
+        _size += part.Length;
+        if (_size > MaxMessageBytes)
+        {
+            Reset();
+            throw new ProtocolException("Fragmented message too large");
+        }
+
+        _parts.Add(part);
+        if (!last)
+            return null;
+
+        var message = new byte[_size];
+        var offset = 0;
+        foreach (var piece in _parts)
+        {
+            Buffer.BlockCopy(piece, 0, message, offset, piece.Length);
+            offset += piece.Length;
+        }
+        Reset();
+        return message;
+    }
+
+    private void Reset()
+    {
+        _parts.Clear();
+        _size = 0;
     }
 }

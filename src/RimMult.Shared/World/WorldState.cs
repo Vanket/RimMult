@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using RimMult.Shared.Serialization;
 
@@ -107,10 +108,61 @@ public sealed class ColonyInfo
     }
 }
 
+/// <summary>
+/// A parcel of items on its way from one player's colony to another's. The server keeps it until the recipient
+/// confirms delivery, so it survives the recipient being offline, disconnects and server restarts.
+/// </summary>
+public sealed class MailItem
+{
+    public const int MaxPayloadBytes = 16 * 1024 * 1024;
+
+    public long Id { get; set; }
+    public ulong FromOwner { get; set; }
+    public string FromName { get; set; } = "";
+    public ulong ToOwner { get; set; }
+
+    /// <summary>Colony tile it was sent to (PlanetTile string); the recipient drops it there if it can.</summary>
+    public string ToTile { get; set; } = "";
+
+    /// <summary>Human-readable contents, e.g. "Steel x200, Medicine x10".</summary>
+    public string Summary { get; set; } = "";
+
+    /// <summary>The recipient no longer had a colony there; the parcel came back to its sender.</summary>
+    public bool Returned { get; set; }
+
+    /// <summary>The items, serialized by the game (opaque to the server).</summary>
+    public byte[] Payload { get; set; } = Array.Empty<byte>();
+
+    public void Write(ByteWriter writer)
+    {
+        writer.WriteVarInt(Id);
+        writer.WriteUInt64(FromOwner);
+        writer.WriteString(FromName);
+        writer.WriteUInt64(ToOwner);
+        writer.WriteString(ToTile);
+        writer.WriteString(Summary);
+        writer.WriteBool(Returned);
+        writer.WriteBytes(Payload);
+    }
+
+    public static MailItem Read(ByteReader reader) => new()
+    {
+        Id = reader.ReadVarInt(),
+        FromOwner = reader.ReadUInt64(),
+        FromName = reader.ReadRequiredString(),
+        ToOwner = reader.ReadUInt64(),
+        ToTile = reader.ReadRequiredString(),
+        Summary = reader.ReadRequiredString(),
+        Returned = reader.ReadBool(),
+        Payload = reader.ReadBytes(),
+    };
+}
+
 /// <summary>The server's view of the shared world. Persisted by the dedicated server and by an in-game host's save.</summary>
 public sealed class WorldState
 {
-    private const byte FormatVersion = 1;
+    /// <summary>1: world, clock, colonies, mods. 2: + parcels in transit.</summary>
+    private const byte FormatVersion = 2;
 
     /// <summary>Null until the first player creates the world (picks the planet when starting their colony).</summary>
     public WorldDefinition? Definition { get; set; }
@@ -127,6 +179,11 @@ public sealed class WorldState
     public string? ModListHash { get; set; }
     public string? GameVersion { get; set; }
 
+    /// <summary>Parcels not yet confirmed by their recipient.</summary>
+    public List<MailItem> Mail { get; set; } = new();
+
+    public long NextMailId { get; set; } = 1;
+
     public void Write(ByteWriter writer)
     {
         writer.WriteBool(Definition != null);
@@ -135,16 +192,33 @@ public sealed class WorldState
         ColonyInfo.WriteList(writer, Colonies);
         writer.WriteString(ModListHash);
         writer.WriteString(GameVersion);
+        writer.WriteVarInt(NextMailId);
+        writer.WriteVarUInt((ulong)Mail.Count);
+        foreach (var item in Mail)
+            item.Write(writer);
     }
 
-    public static WorldState Read(ByteReader reader) => new()
+    private static WorldState Read(ByteReader reader, byte version)
     {
-        Definition = reader.ReadBool() ? WorldDefinition.Read(reader) : null,
-        Tick = reader.ReadVarInt(),
-        Colonies = ColonyInfo.ReadList(reader),
-        ModListHash = reader.ReadString(),
-        GameVersion = reader.ReadString(),
-    };
+        var state = new WorldState
+        {
+            Definition = reader.ReadBool() ? WorldDefinition.Read(reader) : null,
+            Tick = reader.ReadVarInt(),
+            Colonies = ColonyInfo.ReadList(reader),
+            ModListHash = reader.ReadString(),
+            GameVersion = reader.ReadString(),
+        };
+        if (version >= 2)
+        {
+            state.NextMailId = reader.ReadVarInt();
+            var count = reader.ReadVarUInt();
+            if (count > 100_000)
+                throw new ProtocolException($"Too many parcels: {count}");
+            for (var i = 0UL; i < count; i++)
+                state.Mail.Add(MailItem.Read(reader));
+        }
+        return state;
+    }
 
     /// <summary>Standalone file/save format, with a version byte in front.</summary>
     public byte[] Serialize()
@@ -159,9 +233,9 @@ public sealed class WorldState
     {
         var reader = new ByteReader(data);
         var version = reader.ReadByte();
-        if (version != FormatVersion)
+        if (version < 1 || version > FormatVersion)
             throw new ProtocolException($"Unsupported world file version {version}");
-        var state = Read(reader);
+        var state = Read(reader, version);
         reader.EnsureFullyRead();
         return state;
     }

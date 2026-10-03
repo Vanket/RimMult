@@ -88,6 +88,7 @@ internal static class WorldSync
         {
             TimeSync.Update(session);
             ReportColonies(session);
+            Parcels.Update(session);
         }
 
         // Show other players' colonies while playing this world, and on the planet picked for a new colony.

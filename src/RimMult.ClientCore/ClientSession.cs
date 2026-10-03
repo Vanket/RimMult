@@ -62,6 +62,9 @@ public sealed class ClientSession
     /// <summary>The server's answer to <see cref="EnterWorld"/>: the world tick to align the local calendar to.</summary>
     public event Action<long>? ClockReceived;
 
+    /// <summary>A parcel for this player; acknowledge with <see cref="AckParcel"/> once it is safely in the game.</summary>
+    public event Action<MailItem>? ParcelReceived;
+
     public ClientState State { get; private set; } = ClientState.Connecting;
 
     public int PlayerId { get; private set; } = -1;
@@ -139,6 +142,18 @@ public sealed class ClientSession
             Send(new AuthorityReport { Tick = tick, SustainableTicksPerSecond = sustainableTicksPerSecond });
     }
 
+    public void SendParcel(ulong toOwner, string toTile, string summary, byte[] payload)
+    {
+        if (State == ClientState.Connected)
+            Send(new ParcelSend { ToOwner = toOwner, ToTile = toTile, Summary = summary, Payload = payload });
+    }
+
+    public void AckParcel(long id)
+    {
+        if (State == ClientState.Connected)
+            Send(new ParcelAck { Id = id });
+    }
+
     public void SendColonies(List<ColonyInfo> colonies)
     {
         if (State == ClientState.Connected)
@@ -201,6 +216,9 @@ public sealed class ClientSession
                 break;
             case WorldClock clock:
                 ClockReceived?.Invoke(clock.Tick);
+                break;
+            case ParcelDeliver parcel:
+                ParcelReceived?.Invoke(parcel.Item);
                 break;
             case Kick kick:
                 KickReason = kick.Reason;

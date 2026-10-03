@@ -31,6 +31,7 @@ internal sealed class SteamClientTransport : IClientTransport
     private ushort _inSequence;
     private bool _hasInSequence;
     private string? _pendingFailure;
+    private readonly P2PReassembler _parts = new();
 
     public SteamClientTransport(ulong hostSteamId)
     {
@@ -68,7 +69,10 @@ internal sealed class SteamClientTransport : IClientTransport
             return;
 
         if (mode == DeliveryMode.ReliableOrdered)
-            SendFrame(P2PFrame.Reliable(data), reliable: true);
+        {
+            foreach (var frame in P2PFrame.ReliableFrames(data))
+                SendFrame(frame, reliable: true);
+        }
         else
             SendFrame(P2PFrame.Sequenced(data, _outSequence++), reliable: false);
     }
@@ -132,6 +136,20 @@ internal sealed class SteamClientTransport : IClientTransport
                 break;
             case P2PFrameKind.Reliable when _connected:
                 Received?.Invoke(payload);
+                break;
+            case P2PFrameKind.ReliablePart when _connected:
+                byte[]? message;
+                try
+                {
+                    message = _parts.Add(payload, last: sequence == 1);
+                }
+                catch (Shared.Serialization.ProtocolException)
+                {
+                    Fail("RimMult.ErrorTimeout".Translate());
+                    return;
+                }
+                if (message != null)
+                    Received?.Invoke(message);
                 break;
             case P2PFrameKind.Sequenced when _connected:
                 if (!_hasInSequence || P2PFrame.IsNewer(sequence, _inSequence))

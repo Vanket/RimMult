@@ -52,7 +52,10 @@ internal sealed class SteamServerEndpoint : IServerEndpoint
             return;
 
         if (mode == DeliveryMode.ReliableOrdered)
-            SendFrame(peer, P2PFrame.Reliable(data), reliable: true);
+        {
+            foreach (var frame in P2PFrame.ReliableFrames(data))
+                SendFrame(peer, frame, reliable: true);
+        }
         else
             SendFrame(peer, P2PFrame.Sequenced(data, peer.OutSequence++), reliable: false);
     }
@@ -65,7 +68,10 @@ internal sealed class SteamServerEndpoint : IServerEndpoint
         // Reliable frames arrive in order, so the farewell is processed before the disconnect.
         // The Steam session itself is left to expire: closing it now could drop both frames still in flight.
         if (farewell != null)
-            SendFrame(peer, P2PFrame.Reliable(farewell), reliable: true);
+        {
+            foreach (var frame in P2PFrame.ReliableFrames(farewell))
+                SendFrame(peer, frame, reliable: true);
+        }
         SendFrame(peer, P2PFrame.Control(P2PFrameKind.Disconnect), reliable: true);
         Drop(peer);
     }
@@ -123,6 +129,20 @@ internal sealed class SteamServerEndpoint : IServerEndpoint
             case P2PFrameKind.Reliable:
                 _hub.Receive(peer.ConnectionId, payload);
                 break;
+            case P2PFrameKind.ReliablePart:
+                byte[]? message;
+                try
+                {
+                    message = peer.Parts.Add(payload, last: sequence == 1);
+                }
+                catch (Shared.Serialization.ProtocolException)
+                {
+                    Drop(peer);
+                    return;
+                }
+                if (message != null)
+                    _hub.Receive(peer.ConnectionId, message);
+                break;
             case P2PFrameKind.Sequenced:
                 if (!peer.HasInSequence || P2PFrame.IsNewer(sequence, peer.InSequence))
                 {
@@ -159,6 +179,7 @@ internal sealed class SteamServerEndpoint : IServerEndpoint
         public float LastHeard { get; set; }
         public float LastSent { get; set; }
         public uint Nonce { get; set; }
+        public P2PReassembler Parts { get; } = new();
         public ushort OutSequence { get; set; }
         public ushort InSequence { get; set; }
         public bool HasInSequence { get; set; }

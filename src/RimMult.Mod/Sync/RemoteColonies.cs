@@ -23,6 +23,36 @@ public sealed class RemoteColony : WorldObject
 
     public override string GetInspectString() => "RimMult.RemoteColonyInspect".Translate(OwnerName);
 
+    /// <summary>Transport pods can be launched here: the items arrive at this player's colony.</summary>
+    public override IEnumerable<FloatMenuOption> GetTransportersFloatMenuOptions(
+        IEnumerable<IThingHolder> pods, Action<PlanetTile, TransportersArrivalAction> launchAction)
+    {
+        foreach (var option in base.GetTransportersFloatMenuOptions(pods, launchAction))
+            yield return option;
+        foreach (var option in TransportersArrivalActionUtility.GetFloatMenuOptions(
+                     () => TransportersArrivalAction_SendToPlayer.CanSend(pods),
+                     () => new TransportersArrivalAction_SendToPlayer(this),
+                     "RimMult.PodsSendTo".Translate(OwnerName),
+                     launchAction,
+                     Tile))
+            yield return option;
+    }
+
+    /// <summary>A caravan can travel here and hand over its cargo.</summary>
+    public override IEnumerable<FloatMenuOption> GetFloatMenuOptions(Caravan caravan)
+    {
+        foreach (var option in base.GetFloatMenuOptions(caravan))
+            yield return option;
+        foreach (var option in CaravanArrivalActionUtility.GetFloatMenuOptions(
+                     () => CaravanArrivalAction_GiveToPlayer.CanGive(caravan),
+                     () => new CaravanArrivalAction_GiveToPlayer(this),
+                     "RimMult.CaravanGive".Translate(OwnerName),
+                     caravan,
+                     Tile,
+                     this))
+            yield return option;
+    }
+
     /// <summary>A stable, distinct color per player (golden-ratio hue spacing).</summary>
     public static Color PlayerColor(ulong steamId) => Color.HSVToRGB((float)(steamId * 0.6180339887 % 1.0), 0.55f, 1f);
 }

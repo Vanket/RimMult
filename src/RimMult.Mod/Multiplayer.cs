@@ -261,6 +261,7 @@ internal static class Multiplayer
         var session = new ClientSession(transport, hello);
         session.ChatReceived += OnChat;
         WorldSync.Attach(session);
+        Parcels.Attach(session);
         Session = session;
         session.Start();
     }
