@@ -55,4 +55,22 @@
 
   <RimMult.ModListHash>Mod list hash: {0}</RimMult.ModListHash>
   <RimMult.ModListHashHint>Put this into "ModListHash" in a dedicated server's server.json to pin the required mod list.</RimMult.ModListHashHint>
+
+  <RimMult.WorldNone>The shared world has not been created yet. The first player to create a colony picks the planet.</RimMult.WorldNone>
+  <RimMult.WorldInfo>Shared world: seed "{0}", colonies: {1}.</RimMult.WorldInfo>
+  <RimMult.InWorld>You are playing in the shared world. Time is synchronized with everyone.</RimMult.InWorld>
+  <RimMult.OtherSave>The loaded save is not from this server's world. Return to the main menu to create or load a colony of this world.</RimMult.OtherSave>
+  <RimMult.CanShareWorld>The server has no world yet. You can make the planet of the loaded game the shared world.</RimMult.CanShareWorld>
+  <RimMult.ShareWorld>Share this world</RimMult.ShareWorld>
+  <RimMult.CreateColony>Create colony</RimMult.CreateColony>
+  <RimMult.LoadColony>Load my colony</RimMult.LoadColony>
+  <RimMult.PlayingMark>— playing</RimMult.PlayingMark>
+  <RimMult.LobbyMark>— in lobby</RimMult.LobbyMark>
+  <RimMult.OfflineColonies>Colonies of offline players (frozen):</RimMult.OfflineColonies>
+  <RimMult.WorldLocked>Multiplayer: the planet is set by the shared world and can't be changed.</RimMult.WorldLocked>
+  <RimMult.TileNearPlayer>Too close to another player's colony.</RimMult.TileNearPlayer>
+  <RimMult.RemoteColonyInspect>Colony of player {0}.</RimMult.RemoteColonyInspect>
+  <RimMult.StatusMyVote>(your vote: {0})</RimMult.StatusMyVote>
+  <RimMult.StatusWaitingFor>· waiting for {0}</RimMult.StatusWaitingFor>
+  <RimMult.StatusWaiting>· syncing</RimMult.StatusWaiting>
 </LanguageData>

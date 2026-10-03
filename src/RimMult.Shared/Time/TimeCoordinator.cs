@@ -68,11 +68,30 @@ public sealed class TimeCoordinator
         _authorities[playerId] = new AuthorityState(tick, sustainableTicksPerSecond);
     }
 
+    /// <summary>The player stopped simulating (left to the main menu) but may still vote.</summary>
+    public void RemoveAuthority(int playerId) => _authorities.Remove(playerId);
+
     /// <summary>Forgets everything about a player (disconnect).</summary>
     public void RemovePlayer(int playerId)
     {
         _votes.Remove(playerId);
         _authorities.Remove(playerId);
+    }
+
+    public bool HasAuthorities => _authorities.Count > 0;
+
+    /// <summary>Tick of the authority furthest behind: where the world as a whole is. Null without authorities.</summary>
+    public long? SlowestTick
+    {
+        get
+        {
+            if (_authorities.Count == 0)
+                return null;
+            var min = long.MaxValue;
+            foreach (var state in _authorities.Values)
+                min = Math.Min(min, state.Tick);
+            return min;
+        }
     }
 
     public GameSpeed ResolveSpeed()

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- Another player's colony on the globe. Rebuilt from the server's list, never written to saves. -->
+  <WorldObjectDef>
+    <defName>RimMult_RemoteColony</defName>
+    <label>player colony</label>
+    <description>A colony of another player in this multiplayer world.</description>
+    <worldObjectClass>RimMult.Sync.RemoteColony</worldObjectClass>
+    <texture>World/WorldObjects/DefaultSettlement</texture>
+    <expandingIcon>true</expandingIcon>
+    <expandingIconTexture>World/WorldObjects/Expanding/Town</expandingIconTexture>
+    <expandingIconPriority>90</expandingIconPriority>
+    <saved>false</saved>
+    <canHaveFaction>false</canHaveFaction>
+  </WorldObjectDef>
+</Defs>

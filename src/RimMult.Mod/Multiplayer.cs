@@ -5,7 +5,9 @@ using RimMult.ServerCore;
 using RimMult.Shared;
 using RimMult.Shared.Net;
 using RimMult.Shared.Packets;
+using RimMult.Shared.World;
 using RimMult.Steam;
+using RimMult.Sync;
 using RimMult.UI;
 using RimWorld;
 using UnityEngine;
@@ -60,8 +62,11 @@ internal static class Multiplayer
             Password = options.Password.NullOrEmpty() ? null : options.Password,
         };
 
+        // Hosting from a loaded game shares its planet right away; from the main menu the first colony decides.
+        var world = Current.ProgramState == ProgramState.Playing ? WorldOfCurrentGame() : null;
+
         var hub = new TransportHub();
-        var server = new GameServer(settings, hub, message => Log.Message("[RimMult] " + message));
+        var server = new GameServer(settings, hub, message => Log.Message("[RimMult] " + message), world);
         hub.Attach(server);
 
         if (options.OpenPort)
@@ -118,11 +123,16 @@ internal static class Multiplayer
         return true;
     }
 
+    /// <summary>The hosted world, if this instance hosts the world with that id (saved into the host's save).</summary>
+    public static WorldState? HostedWorldState(string worldId) =>
+        _server?.World.Definition?.WorldId == worldId ? _server.World : null;
+
     /// <summary>Leaves the session and, when hosting, shuts the server down (everyone else is kicked).</summary>
     public static void Stop()
     {
         Session?.Disconnect();
         Session = null;
+        WorldSync.Reset();
 
         if (_server != null)
         {
@@ -141,6 +151,7 @@ internal static class Multiplayer
         _hub?.Poll();
         _server?.Update(Time.realtimeSinceStartupAsDouble);
         Session?.Poll();
+        WorldSync.Update(Session);
     }
 
     public static void OpenDialog()
@@ -157,6 +168,38 @@ internal static class Multiplayer
         return false;
     }
 
+    /// <summary>The world for hosting the loaded game: restored from this save if it hosted before, otherwise new.</summary>
+    private static WorldState WorldOfCurrentGame()
+    {
+        var comp = RimMultGameComp.Instance!;
+        if (comp.WorldId != null && comp.HostedWorld != null)
+        {
+            try
+            {
+                var saved = WorldState.Deserialize(Convert.FromBase64String(comp.HostedWorld));
+                if (saved.Definition?.WorldId == comp.WorldId)
+                {
+                    // The host's own game defines the mods: after a mod update the host must not be locked out
+                    // of their own world. (A dedicated server keeps them pinned.)
+                    saved.ModListHash = null;
+                    saved.GameVersion = null;
+                    return saved;
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Warning($"[RimMult] Could not restore the hosted world from this save: {e.Message}");
+            }
+        }
+
+        comp.WorldId ??= Guid.NewGuid().ToString("N");
+        return new WorldState
+        {
+            Definition = WorldDefinitions.FromCurrentWorld(comp.WorldId),
+            Tick = Find.TickManager.TicksAbs,
+        };
+    }
+
     private static void StartSession(IClientTransport transport, string? password)
     {
         var hello = new ClientHello
@@ -170,6 +213,7 @@ internal static class Multiplayer
 
         var session = new ClientSession(transport, hello);
         session.ChatReceived += OnChat;
+        WorldSync.Attach(session);
         Session = session;
         session.Start();
     }

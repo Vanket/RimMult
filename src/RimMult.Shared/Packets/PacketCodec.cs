@@ -28,6 +28,12 @@ public static class PacketCodec
             PacketType.SpeedVote => SpeedVote.Read(reader),
             PacketType.AuthorityReport => AuthorityReport.Read(reader),
             PacketType.TickGrant => TickGrant.Read(reader),
+            PacketType.WorldCreate => WorldCreate.Read(reader),
+            PacketType.WorldUpdate => WorldUpdate.Read(reader),
+            PacketType.EnterWorld => EnterWorld.Read(reader),
+            PacketType.LeaveWorld => LeaveWorld.Read(reader),
+            PacketType.WorldClock => WorldClock.Read(reader),
+            PacketType.MyColonies => MyColonies.Read(reader),
             _ => throw new ProtocolException($"Unknown packet type {(ushort)type}"),
         };
         reader.EnsureFullyRead();

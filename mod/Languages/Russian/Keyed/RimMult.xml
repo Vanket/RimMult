@@ -55,4 +55,22 @@
 
   <RimMult.ModListHash>Хэш списка модов: {0}</RimMult.ModListHash>
   <RimMult.ModListHashHint>Укажите его в «ModListHash» в server.json выделенного сервера, чтобы закрепить нужный список модов.</RimMult.ModListHashHint>
+
+  <RimMult.WorldNone>Общий мир ещё не создан. Первый, кто создаст колонию, выберет планету.</RimMult.WorldNone>
+  <RimMult.WorldInfo>Общий мир: сид «{0}», колоний: {1}.</RimMult.WorldInfo>
+  <RimMult.InWorld>Вы играете в общем мире. Время синхронизировано со всеми.</RimMult.InWorld>
+  <RimMult.OtherSave>Загруженный сейв не из мира этого сервера. Выйдите в главное меню, чтобы создать или загрузить колонию этого мира.</RimMult.OtherSave>
+  <RimMult.CanShareWorld>У сервера ещё нет мира. Можно сделать планету загруженной игры общим миром.</RimMult.CanShareWorld>
+  <RimMult.ShareWorld>Сделать мир общим</RimMult.ShareWorld>
+  <RimMult.CreateColony>Создать колонию</RimMult.CreateColony>
+  <RimMult.LoadColony>Загрузить свою колонию</RimMult.LoadColony>
+  <RimMult.PlayingMark>— играет</RimMult.PlayingMark>
+  <RimMult.LobbyMark>— в лобби</RimMult.LobbyMark>
+  <RimMult.OfflineColonies>Колонии игроков не в сети (заморожены):</RimMult.OfflineColonies>
+  <RimMult.WorldLocked>Мультиплеер: планета задана общим миром, её нельзя изменить.</RimMult.WorldLocked>
+  <RimMult.TileNearPlayer>Слишком близко к колонии другого игрока.</RimMult.TileNearPlayer>
+  <RimMult.RemoteColonyInspect>Колония игрока {0}.</RimMult.RemoteColonyInspect>
+  <RimMult.StatusMyVote>(ваш голос: {0})</RimMult.StatusMyVote>
+  <RimMult.StatusWaitingFor>· ждём {0}</RimMult.StatusWaitingFor>
+  <RimMult.StatusWaiting>· синхронизация</RimMult.StatusWaiting>
 </LanguageData>
