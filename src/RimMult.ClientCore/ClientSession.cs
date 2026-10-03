@@ -65,6 +65,9 @@ public sealed class ClientSession
     /// <summary>A parcel for this player; acknowledge with <see cref="AckParcel"/> once it is safely in the game.</summary>
     public event Action<MailItem>? ParcelReceived;
 
+    /// <summary>A relayed message from another player: (sender id, channel, data).</summary>
+    public event Action<int, RelayChannel, byte[]>? RelayReceived;
+
     public ClientState State { get; private set; } = ClientState.Connecting;
 
     public int PlayerId { get; private set; } = -1;
@@ -84,6 +87,9 @@ public sealed class ClientSession
     public WorldDefinition? World { get; private set; }
 
     public IReadOnlyList<ColonyInfo> Colonies { get; private set; } = Array.Empty<ColonyInfo>();
+
+    /// <summary>Tiles of NPC settlements destroyed by any player.</summary>
+    public IReadOnlyList<string> DestroyedSettlements { get; private set; } = Array.Empty<string>();
 
     /// <summary>Why the session ended; set once <see cref="State"/> is <see cref="ClientState.Disconnected"/>.</summary>
     public string? DisconnectReason { get; private set; }
@@ -147,6 +153,21 @@ public sealed class ClientSession
         if (State == ClientState.Connected)
             Send(new ParcelSend { ToOwner = toOwner, ToTile = toTile, Summary = summary, Payload = payload });
     }
+
+    public void SendRelay(int playerId, RelayChannel channel, byte[] data)
+    {
+        if (State == ClientState.Connected)
+            Send(new PlayerRelay { PlayerId = playerId, Channel = channel, Data = data });
+    }
+
+    public void ReportSettlementDestroyed(string tile)
+    {
+        if (State == ClientState.Connected)
+            Send(new SettlementDestroyed { Tile = tile });
+    }
+
+    /// <summary>A player's color index (0 if unknown).</summary>
+    public byte ColorOf(int playerId) => _players.FirstOrDefault(p => p.Id == playerId)?.ColorIndex ?? 0;
 
     public void AckParcel(long id)
     {
@@ -212,6 +233,7 @@ public sealed class ClientSession
             case WorldUpdate world:
                 World = world.Definition;
                 Colonies = world.Colonies;
+                DestroyedSettlements = world.DestroyedSettlements;
                 WorldChanged?.Invoke();
                 break;
             case WorldClock clock:
@@ -219,6 +241,9 @@ public sealed class ClientSession
                 break;
             case ParcelDeliver parcel:
                 ParcelReceived?.Invoke(parcel.Item);
+                break;
+            case PlayerRelay relay:
+                RelayReceived?.Invoke(relay.PlayerId, relay.Channel, relay.Data);
                 break;
             case Kick kick:
                 KickReason = kick.Reason;

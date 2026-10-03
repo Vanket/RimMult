@@ -4,6 +4,7 @@ using System.Linq;
 using RimMult.ClientCore;
 using RimMult.Shared.World;
 using RimMult.Steam;
+using RimMult.UI;
 using RimWorld.Planet;
 using UnityEngine;
 using Verse;
@@ -16,10 +17,14 @@ public sealed class RemoteColony : WorldObject
     public ulong OwnerSteamId;
     public string OwnerName = "";
     public string ColonyName = "";
+    public byte ColorIndex;
 
     public override string Label => ColonyName.NullOrEmpty() ? OwnerName : $"{ColonyName} ({OwnerName})";
 
-    public override Color ExpandingIconColor => PlayerColor(OwnerSteamId);
+    /// <summary>The owner's color, both zoomed out (icon) and zoomed in (settlement graphic).</summary>
+    public override Color ExpandingIconColor => PlayerPalette.Get(ColorIndex);
+
+    public override Material Material => PlayerPalette.WorldMaterial(def.texture, ColorIndex);
 
     public override string GetInspectString() => "RimMult.RemoteColonyInspect".Translate(OwnerName);
 
@@ -38,6 +43,35 @@ public sealed class RemoteColony : WorldObject
             yield return option;
     }
 
+    /// <summary>"Offer a trade" while the owner is playing in the world too.</summary>
+    public override IEnumerable<Gizmo> GetGizmos()
+    {
+        foreach (var gizmo in base.GetGizmos())
+            yield return gizmo;
+
+        var session = Multiplayer.Session;
+        var owner = session?.Players.FirstOrDefault(p => Multiplayer.OwnerKey(p) == OwnerSteamId);
+        var command = new Command_Action
+        {
+            defaultLabel = "RimMult.TradeOffer".Translate(),
+            defaultDesc = "RimMult.TradeOfferDesc".Translate(OwnerName),
+            icon = TradeIcon,
+            action = () => Multiplayer.StartTrade(owner!.Id),
+        };
+        if (owner == null || !owner.InWorld)
+            command.Disable("RimMult.TradeOwnerAway".Translate(OwnerName));
+        else if (!WorldSync.InWorld)
+            command.Disable("RimMult.TradeNotInWorld".Translate());
+        yield return command;
+    }
+
+    private static Texture2D? _tradeIcon;
+
+    private static Texture2D TradeIcon => _tradeIcon ??=
+        ContentFinder<Texture2D>.Get("UI/Commands/Trade", reportFailure: false)
+        ?? ContentFinder<Texture2D>.Get("UI/Commands/FormCaravan", reportFailure: false)
+        ?? BaseContent.BadTex;
+
     /// <summary>A caravan can travel here and hand over its cargo.</summary>
     public override IEnumerable<FloatMenuOption> GetFloatMenuOptions(Caravan caravan)
     {
@@ -51,10 +85,16 @@ public sealed class RemoteColony : WorldObject
                      Tile,
                      this))
             yield return option;
+        foreach (var option in CaravanArrivalActionUtility.GetFloatMenuOptions(
+                     () => CaravanArrivalAction_JoinPlayer.CanJoin(caravan),
+                     () => new CaravanArrivalAction_JoinPlayer(this),
+                     "RimMult.CaravanJoin".Translate(OwnerName),
+                     caravan,
+                     Tile,
+                     this))
+            yield return option;
     }
 
-    /// <summary>A stable, distinct color per player (golden-ratio hue spacing).</summary>
-    public static Color PlayerColor(ulong steamId) => Color.HSVToRGB((float)(steamId * 0.6180339887 % 1.0), 0.55f, 1f);
 }
 
 internal static class RemoteColonies
@@ -93,6 +133,7 @@ internal static class RemoteColonies
                 obj.OwnerSteamId = colony.OwnerSteamId;
                 obj.OwnerName = colony.OwnerName;
                 obj.ColonyName = colony.Name;
+                obj.ColorIndex = colony.ColorIndex;
                 world.worldObjects.Add(obj);
                 Objects.Add(obj);
             }

@@ -134,6 +134,12 @@ public sealed class GameServer
             case ParcelAck ack:
                 HandleParcelAck(player, ack);
                 break;
+            case SettlementDestroyed destroyed:
+                HandleSettlementDestroyed(player, destroyed);
+                break;
+            case PlayerRelay relay:
+                HandleRelay(player, relay);
+                break;
             default:
                 Kick(session, KickReason.BadData, $"Unexpected packet {packet.Type}");
                 break;
@@ -228,6 +234,7 @@ public sealed class GameServer
             IsHost = PlayerCount == 0,
         };
         session.Player = player;
+        player.ColorIndex = ColorFor(OwnerKey(player));
         if (player.IsHost)
             Time.HostPlayerId = player.Id;
 
@@ -348,6 +355,7 @@ public sealed class GameServer
                 OwnerName = player.Name,
                 Name = Truncate(colony.Name.Trim(), 64),
                 Tile = Truncate(colony.Tile, 64),
+                ColorIndex = player.ColorIndex,
             });
         }
 
@@ -366,7 +374,51 @@ public sealed class GameServer
             World.Tick = slowest;
     }
 
-    private WorldUpdate WorldUpdatePacket() => new() { Definition = World.Definition, Colonies = World.Colonies };
+    private WorldUpdate WorldUpdatePacket() => new()
+    {
+        Definition = World.Definition,
+        Colonies = World.Colonies,
+        DestroyedSettlements = World.DestroyedSettlements,
+    };
+
+    /// <summary>A player's color: kept from earlier sessions, otherwise the first one nobody has yet.</summary>
+    private byte ColorFor(ulong owner)
+    {
+        if (World.PlayerColors.TryGetValue(owner, out var existing))
+            return existing;
+
+        // netstandard2.0 has no FirstOrDefault(predicate, default); all colors taken → reuse in order.
+        var used = new HashSet<byte>(World.PlayerColors.Values);
+        var free = Enumerable.Range(0, ProtocolInfo.PlayerPaletteSize).Where(i => !used.Contains((byte)i)).ToList();
+        var color = (byte)(free.Count > 0 ? free[0] : World.PlayerColors.Count % ProtocolInfo.PlayerPaletteSize);
+        World.PlayerColors[owner] = color;
+        WorldChanged?.Invoke();
+        return color;
+    }
+
+    private void HandleSettlementDestroyed(PlayerInfo player, SettlementDestroyed destroyed)
+    {
+        const int maxDestroyed = 10_000;
+        if (World.Definition == null || !player.InWorld || World.DestroyedSettlements.Count >= maxDestroyed)
+            return;
+        var tile = Truncate(destroyed.Tile, 64);
+        if (World.DestroyedSettlements.Contains(tile))
+            return;
+
+        World.DestroyedSettlements.Add(tile);
+        Broadcast(PacketCodec.Encode(WorldUpdatePacket()), DeliveryMode.ReliableOrdered);
+        WorldChanged?.Invoke();
+    }
+
+    /// <summary>Passes a message to another player in the world, stamped with the real sender.</summary>
+    private void HandleRelay(PlayerInfo sender, PlayerRelay relay)
+    {
+        if (!sender.InWorld || relay.PlayerId == sender.Id)
+            return;
+        var target = _sessions.Values.FirstOrDefault(s => s.Player is { InWorld: true } p && p.Id == relay.PlayerId);
+        if (target != null)
+            Send(target, new PlayerRelay { PlayerId = sender.Id, Channel = relay.Channel, Data = relay.Data });
+    }
 
     private void HandleChat(PlayerInfo sender, ChatMessage chat)
     {

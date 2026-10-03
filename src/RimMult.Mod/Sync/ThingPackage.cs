@@ -16,11 +16,30 @@ internal static class ThingPackage
 {
     private const string RootElement = "RimMultParcel";
 
-    /// <summary>What may travel: items, not people, animals or corpses (they carry a whole life of references).</summary>
-    public static bool CanSend(Thing thing) => thing is not Pawn && thing is not Corpse;
+    /// <summary>What may travel: items, and colonists/colony animals that pass <see cref="PawnTransfer.CanSend"/>.</summary>
+    public static bool CanSend(Thing thing) => CanSend(thing, out _);
 
+    public static bool CanSend(Thing thing, out string reason)
+    {
+        reason = "";
+        switch (thing)
+        {
+            case Corpse:
+                reason = "RimMult.ParcelNoCorpses".Translate();
+                return false;
+            case Pawn pawn:
+                return PawnTransfer.CanSend(pawn, out reason);
+            default:
+                return true;
+        }
+    }
+
+    /// <summary>Packs things that are leaving this game for good (pawns among them are prepared for the move).</summary>
     public static byte[] Pack(List<Thing> things)
     {
+        foreach (var pawn in things.OfType<Pawn>())
+            PawnTransfer.PrepareToLeave(pawn);
+
         var path = TempPath();
         try
         {
@@ -65,7 +84,11 @@ internal static class ThingPackage
 
         var result = things?.Where(t => t != null).ToList() ?? new List<Thing>();
         foreach (var thing in result)
+        {
             GiveNewIds(thing);
+            if (thing is Pawn pawn)
+                PawnTransfer.WelcomeArrived(pawn);
+        }
         return result;
     }
 
@@ -91,6 +114,31 @@ internal static class ThingPackage
         }
         if (thing is MinifiedThing minified && minified.InnerThing != null)
             GiveNewIds(minified.InnerThing);
+
+        if (thing is Pawn pawn)
+        {
+            // A pawn travels with its gear, and its hediffs carry game-wide ids of their own.
+            foreach (var gear in PawnGear(pawn).ToList())
+                GiveNewIds(gear);
+            foreach (var hediff in pawn.health?.hediffSet?.hediffs ?? new List<Hediff>())
+                hediff.loadID = Find.UniqueIDsManager.GetNextHediffID();
+        }
+    }
+
+    private static IEnumerable<Thing> PawnGear(Pawn pawn)
+    {
+        if (pawn.apparel != null)
+            foreach (var apparel in pawn.apparel.WornApparel)
+                yield return apparel;
+        if (pawn.equipment != null)
+            foreach (var equipment in pawn.equipment.AllEquipmentListForReading)
+                yield return equipment;
+        if (pawn.inventory != null)
+            foreach (var item in pawn.inventory.innerContainer)
+                yield return item;
+        if (pawn.carryTracker != null)
+            foreach (var carried in pawn.carryTracker.innerContainer)
+                yield return carried;
     }
 
     private static string TempPath()

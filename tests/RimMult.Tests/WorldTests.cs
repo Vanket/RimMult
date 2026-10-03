@@ -72,6 +72,7 @@ public class WorldTests
         var b = host.Join("B", 2);
         host.Pump(a, b);
         Assert.Null(b.World);
+        var changesBefore = host.WorldChanges; // joining already assigned player colors
 
         a.CreateWorld(Planet(), tick: 900_000);
         host.Pump(a, b);
@@ -79,7 +80,7 @@ public class WorldTests
         Assert.Equal("rimmult", b.World?.SeedString);
         Assert.Equal(["OutlanderCivil", "TribeRough", "TribeRough"], b.World!.Factions);
         Assert.Equal(900_000, host.Server.World.Tick);
-        Assert.Equal(1, host.WorldChanges);
+        Assert.Equal(changesBefore + 1, host.WorldChanges);
 
         // A second creator does not replace it.
         b.CreateWorld(Planet("other"), tick: 5);
@@ -290,6 +291,7 @@ public class WorldTests
         var host = new Host();
         var a = host.Join("A", 1);
         host.Pump(a);
+        var changesBefore = host.WorldChanges;
 
         a.CreateWorld(Planet("same"), 100);
         a.CreateWorld(Planet("same"), 200);
@@ -297,6 +299,6 @@ public class WorldTests
 
         Assert.Equal("same", a.World?.WorldId);
         Assert.Equal(100, host.Server.World.Tick);
-        Assert.Equal(1, host.WorldChanges);
+        Assert.Equal(changesBefore + 1, host.WorldChanges);
     }
 }

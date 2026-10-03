@@ -125,6 +125,9 @@ public sealed class PlayerInfo
     /// <summary>Playing a colony in the shared world (as opposed to sitting in the lobby).</summary>
     public bool InWorld { get; set; }
 
+    /// <summary>The player's color (index into the player palette), the same on everyone's screen.</summary>
+    public byte ColorIndex { get; set; }
+
     public void Write(ByteWriter writer)
     {
         writer.WriteVarInt(Id);
@@ -132,6 +135,7 @@ public sealed class PlayerInfo
         writer.WriteString(Name);
         writer.WriteBool(IsHost);
         writer.WriteBool(InWorld);
+        writer.WriteByte(ColorIndex);
     }
 
     public static PlayerInfo Read(ByteReader reader) => new()
@@ -141,6 +145,7 @@ public sealed class PlayerInfo
         Name = reader.ReadRequiredString(),
         IsHost = reader.ReadBool(),
         InWorld = reader.ReadBool(),
+        ColorIndex = reader.ReadByte(),
     };
 }
 

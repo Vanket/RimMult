@@ -73,20 +73,26 @@ public sealed class ColonyInfo
     /// <summary>World tile in RimWorld's <c>PlanetTile</c> string form (tile id plus planet layer).</summary>
     public string Tile { get; set; } = "";
 
+    /// <summary>The owner's color (index into the player palette); filled in by the server.</summary>
+    public byte ColorIndex { get; set; }
+
     public void Write(ByteWriter writer)
     {
         writer.WriteUInt64(OwnerSteamId);
         writer.WriteString(OwnerName);
         writer.WriteString(Name);
         writer.WriteString(Tile);
+        writer.WriteByte(ColorIndex);
     }
 
-    public static ColonyInfo Read(ByteReader reader) => new()
+    /// <param name="withColor">False for world files older than format 3, which had no color.</param>
+    public static ColonyInfo Read(ByteReader reader, bool withColor = true) => new()
     {
         OwnerSteamId = reader.ReadUInt64(),
         OwnerName = reader.ReadRequiredString(),
         Name = reader.ReadRequiredString(),
         Tile = reader.ReadRequiredString(),
+        ColorIndex = withColor ? reader.ReadByte() : (byte)0,
     };
 
     public static void WriteList(ByteWriter writer, IReadOnlyList<ColonyInfo> colonies)
@@ -96,14 +102,14 @@ public sealed class ColonyInfo
             colony.Write(writer);
     }
 
-    public static List<ColonyInfo> ReadList(ByteReader reader)
+    public static List<ColonyInfo> ReadList(ByteReader reader, bool withColor = true)
     {
         var count = reader.ReadVarUInt();
         if (count > 10_000)
             throw new ProtocolException($"Too many colonies: {count}");
         var colonies = new List<ColonyInfo>((int)count);
         for (var i = 0UL; i < count; i++)
-            colonies.Add(Read(reader));
+            colonies.Add(Read(reader, withColor));
         return colonies;
     }
 }
@@ -161,8 +167,8 @@ public sealed class MailItem
 /// <summary>The server's view of the shared world. Persisted by the dedicated server and by an in-game host's save.</summary>
 public sealed class WorldState
 {
-    /// <summary>1: world, clock, colonies, mods. 2: + parcels in transit.</summary>
-    private const byte FormatVersion = 2;
+    /// <summary>1: world, clock, colonies, mods. 2: + parcels in transit. 3: + player colors, destroyed NPC settlements.</summary>
+    private const byte FormatVersion = 3;
 
     /// <summary>Null until the first player creates the world (picks the planet when starting their colony).</summary>
     public WorldDefinition? Definition { get; set; }
@@ -184,6 +190,12 @@ public sealed class WorldState
 
     public long NextMailId { get; set; } = 1;
 
+    /// <summary>Each player's color (owner key → palette index), stable across sessions.</summary>
+    public Dictionary<ulong, byte> PlayerColors { get; set; } = new();
+
+    /// <summary>Tiles of NPC settlements that some player destroyed; they are gone for everyone.</summary>
+    public List<string> DestroyedSettlements { get; set; } = new();
+
     public void Write(ByteWriter writer)
     {
         writer.WriteBool(Definition != null);
@@ -196,6 +208,31 @@ public sealed class WorldState
         writer.WriteVarUInt((ulong)Mail.Count);
         foreach (var item in Mail)
             item.Write(writer);
+        writer.WriteVarUInt((ulong)PlayerColors.Count);
+        foreach (var pair in PlayerColors)
+        {
+            writer.WriteUInt64(pair.Key);
+            writer.WriteByte(pair.Value);
+        }
+        WriteStrings(writer, DestroyedSettlements);
+    }
+
+    public static void WriteStrings(ByteWriter writer, IReadOnlyList<string> values)
+    {
+        writer.WriteVarUInt((ulong)values.Count);
+        foreach (var value in values)
+            writer.WriteString(value);
+    }
+
+    public static List<string> ReadStrings(ByteReader reader)
+    {
+        var count = reader.ReadVarUInt();
+        if (count > 100_000)
+            throw new ProtocolException($"Too many entries: {count}");
+        var values = new List<string>((int)count);
+        for (var i = 0UL; i < count; i++)
+            values.Add(reader.ReadRequiredString());
+        return values;
     }
 
     private static WorldState Read(ByteReader reader, byte version)
@@ -204,7 +241,7 @@ public sealed class WorldState
         {
             Definition = reader.ReadBool() ? WorldDefinition.Read(reader) : null,
             Tick = reader.ReadVarInt(),
-            Colonies = ColonyInfo.ReadList(reader),
+            Colonies = ColonyInfo.ReadList(reader, withColor: version >= 3),
             ModListHash = reader.ReadString(),
             GameVersion = reader.ReadString(),
         };
@@ -216,6 +253,15 @@ public sealed class WorldState
                 throw new ProtocolException($"Too many parcels: {count}");
             for (var i = 0UL; i < count; i++)
                 state.Mail.Add(MailItem.Read(reader));
+        }
+        if (version >= 3)
+        {
+            var colors = reader.ReadVarUInt();
+            if (colors > 100_000)
+                throw new ProtocolException($"Too many players: {colors}");
+            for (var i = 0UL; i < colors; i++)
+                state.PlayerColors[reader.ReadUInt64()] = reader.ReadByte();
+            state.DestroyedSettlements = ReadStrings(reader);
         }
         return state;
     }

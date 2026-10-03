@@ -313,7 +313,7 @@ internal sealed class Dialog_Multiplayer : Window
         var online = new HashSet<ulong>();
         foreach (var player in session.Players)
         {
-            var label = player.Name;
+            var label = PlayerPalette.Colorize("■ " + player.Name, player.ColorIndex);
             if (player.IsHost)
                 label += " " + "RimMult.HostMark".Translate();
             label += player.InWorld ? " " + "RimMult.PlayingMark".Translate() : " " + "RimMult.LobbyMark".Translate();
@@ -329,7 +329,7 @@ internal sealed class Dialog_Multiplayer : Window
         if (offline.Count > 0)
         {
             rows.Add("<color=#999999>" + "RimMult.OfflineColonies".Translate() + "</color>");
-            rows.AddRange(offline.Select(c => $"<color=#999999>    · {c.Name} ({c.OwnerName})</color>"));
+            rows.AddRange(offline.Select(c => $"    {PlayerPalette.Colorize("■", c.ColorIndex)} <color=#999999>{c.Name} ({c.OwnerName})</color>"));
         }
 
         var view = new Rect(0f, 0f, inner.width - 16f, Mathf.Max(rows.Count * 24f, inner.height));

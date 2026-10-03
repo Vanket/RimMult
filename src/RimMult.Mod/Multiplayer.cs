@@ -39,6 +39,12 @@ internal static class Multiplayer
 
     public static ClientSession? Session { get; private set; }
 
+    /// <summary>Trades with other players over the current session.</summary>
+    public static TradeManager? Trades { get; private set; }
+
+    /// <summary>How the server keys a player's colonies and parcels: SteamID, or the session id without Steam.</summary>
+    public static ulong OwnerKey(PlayerInfo player) => player.SteamId != 0 ? player.SteamId : (ulong)player.Id;
+
     /// <summary>Where the last join went (host SteamID or address), for "try again".</summary>
     private static ulong? _lastSteamHost;
     private static string? _lastAddress;
@@ -156,6 +162,7 @@ internal static class Multiplayer
     {
         Session?.Disconnect();
         Session = null;
+        Trades = null;
         WorldSync.Reset();
 
         if (_server != null)
@@ -262,8 +269,38 @@ internal static class Multiplayer
         session.ChatReceived += OnChat;
         WorldSync.Attach(session);
         Parcels.Attach(session);
+        Trades = new TradeManager(session);
+        Trades.Invited += OnTradeInvited;
         Session = session;
         session.Start();
+    }
+
+    /// <summary>Opens a trade with the owner of a colony (from the colony's button on the globe).</summary>
+    public static void StartTrade(int partnerId)
+    {
+        if (Trades == null)
+            return;
+        if (Trades.Busy)
+        {
+            Messages.Message("RimMult.TradeBusy".Translate(), MessageTypeDefOf.RejectInput, historical: false);
+            return;
+        }
+        if (Trades.Invite(partnerId) is { } trade)
+            Find.WindowStack.Add(new Dialog_PlayerTrade(trade));
+    }
+
+    private static void OnTradeInvited(PlayerTrade trade)
+    {
+        Find.WindowStack.Add(new Dialog_MessageBox(
+            "RimMult.TradeInvite".Translate(trade.PartnerName),
+            "RimMult.TradeOpen".Translate(),
+            () =>
+            {
+                trade.Join();
+                Find.WindowStack.Add(new Dialog_PlayerTrade(trade));
+            },
+            "RimMult.TradeDecline".Translate(),
+            trade.Cancel));
     }
 
     private static void OnChat(ChatLine line)

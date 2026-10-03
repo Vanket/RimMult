@@ -81,7 +81,6 @@ internal sealed class ChatPanel
 
     private static string Format(ChatLine line, ClientSession session)
     {
-        var color = line.SenderId == session.PlayerId ? "#9fd3ff" : "#ffd27f";
-        return $"<color={color}>{line.SenderName.Replace("<", "‹")}</color>: {line.Text.Replace("<", "‹")}";
+        return $"{PlayerPalette.Colorize(line.SenderName, session.ColorOf(line.SenderId))}: {line.Text.Replace("<", "‹")}";
     }
 }

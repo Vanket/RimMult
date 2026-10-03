@@ -3,7 +3,7 @@ namespace RimMult.Shared;
 public static class ProtocolInfo
 {
     /// <summary>Bumped on every incompatible change to packets or their semantics.</summary>
-    public const int Version = 5;
+    public const int Version = 6;
 
     /// <summary>LiteNetLib connection key; rejects random UDP traffic before the handshake.</summary>
     public const string ConnectionKey = "RimMult";
@@ -19,4 +19,7 @@ public static class ProtocolInfo
 
     /// <summary>RimWorld runs 60 ticks per real second at speed x1.</summary>
     public const int TicksPerSecondAtNormal = 60;
+
+    /// <summary>Number of distinct player colors; the server hands them out in order, the mod maps them to colors.</summary>
+    public const int PlayerPaletteSize = 12;
 }

@@ -97,18 +97,45 @@
   <RimMult.KickKicked>you were kicked.</RimMult.KickKicked>
   <RimMult.KickServerShutdown>the host closed the game.</RimMult.KickServerShutdown>
   <RimMult.KickBadData>connection error ({0}).</RimMult.KickBadData>
-  <RimMult.PodsSendTo>Send to {0}'s colony (items only)</RimMult.PodsSendTo>
+  <RimMult.PodsSendTo>Send to {0}'s colony</RimMult.PodsSendTo>
   <RimMult.CaravanGive>Hand the cargo to {0}</RimMult.CaravanGive>
   <RimMult.CaravanGiveReport>Bringing cargo to {0}.</RimMult.CaravanGiveReport>
   <RimMult.CaravanNothingToGive>the caravan carries nothing to hand over</RimMult.CaravanNothingToGive>
-  <RimMult.ParcelItemsOnlyReason>items only</RimMult.ParcelItemsOnlyReason>
-  <RimMult.ParcelItemsOnly>Only items can be sent to another player for now, not people, animals or corpses.</RimMult.ParcelItemsOnly>
   <RimMult.ParcelSent>Parcel for {0} is on its way: {1}.</RimMult.ParcelSent>
   <RimMult.ParcelTooLarge>The parcel is too large. Split it into several.</RimMult.ParcelTooLarge>
   <RimMult.ParcelLabel>Parcel from {0}</RimMult.ParcelLabel>
-  <RimMult.ParcelText>{0} sent you a parcel. It is coming down by drop pod:\n\n{1}</RimMult.ParcelText>
+  <RimMult.ParcelText>{0} sent you a parcel. It is coming down by drop pod (people and animals in it join your colony):\n\n{1}</RimMult.ParcelText>
   <RimMult.ParcelReturnedLabel>Parcel returned</RimMult.ParcelReturnedLabel>
   <RimMult.ParcelReturnedText>The colony you sent a parcel to no longer exists, so it came back:\n\n{0}</RimMult.ParcelReturnedText>
   <RimMult.ParcelBrokenLabel>Damaged parcel</RimMult.ParcelBrokenLabel>
   <RimMult.ParcelBrokenText>A parcel from {0} could not be unpacked (probably different mods). Details are in the log.</RimMult.ParcelBrokenText>
+  <RimMult.PawnDead>the dead can't be sent</RimMult.PawnDead>
+  <RimMult.PawnNotColonist>{0} is not a colonist or colony animal</RimMult.PawnNotColonist>
+  <RimMult.PawnMechanoid>{0}: mechanoids can't move to another colony yet</RimMult.PawnMechanoid>
+  <RimMult.PawnTitled>{0} holds a royal title and can't leave the empire's reach</RimMult.PawnTitled>
+  <RimMult.PawnMechanitor>{0} controls mechanoids: disconnect them first</RimMult.PawnMechanitor>
+  <RimMult.ParcelNoCorpses>corpses can't be sent</RimMult.ParcelNoCorpses>
+  <RimMult.CaravanJoin>Join {0}'s colony (people, animals and cargo)</RimMult.CaravanJoin>
+  <RimMult.CaravanJoinReport>Going to join {0}'s colony.</RimMult.CaravanJoinReport>
+  <RimMult.TradeOffer>Offer a trade</RimMult.TradeOffer>
+  <RimMult.TradeOfferDesc>Exchange goods with {0}. Both of you choose what to give; when both accept, the goods arrive by drop pod.</RimMult.TradeOfferDesc>
+  <RimMult.TradeOwnerAway>{0} is not playing in the world right now</RimMult.TradeOwnerAway>
+  <RimMult.TradeNotInWorld>you are not playing in the shared world</RimMult.TradeNotInWorld>
+  <RimMult.TradeBusy>You are already trading with someone.</RimMult.TradeBusy>
+  <RimMult.TradeInvite>{0} wants to trade with you.</RimMult.TradeInvite>
+  <RimMult.TradeOpen>Open trade</RimMult.TradeOpen>
+  <RimMult.TradeDecline>Decline</RimMult.TradeDecline>
+  <RimMult.TradeTitle>Trade with {0}</RimMult.TradeTitle>
+  <RimMult.TradeWaitingJoin>Waiting for {0} to open the trade…</RimMult.TradeWaitingJoin>
+  <RimMult.TradeHint>Choose what you give on the left. When you both accept, the goods are sent.</RimMult.TradeHint>
+  <RimMult.TradeTheyAccepted>{0} accepted your offer. Accept theirs to complete the trade.</RimMult.TradeTheyAccepted>
+  <RimMult.TradeLocked>Confirmed. Waiting for {0} to confirm…</RimMult.TradeLocked>
+  <RimMult.TradeDone>Trade complete. The goods are on their way by drop pod.</RimMult.TradeDone>
+  <RimMult.TradeCancelled>The trade was cancelled.</RimMult.TradeCancelled>
+  <RimMult.TradeYouGive>You give ({0})</RimMult.TradeYouGive>
+  <RimMult.TradeTheyGive>{0} gives ({1})</RimMult.TradeTheyGive>
+  <RimMult.TradeNoGoods>Nothing in your stockpiles to offer.</RimMult.TradeNoGoods>
+  <RimMult.TradeAccept>Accept</RimMult.TradeAccept>
+  <RimMult.TradeUnaccept>Withdraw acceptance</RimMult.TradeUnaccept>
+  <RimMult.TradeCancel>Cancel trade</RimMult.TradeCancel>
 </LanguageData>
