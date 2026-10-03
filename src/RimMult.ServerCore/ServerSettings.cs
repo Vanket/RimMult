@@ -32,4 +32,10 @@ public sealed class ServerSettings
     /// the world); off for a dedicated server, where the first player to start a colony picks it.
     /// </summary>
     public bool HostCreatesWorld { get; set; }
+
+    /// <summary>
+    /// Separate colonies, or co-op in the host's colony. Co-op needs a host that simulates the game, so it is only
+    /// available when hosting from inside RimWorld; a dedicated server always runs separate colonies.
+    /// </summary>
+    public Shared.Coop.GameMode Mode { get; set; }
 }

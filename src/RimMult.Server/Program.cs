@@ -28,6 +28,13 @@ if (File.Exists(worldPath))
     Log($"Loaded world from {worldPath}: {world.Colonies.Count} colonies, tick {world.Tick}");
 }
 
+// Co-op runs the host's game on the host's machine: a dedicated server has no such game to share.
+if (config.Server.Mode != RimMult.Shared.Coop.GameMode.SeparateColonies)
+{
+    Log("Co-op mode needs a host playing in RimWorld; the dedicated server runs separate colonies.");
+    config.Server.Mode = RimMult.Shared.Coop.GameMode.SeparateColonies;
+}
+
 var hub = new TransportHub();
 var server = new GameServer(config.Server, hub, Log, world);
 var worldDirty = false;

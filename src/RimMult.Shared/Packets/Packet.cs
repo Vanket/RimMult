@@ -24,6 +24,7 @@ public enum PacketType : ushort
     ParcelAck = 42,
     SettlementDestroyed = 43,
     PlayerRelay = 50,
+    CoopMessage = 60,
 }
 
 /// <summary>A message body. <see cref="PacketCodec"/> adds the type header.</summary>

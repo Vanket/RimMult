@@ -147,4 +147,30 @@
   <RimMult.TradeHintPartnerCaravan>{0} торгует караваном у вашей колонии: купленное уйдёт в его караван, а его товар спустится к вам.</RimMult.TradeHintPartnerCaravan>
   <RimMult.ParcelToCaravanLabel>Товары от {0}</RimMult.ParcelToCaravanLabel>
   <RimMult.ParcelToCaravanText>{0} принял товары, купленные у {1}:\n\n{2}</RimMult.ParcelToCaravanText>
+  <!-- Этап 4: кооп -->
+  <RimMult.GameMode>Режим игры:</RimMult.GameMode>
+  <RimMult.ModeSeparate>Раздельные колонии</RimMult.ModeSeparate>
+  <RimMult.ModeSeparateDesc>Каждый основывает свою колонию на общей планете. Каждый компьютер считает только свою колонию, поэтому слабый ПК не тормозит остальных. Ходите друг к другу караванами, шлите капсулы, торгуйте.</RimMult.ModeSeparateDesc>
+  <RimMult.ModeCoop>Кооп на одной карте</RimMult.ModeCoop>
+  <RimMult.ModeCoopDesc>Все вместе играют в колонии хоста. Симуляцию считает игра хоста, друзья видят её вживую и отдают приказы: разметка, стройка, призыв, приказы правой кнопкой, приоритеты работ, исследования. Всю нагрузку несёт компьютер хоста.</RimMult.ModeCoopDesc>
+  <RimMult.ModeCoopHostInfo>Кооп: друзья входят в вашу колонию из своего лобби.</RimMult.ModeCoopHostInfo>
+  <RimMult.ModeCoopGuestInfo>Кооп: вы играете вместе в колонии {0}.</RimMult.ModeCoopGuestInfo>
+  <RimMult.CoopJoinHint>Здесь загрузится игра хоста (текущая игра закроется без сохранения).</RimMult.CoopJoinHint>
+  <RimMult.CoopJoin>Войти в колонию хоста</RimMult.CoopJoin>
+  <RimMult.CoopRequested>Ждём игру от хоста…</RimMult.CoopRequested>
+  <RimMult.CoopCancel>Отмена</RimMult.CoopCancel>
+  <RimMult.CoopLoading>RimMult: загрузка колонии хоста…</RimMult.CoopLoading>
+  <RimMult.CoopPlaying>Вы в колонии хоста.</RimMult.CoopPlaying>
+  <RimMult.StatusCoop>кооп</RimMult.StatusCoop>
+  <RimMult.CoopGuestJoining>{0} входит в вашу колонию. Игра на паузе, пока он загружается.</RimMult.CoopGuestJoining>
+  <RimMult.CoopGuestJoined>{0} вошёл в вашу колонию.</RimMult.CoopGuestJoined>
+  <RimMult.CoopHostNotReady>Хост ещё не в игре. Попробуйте снова, когда он загрузит колонию.</RimMult.CoopHostNotReady>
+  <RimMult.CoopJoined>Вы вошли в колонию {0}.</RimMult.CoopJoined>
+  <RimMult.CoopLoadFailed>Не удалось загрузить игру хоста. Посмотрите лог (моды должны совпадать).</RimMult.CoopLoadFailed>
+  <RimMult.CoopDisconnected>Связь с хостом потеряна: {0}\n\nТеперь это просто копия колонии хоста.</RimMult.CoopDisconnected>
+  <RimMult.CoopConnectionLost>отключено</RimMult.CoopConnectionLost>
+  <RimMult.CoopToMainMenu>Главное меню</RimMult.CoopToMainMenu>
+  <RimMult.CoopKeepCopy>Остаться</RimMult.CoopKeepCopy>
+  <RimMult.CoopNoSave>В коопе игру сохраняет только хост.</RimMult.CoopNoSave>
+  <RimMult.CoopTargetUnsupported>Команды с выбором цели пока не работают у гостей коопа. Используйте приказы правой кнопкой.</RimMult.CoopTargetUnsupported>
 </LanguageData>

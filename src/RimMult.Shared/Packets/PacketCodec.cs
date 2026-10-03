@@ -39,6 +39,7 @@ public static class PacketCodec
             PacketType.ParcelAck => ParcelAck.Read(reader),
             PacketType.SettlementDestroyed => SettlementDestroyed.Read(reader),
             PacketType.PlayerRelay => PlayerRelay.Read(reader),
+            PacketType.CoopMessage => CoopMessage.Read(reader),
             _ => throw new ProtocolException($"Unknown packet type {(ushort)type}"),
         };
         reader.EnsureFullyRead();

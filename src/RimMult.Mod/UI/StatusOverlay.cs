@@ -1,4 +1,5 @@
 using RimMult.ClientCore;
+using RimMult.Coop;
 using RimMult.Shared.Time;
 using RimMult.Sync;
 using UnityEngine;
@@ -56,14 +57,19 @@ internal static class StatusOverlay
                 return "RimMult.StatusDisconnected".Translate();
         }
 
-        // The shared speed only applies to someone playing in the world.
-        if (!WorldSync.InWorld)
+        if (CoopGuest.State is CoopGuest.Phase.Requested or CoopGuest.Phase.Loading)
+            return "RimMult.CoopLoading".Translate();
+
+        // The shared speed only applies to someone playing in the world (or in the host's colony).
+        if (!WorldSync.InWorld && !CoopGuest.Active)
             return "RimMult.StatusLobby".Translate(session.Players.Count);
 
         var speed = session.LastGrant?.Speed ?? GameSpeed.Paused;
         string text = "RimMult.StatusConnected".Translate(session.Players.Count, SpeedLabel(speed));
+        if (CoopGuest.Active)
+            text += " · " + "RimMult.StatusCoop".Translate();
 
-        if (TimeSync.MyVote is { } vote && vote != speed)
+        if ((TimeSync.MyVote ?? CoopGuest.MyVote) is { } vote && vote != speed)
             text += " " + "RimMult.StatusMyVote".Translate(SpeedLabel(vote));
         if (TimeSync.BlockedByHorizon && speed != GameSpeed.Paused)
         {

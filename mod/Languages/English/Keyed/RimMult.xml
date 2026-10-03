@@ -147,4 +147,30 @@
   <RimMult.TradeHintPartnerCaravan>{0} trades from a caravan at your colony: what they buy goes into their caravan, what they give lands here.</RimMult.TradeHintPartnerCaravan>
   <RimMult.ParcelToCaravanLabel>Goods from {0}</RimMult.ParcelToCaravanLabel>
   <RimMult.ParcelToCaravanText>{0} took on the goods bought from {1}:\n\n{2}</RimMult.ParcelToCaravanText>
+  <!-- Stage 4: co-op -->
+  <RimMult.GameMode>Game mode:</RimMult.GameMode>
+  <RimMult.ModeSeparate>Separate colonies</RimMult.ModeSeparate>
+  <RimMult.ModeSeparateDesc>Everyone founds their own colony on one shared planet. Each computer simulates only its own colony, so a weak PC doesn't slow down the others. Visit each other with caravans, send pods, trade.</RimMult.ModeSeparateDesc>
+  <RimMult.ModeCoop>Co-op on one map</RimMult.ModeCoop>
+  <RimMult.ModeCoopDesc>Everyone plays the host's colony together. The host's game runs the simulation, friends see it live and give orders: designate, build, draft, right-click orders, work priorities, research. The host's computer does all the work.</RimMult.ModeCoopDesc>
+  <RimMult.ModeCoopHostInfo>Co-op: friends join your colony from their lobby.</RimMult.ModeCoopHostInfo>
+  <RimMult.ModeCoopGuestInfo>Co-op: you play {0}'s colony together.</RimMult.ModeCoopGuestInfo>
+  <RimMult.CoopJoinHint>The host's game will be loaded here (your current game is closed without saving).</RimMult.CoopJoinHint>
+  <RimMult.CoopJoin>Join the host's colony</RimMult.CoopJoin>
+  <RimMult.CoopRequested>Waiting for the host's game…</RimMult.CoopRequested>
+  <RimMult.CoopCancel>Cancel</RimMult.CoopCancel>
+  <RimMult.CoopLoading>RimMult: loading the host's colony…</RimMult.CoopLoading>
+  <RimMult.CoopPlaying>You are in the host's colony.</RimMult.CoopPlaying>
+  <RimMult.StatusCoop>co-op</RimMult.StatusCoop>
+  <RimMult.CoopGuestJoining>{0} is joining your colony. The game is paused while they load.</RimMult.CoopGuestJoining>
+  <RimMult.CoopGuestJoined>{0} joined your colony.</RimMult.CoopGuestJoined>
+  <RimMult.CoopHostNotReady>The host isn't in a game yet. Try again once they have loaded their colony.</RimMult.CoopHostNotReady>
+  <RimMult.CoopJoined>You joined {0}'s colony.</RimMult.CoopJoined>
+  <RimMult.CoopLoadFailed>The host's game could not be loaded. Check the log (mods must match).</RimMult.CoopLoadFailed>
+  <RimMult.CoopDisconnected>Connection to the host lost: {0}\n\nThis is now just a copy of the host's colony.</RimMult.CoopDisconnected>
+  <RimMult.CoopConnectionLost>disconnected</RimMult.CoopConnectionLost>
+  <RimMult.CoopToMainMenu>Main menu</RimMult.CoopToMainMenu>
+  <RimMult.CoopKeepCopy>Stay</RimMult.CoopKeepCopy>
+  <RimMult.CoopNoSave>In co-op only the host saves the game.</RimMult.CoopNoSave>
+  <RimMult.CoopTargetUnsupported>Targeting commands don't work for co-op guests yet. Use right-click orders instead.</RimMult.CoopTargetUnsupported>
 </LanguageData>
