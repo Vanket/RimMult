@@ -11,6 +11,19 @@
 > Статус: ранняя разработка. Этап 1 — подключение, хост через Steam, чат, проверка модов.
 > Колонии ещё не синхронизируются (это этап 2).
 
+## Установка
+
+Нужен мод [Harmony](https://steamcommunity.com/sharedfiles/filedetails/?id=2009463077).
+Свежая сборка из `main` всегда лежит в релизе
+[latest](https://github.com/Vanket/RimMult/releases/tag/latest). Установить или обновить мод
+можно одной командой в PowerShell (путь к `Mods` замените на свой):
+
+```powershell
+$mods = "D:\SteamLibrary\steamapps\common\RimWorld\Mods"; $zip = "$env:TEMP\RimMult.zip"; [Net.ServicePointManager]::SecurityProtocol = 'Tls12'; Invoke-WebRequest "https://github.com/Vanket/RimMult/releases/download/latest/RimMult.zip" -OutFile $zip -UseBasicParsing; Remove-Item "$mods\RimMult" -Recurse -Force -ErrorAction SilentlyContinue; Expand-Archive $zip -DestinationPath $mods -Force
+```
+
+У всех игроков должна быть **одна и та же сборка**: RimMult сравнивает версии модов вплоть до DLL.
+
 ## Структура
 
 | Путь | Что это |

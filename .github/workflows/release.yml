@@ -1,0 +1,42 @@
+name: release
+
+# Every merge to main publishes the mod as a rolling "latest" pre-release,
+# so players can install/update with one download (see README).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet build -c Release
+      - run: dotnet test -c Release --no-build
+      - name: Package mod
+        run: |
+          mkdir -p dist/RimMult
+          cp -r mod/. dist/RimMult/
+          rm -f dist/RimMult/1.6/Assemblies/.gitkeep dist/RimMult/1.6/Assemblies/*.pdb
+          (cd dist && zip -qr RimMult.zip RimMult)
+      - name: Publish "latest" pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest dist/RimMult.zip \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "Latest build" \
+            --notes "Built from ${GITHUB_SHA::7}. Unzip into RimWorld/Mods (see README)."
