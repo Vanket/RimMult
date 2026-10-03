@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- netstandard2.0: the same server logic runs inside the game (Steam-hosted session) and in the dedicated server. -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>RimMult.ServerCore</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RimMult.Shared\RimMult.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

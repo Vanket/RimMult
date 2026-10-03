@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- RimWorld 1.6 runs mods on Unity's Mono with the .NET Framework 4.7.2 profile. -->
+    <TargetFramework>net472</TargetFramework>
+    <RootNamespace>RimMult</RootNamespace>
+    <AssemblyName>RimMult</AssemblyName>
+    <!-- Build straight into the mod folder so it can be symlinked into RimWorld/Mods. -->
+    <OutputPath>..\..\mod\1.6\Assemblies\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Krafs.Rimworld.Ref" ExcludeAssets="runtime" />
+    <PackageReference Include="Lib.Harmony" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RimMult.Shared\RimMult.Shared.csproj" />
+    <ProjectReference Include="..\RimMult.ServerCore\RimMult.ServerCore.csproj" />
+  </ItemGroup>
+
+</Project>
