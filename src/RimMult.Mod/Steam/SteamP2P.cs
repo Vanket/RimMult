@@ -9,7 +9,7 @@ internal static class SteamP2P
     public const float HeartbeatInterval = 2f;
 
     /// <summary>Seconds of silence after which a peer is considered gone.</summary>
-    public const float Timeout = 20f;
+    public const float Timeout = Shared.ProtocolInfo.ConnectionTimeoutSeconds;
 
     public static void Send(CSteamID target, byte[] frame, bool reliable) =>
         SteamNetworking.SendP2PPacket(

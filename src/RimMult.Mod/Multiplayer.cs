@@ -38,6 +38,12 @@ internal static class Multiplayer
 
     public static ClientSession? Session { get; private set; }
 
+    /// <summary>Where the last join went (host SteamID or address), for "try again".</summary>
+    private static ulong? _lastSteamHost;
+    private static string? _lastAddress;
+
+    public static bool CanRetry => _lastSteamHost != null || _lastAddress != null;
+
     public static bool IsHosting => _server != null;
 
     /// <summary>UDP port the hosted server listens on, or null when it is Steam-only.</summary>
@@ -60,6 +66,8 @@ internal static class Multiplayer
             Name = options.ServerName.NullOrEmpty() ? "RimMult.DefaultServerName".Translate(SteamIntegration.MyName).ToString() : options.ServerName,
             MaxPlayers = Mathf.Clamp(options.MaxPlayers, 1, 64),
             Password = options.Password.NullOrEmpty() ? null : options.Password,
+            // Hosting from inside the game: the host's planet is the world, friends don't get to pick another.
+            HostCreatesWorld = true,
         };
 
         // Hosting from a loaded game shares its planet right away; from the main menu the first colony decides.
@@ -87,6 +95,8 @@ internal static class Multiplayer
 
         _hub = hub;
         _server = server;
+        _lastSteamHost = null;
+        _lastAddress = null;
         SteamIntegration.SetHosting(true);
         StartSession(loopback.CreateClient(), settings.Password);
         return true;
@@ -103,6 +113,8 @@ internal static class Multiplayer
         }
 
         Stop();
+        _lastSteamHost = hostSteamId;
+        _lastAddress = null;
         StartSession(new SteamClientTransport(hostSteamId), password);
         OpenDialog();
     }
@@ -119,8 +131,19 @@ internal static class Multiplayer
         }
 
         Stop();
+        _lastAddress = address;
+        _lastSteamHost = null;
         StartSession(new LiteNetClientTransport(host, port), password);
         return true;
+    }
+
+    /// <summary>Joins the last server again (after a wrong password or a lost connection).</summary>
+    public static void Retry(string? password)
+    {
+        if (_lastSteamHost is { } steamHost)
+            JoinSteam(steamHost, password);
+        else if (_lastAddress != null)
+            JoinAddress(_lastAddress, password, out _);
     }
 
     /// <summary>The hosted world, if this instance hosts the world with that id (saved into the host's save).</summary>

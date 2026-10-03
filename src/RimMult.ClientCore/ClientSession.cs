@@ -67,6 +67,9 @@ public sealed class ClientSession
     public int PlayerId { get; private set; } = -1;
     public string ServerName { get; private set; } = "";
     public TimeSettings? TimeSettings { get; private set; }
+
+    /// <summary>Only the host may create the shared world (the server is hosted from inside RimWorld).</summary>
+    public bool HostCreatesWorld { get; private set; }
     public TickGrant? LastGrant { get; private set; }
 
     public bool IsHost => _players.Any(p => p.Id == PlayerId && p.IsHost);
@@ -178,6 +181,7 @@ public sealed class ClientSession
                 PlayerId = welcome.PlayerId;
                 ServerName = welcome.ServerName;
                 TimeSettings = welcome.Time;
+                HostCreatesWorld = welcome.HostCreatesWorld;
                 SetState(ClientState.Connected);
                 break;
             case PlayerList list:

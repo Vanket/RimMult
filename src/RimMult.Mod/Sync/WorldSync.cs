@@ -26,7 +26,15 @@ internal static class WorldSync
 
     public static bool InWorld { get; private set; }
 
-    public static void Attach(ClientSession session) => session.ClockReceived += OnClock;
+    /// <summary>This client asked the server to make its planet the world and waits for the answer.</summary>
+    public static bool WorldCreatePending { get; private set; }
+
+    public static void Attach(ClientSession session)
+    {
+        session.ClockReceived += OnClock;
+        // Any world answer settles a pending create: accepted, beaten by someone else, or refused.
+        session.WorldChanged += () => WorldCreatePending = false;
+    }
 
     public static void Reset()
     {
@@ -34,6 +42,7 @@ internal static class WorldSync
         InWorld = false;
         _lastColoniesKey = "";
         NewColonyFlowActive = false;
+        WorldCreatePending = false;
         TimeSync.End();
         RemoteColonies.Clear();
     }
@@ -107,9 +116,29 @@ internal static class WorldSync
     /// <summary>Offers the loaded game's planet as the server's world (a server without a world yet).</summary>
     public static void ShareCurrentWorld(ClientSession session, RimMultGameComp comp)
     {
-        var id = Guid.NewGuid().ToString("N");
-        comp.WorldId = id;
-        session.CreateWorld(WorldDefinitions.FromCurrentWorld(id), Find.TickManager.TicksAbs);
+        // Keep an id the save already has: repeating the request (double click, retry) must not give the save
+        // a different id than the one the server accepted first.
+        comp.WorldId ??= Guid.NewGuid().ToString("N");
+        WorldCreatePending = true;
+        session.CreateWorld(WorldDefinitions.FromCurrentWorld(comp.WorldId), Find.TickManager.TicksAbs);
+    }
+
+    /// <summary>
+    /// Whether the loaded game is on the same planet as the shared world (same seed and parameters), e.g. the save
+    /// the world was created from. Such a save can be attached to the world as is.
+    /// </summary>
+    public static bool SaveMatchesWorld(WorldDefinition world)
+    {
+        if (Find.World == null)
+            return false;
+        var mine = WorldDefinitions.FromCurrentWorld(world.WorldId);
+        return mine.SeedString == world.SeedString
+               && Mathf.Approximately(mine.PlanetCoverage, world.PlanetCoverage)
+               && mine.Rainfall == world.Rainfall
+               && mine.Temperature == world.Temperature
+               && mine.Population == world.Population
+               && mine.LandmarkDensity == world.LandmarkDensity
+               && Mathf.Approximately(mine.Pollution, world.Pollution);
     }
 
     private static void OnClock(long worldTick)

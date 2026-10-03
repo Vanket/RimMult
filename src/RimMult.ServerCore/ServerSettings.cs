@@ -26,4 +26,10 @@ public sealed class ServerSettings
     public double TickGrantIntervalSeconds { get; set; } = 0.05;
 
     public TimeSettings Time { get; set; } = new();
+
+    /// <summary>
+    /// Only the host may create the shared world. On for a game hosted from inside RimWorld (the host's planet is
+    /// the world); off for a dedicated server, where the first player to start a colony picks it.
+    /// </summary>
+    public bool HostCreatesWorld { get; set; }
 }

@@ -230,6 +230,7 @@ public sealed class GameServer
             ServerName = Settings.Name,
             IsHost = player.IsHost,
             Time = Settings.Time,
+            HostCreatesWorld = Settings.HostCreatesWorld,
         });
         Send(session, WorldUpdatePacket());
         BroadcastPlayerList();
@@ -237,9 +238,10 @@ public sealed class GameServer
 
     private void HandleWorldCreate(Session session, PlayerInfo player, WorldCreate create)
     {
-        if (World.Definition != null)
+        // Someone was faster (or it is not this player's call): tell them what the world really is.
+        // A repeat of the create that won (same id, e.g. a double click) gets the same answer and is harmless.
+        if (World.Definition != null || (Settings.HostCreatesWorld && !player.IsHost))
         {
-            // Someone was faster; tell the late creator what the world really is.
             Send(session, WorldUpdatePacket());
             return;
         }

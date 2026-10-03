@@ -71,7 +71,7 @@ internal sealed class Dialog_Multiplayer : Window
         if (session != null)
         {
             // The last connection ended: say why, on top of the join/host controls.
-            var endedHeight = session.ModDiff != null ? 230f : 60f;
+            var endedHeight = session.ModDiff != null ? 230f : session.KickReason == KickReason.WrongPassword ? 92f : 60f;
             DrawEnded(new Rect(inRect.x, inRect.y, inRect.width, endedHeight), session);
             setupRect.yMin += endedHeight + Gap;
         }
@@ -105,6 +105,10 @@ internal sealed class Dialog_Multiplayer : Window
         list.Label("RimMult.Join".Translate());
         Text.Font = GameFont.Small;
 
+        // The password applies to both ways of joining below, so it comes first.
+        _password = list.TextEntryLabeled("RimMult.ServerPassword".Translate(), _password);
+        list.Gap(6f);
+
         list.Label("RimMult.FriendsHosting".Translate());
         var friends = SteamIntegration.FriendHosts();
         var friendsRect = list.GetRect(120f);
@@ -132,7 +136,6 @@ internal sealed class Dialog_Multiplayer : Window
 
         list.Gap();
         Settings.LastServerAddress = list.TextEntryLabeled("RimMult.Address".Translate(), Settings.LastServerAddress);
-        _password = list.TextEntryLabeled("RimMult.Password".Translate(), _password);
         if (list.ButtonText("RimMult.JoinByAddress".Translate()))
         {
             _error = Multiplayer.JoinAddress(Settings.LastServerAddress, _password, out var error) ? null : error;
@@ -158,7 +161,7 @@ internal sealed class Dialog_Multiplayer : Window
         Settings.HostServerName = list.TextEntryLabeled("RimMult.ServerName".Translate(), Settings.HostServerName);
         Settings.HostMaxPlayers = Mathf.RoundToInt(list.SliderLabeled(
             "RimMult.MaxPlayers".Translate(Settings.HostMaxPlayers), Settings.HostMaxPlayers, 2f, 10f));
-        _hostPassword = list.TextEntryLabeled("RimMult.Password".Translate(), _hostPassword);
+        _hostPassword = list.TextEntryLabeled("RimMult.HostPassword".Translate(), _hostPassword);
 
         list.CheckboxLabeled("RimMult.OpenPort".Translate(), ref Settings.HostOpenPort, "RimMult.OpenPortTip".Translate());
         if (Settings.HostOpenPort)
@@ -234,29 +237,50 @@ internal sealed class Dialog_Multiplayer : Window
         var comp = RimMultGameComp.Instance;
         var playing = Current.ProgramState == ProgramState.Playing;
 
+        var firstButton = new Rect(buttons.x, buttons.y, buttons.width, RowHeight);
+        var waitingForHost = world == null && session.HostCreatesWorld && !session.IsHost;
+
         string status;
-        if (world == null)
-            status = "RimMult.WorldNone".Translate();
-        else
+        if (world != null)
             status = "RimMult.WorldInfo".Translate(world.SeedString, session.Colonies.Count);
+        else if (WorldSync.WorldCreatePending)
+            status = "RimMult.WorldCreating".Translate();
+        else if (waitingForHost)
+            status = "RimMult.WaitingForHostWorld".Translate();
+        else
+            status = "RimMult.WorldNone".Translate();
 
         if (WorldSync.InWorld)
         {
             status += "\n" + "RimMult.InWorld".Translate();
         }
-        else if (playing && world != null && comp?.WorldId != world.WorldId)
+        else if (waitingForHost || WorldSync.WorldCreatePending)
         {
-            status += "\n" + "RimMult.OtherSave".Translate();
+            // Nothing to do but wait.
+        }
+        else if (playing && world != null && comp != null && comp.WorldId != world.WorldId)
+        {
+            // A save of the same planet (e.g. the one the world was made from) can simply be attached.
+            if (WorldSync.SaveMatchesWorld(world))
+            {
+                status += "\n" + "RimMult.SameWorldSave".Translate();
+                if (Widgets.ButtonText(firstButton, "RimMult.AttachSave".Translate()))
+                    comp.WorldId = world.WorldId;
+            }
+            else
+            {
+                status += "\n" + "RimMult.OtherSave".Translate();
+            }
         }
         else if (playing && world == null && comp != null)
         {
             status += "\n" + "RimMult.CanShareWorld".Translate();
-            if (Widgets.ButtonText(new Rect(buttons.x, buttons.y, buttons.width, RowHeight), "RimMult.ShareWorld".Translate()))
+            if (Widgets.ButtonText(firstButton, "RimMult.ShareWorld".Translate()))
                 WorldSync.ShareCurrentWorld(session, comp);
         }
         else if (!playing)
         {
-            if (Widgets.ButtonText(new Rect(buttons.x, buttons.y, buttons.width, RowHeight), "RimMult.CreateColony".Translate()))
+            if (Widgets.ButtonText(firstButton, "RimMult.CreateColony".Translate()))
             {
                 WorldSync.NewColonyFlowActive = true;
                 Close();
@@ -314,16 +338,29 @@ internal sealed class Dialog_Multiplayer : Window
         Widgets.DrawMenuSection(rect);
         var inner = rect.ContractedBy(8f);
 
-        var headline = new Rect(inner.x, inner.y, inner.width - 110f, RowHeight);
+        var canRetry = Multiplayer.CanRetry;
+        var headline = new Rect(inner.x, inner.y, inner.width - (canRetry ? 320f : 110f), RowHeight);
         GUI.color = ColorLibrary.RedReadable;
         Widgets.Label(headline, "RimMult.ConnectionEnded".Translate(session.DisconnectReason ?? ""));
         GUI.color = Color.white;
         if (Widgets.ButtonText(new Rect(inner.xMax - 100f, inner.y, 100f, RowHeight - 4f), "RimMult.Dismiss".Translate()))
+        {
             Multiplayer.Stop();
+            return;
+        }
+        if (canRetry && Widgets.ButtonText(new Rect(inner.xMax - 310f, inner.y, 200f, RowHeight - 4f), "RimMult.Retry".Translate()))
+        {
+            Multiplayer.Retry(_password);
+            return;
+        }
 
         if (session.KickReason == KickReason.WrongPassword)
         {
-            Widgets.Label(new Rect(inner.x, inner.y + RowHeight, inner.width, RowHeight), "RimMult.WrongPasswordHint".Translate());
+            var row = new Rect(inner.x, inner.y + RowHeight + 4f, inner.width, RowHeight);
+            _password = Widgets.TextEntryLabeled(row.LeftPart(0.6f), "RimMult.ServerPassword".Translate(), _password);
+            GUI.color = Color.gray;
+            Widgets.Label(row.RightPart(0.38f), "RimMult.WrongPasswordHint".Translate());
+            GUI.color = Color.white;
             return;
         }
 
