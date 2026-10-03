@@ -185,3 +185,33 @@ public sealed class CaravanArrivalAction_JoinPlayer : CaravanArrivalAction
         _target ??= new ParcelTarget();
     }
 }
+
+/// <summary>A caravan at another player's colony trades with them: its cargo and animals against their stockpiles.</summary>
+public sealed class CaravanArrivalAction_TradeWithPlayer : CaravanArrivalAction
+{
+    private ParcelTarget _target = new();
+
+    public CaravanArrivalAction_TradeWithPlayer()
+    {
+    }
+
+    public CaravanArrivalAction_TradeWithPlayer(RemoteColony colony)
+    {
+        _target = new ParcelTarget(colony);
+    }
+
+    public override string Label => "RimMult.CaravanTrade".Translate(_target.OwnerName);
+
+    public override string ReportString => "RimMult.CaravanTradeReport".Translate(_target.OwnerName);
+
+    public override FloatMenuAcceptanceReport StillValid(Caravan caravan, PlanetTile destinationTile) => true;
+
+    public override void Arrived(Caravan caravan) => Multiplayer.StartCaravanTrade(caravan, _target.OwnerSteamId, _target.OwnerName);
+
+    public override void ExposeData()
+    {
+        base.ExposeData();
+        Scribe_Deep.Look(ref _target, "target");
+        _target ??= new ParcelTarget();
+    }
+}

@@ -58,6 +58,13 @@ public sealed class TradeMessage
     public TradeMessageKind Kind { get; set; }
     public int Version { get; set; }
     public int OtherVersion { get; set; }
+
+    /// <summary>
+    /// <see cref="TradeMessageKind.Invite"/> from a caravan standing at the receiver's colony: its id in the
+    /// sender's game, so the receiver's goods can be loaded straight into it. 0 = trading from home.
+    /// </summary>
+    public int CaravanId { get; set; }
+
     public List<TradeLine> Lines { get; set; } = new();
 
     public byte[] Encode()
@@ -66,6 +73,7 @@ public sealed class TradeMessage
         writer.WriteByte((byte)Kind);
         writer.WriteVarInt(Version);
         writer.WriteVarInt(OtherVersion);
+        writer.WriteVarInt(CaravanId);
         writer.WriteVarUInt((ulong)Lines.Count);
         foreach (var line in Lines)
             line.Write(writer);
@@ -80,6 +88,7 @@ public sealed class TradeMessage
             Kind = (TradeMessageKind)reader.ReadByte(),
             Version = (int)reader.ReadVarInt(),
             OtherVersion = (int)reader.ReadVarInt(),
+            CaravanId = (int)reader.ReadVarInt(),
         };
         if (message.Kind < TradeMessageKind.Invite || message.Kind > TradeMessageKind.Commit)
             throw new ProtocolException($"Unknown trade message {(byte)message.Kind}");

@@ -4,21 +4,25 @@ using RimMult.ClientCore;
 using RimMult.Shared.Packets;
 using RimMult.Shared.Trade;
 using RimMult.Sync;
+using RimMult.Shared.World;
 using RimWorld;
+using RimWorld.Planet;
 using UnityEngine;
 using Verse;
 
 namespace RimMult.UI;
 
 /// <summary>
-/// Trading with another player: pick what you give from your stockpiles, see what they give, both accept.
-/// When the trade completes each side's goods leave as a parcel and arrive by drop pod at the other colony.
+/// Trading with another player: pick what you give, see what they give, both accept. From home you give from your
+/// stockpiles; from a caravan standing at their colony you give its cargo and animals, and what you buy is loaded
+/// into the caravan. Goods for a colony arrive by drop pod.
 /// </summary>
 internal sealed class Dialog_PlayerTrade : Window
 {
     private const float RowHeight = 30f;
 
     private readonly PlayerTrade _trade;
+    private readonly Caravan? _caravan;
     private readonly List<TransferableOneWay> _mine = new();
     private string _lastSignature = "";
     private Vector2 _mineScroll;
@@ -34,6 +38,8 @@ internal sealed class Dialog_PlayerTrade : Window
         closeOnAccept = false;
         onlyOneOfTypeAllowed = true;
         optionalTitle = "RimMult.TradeTitle".Translate(trade.PartnerName);
+        if (trade.MyCaravanId != 0)
+            _caravan = Find.WorldObjects.Caravans.FirstOrDefault(c => c.ID == trade.MyCaravanId && !c.Destroyed);
         _trade.Completed += HandOver;
         CollectMyGoods();
     }
@@ -77,6 +83,8 @@ internal sealed class Dialog_PlayerTrade : Window
         TradeState.Cancelled => "RimMult.TradeCancelled".Translate(),
         _ when _trade.Locked => "RimMult.TradeLocked".Translate(_trade.PartnerName),
         _ when _trade.TheyAccepted => "RimMult.TradeTheyAccepted".Translate(_trade.PartnerName),
+        _ when _caravan != null => "RimMult.TradeHintCaravan".Translate(_caravan.LabelCap),
+        _ when _trade.PartnerCaravanId != 0 => "RimMult.TradeHintPartnerCaravan".Translate(_trade.PartnerName),
         _ => "RimMult.TradeHint".Translate(),
     };
 
@@ -86,7 +94,9 @@ internal sealed class Dialog_PlayerTrade : Window
         var inner = rect.ContractedBy(6f);
         var header = new Rect(inner.x, inner.y, inner.width, RowHeight);
         Text.Font = GameFont.Medium;
-        Widgets.Label(header, "RimMult.TradeYouGive".Translate(_trade.MyValue.ToStringMoney()));
+        Widgets.Label(header, _caravan != null
+            ? "RimMult.TradeCaravanGives".Translate(_trade.MyValue.ToStringMoney())
+            : "RimMult.TradeYouGive".Translate(_trade.MyValue.ToStringMoney()));
         Text.Font = GameFont.Small;
 
         var listRect = new Rect(inner.x, header.yMax, inner.width, inner.height - RowHeight);
@@ -166,9 +176,21 @@ internal sealed class Dialog_PlayerTrade : Window
             _trade.SetAccepted(!_trade.IAccepted);
     }
 
-    /// <summary>Everything this colony could give: stored items on its home maps, grouped like the pod-loading window.</summary>
+    /// <summary>
+    /// What we could give, grouped like the pod-loading window: the caravan's cargo and animals, or the stored
+    /// items on our home maps.
+    /// </summary>
     private void CollectMyGoods()
     {
+        if (_caravan != null)
+        {
+            var animals = _caravan.PawnsListForReading.Where(p => !p.RaceProps.Humanlike && PawnTransfer.CanSend(p, out _));
+            foreach (var thing in CaravanInventoryUtility.AllInventoryItems(_caravan).Where(ThingPackage.CanSend).Concat(animals))
+                AddGood(thing);
+            _mine.SortBy(t => t.LabelCap.ToString());
+            return;
+        }
+
         foreach (var map in Find.Maps.Where(m => m.IsPlayerHome))
         {
             foreach (var thing in map.listerThings.ThingsInGroup(ThingRequestGroup.HaulableEver))
@@ -179,16 +201,31 @@ internal sealed class Dialog_PlayerTrade : Window
                     continue;
                 }
 
-                var transferable = TransferableUtility.TransferableMatching(thing, _mine, TransferAsOneMode.PodsOrCaravanPacking);
-                if (transferable == null)
-                {
-                    transferable = new TransferableOneWay();
-                    _mine.Add(transferable);
-                }
-                transferable.things.Add(thing);
+                AddGood(thing);
             }
         }
         _mine.SortBy(t => t.LabelCap.ToString());
+    }
+
+    private void AddGood(Thing thing)
+    {
+        var transferable = TransferableUtility.TransferableMatching(thing, _mine, TransferAsOneMode.PodsOrCaravanPacking);
+        if (transferable == null)
+        {
+            transferable = new TransferableOneWay();
+            _mine.Add(transferable);
+        }
+        transferable.things.Add(thing);
+    }
+
+    /// <summary>Still ours to give: on the map, or still with the caravan.</summary>
+    private bool StillAvailable(Thing thing)
+    {
+        if (thing.Destroyed)
+            return false;
+        if (_caravan == null)
+            return thing.Spawned;
+        return thing is Pawn pawn ? _caravan.ContainsPawn(pawn) : thing.holdingOwner != null;
     }
 
     private void PushOfferIfChanged()
@@ -216,24 +253,52 @@ internal sealed class Dialog_PlayerTrade : Window
             return;
         }
 
+        // If the partner came with a caravan, what they bought goes into it (their colony if it's gone meanwhile).
+        var address = _trade.PartnerCaravanId != 0 ? ParcelAddress.ForCaravan(_trade.PartnerCaravanId, colony.Tile) : colony.Tile;
+
         // Hand over what is still there: colonists may have used some of it while the trade was negotiated.
         var goods = new List<Thing>();
         foreach (var transferable in _mine.Where(t => t.CountToTransfer > 0))
         {
-            var available = transferable.things.Where(t => !t.Destroyed && t.Spawned).ToList();
+            var available = transferable.things.Where(StillAvailable).ToList();
             var count = System.Math.Min(transferable.CountToTransfer, available.Sum(t => t.stackCount));
             if (count <= 0)
                 continue;
-            TransferableUtility.TransferNoSplit(available, count,
-                (thing, n) => goods.Add(thing.SplitOff(n)), errorIfNotEnoughThings: false);
+            TransferableUtility.TransferNoSplit(available, count, (thing, n) =>
+            {
+                if (thing is Pawn pawn)
+                {
+                    if (_caravan != null)
+                    {
+                        // A sold pack animal leaves its load with the rest of the caravan, as in vanilla trading.
+                        CaravanInventoryUtility.MoveAllInventoryToSomeoneElse(pawn, _caravan.PawnsListForReading);
+                        _caravan.RemovePawn(pawn);
+                    }
+                    goods.Add(pawn);
+                }
+                else
+                {
+                    goods.Add(thing.SplitOff(n));
+                }
+            }, errorIfNotEnoughThings: false);
         }
         if (goods.Count == 0)
             return;
 
-        if (Parcels.Send(colony.OwnerSteamId, colony.OwnerName, colony.Tile, goods))
+        if (Parcels.Send(colony.OwnerSteamId, colony.OwnerName, address, goods))
         {
             foreach (var thing in goods.Where(t => !t.Destroyed))
-                thing.Destroy();
+            {
+                if (thing is Pawn pawn && Find.WorldPawns.Contains(pawn))
+                    Find.WorldPawns.RemovePawn(pawn);
+                thing.Destroy(DestroyMode.Vanish);
+            }
+        }
+        else if (_caravan != null && !_caravan.Destroyed)
+        {
+            // Couldn't pack: everything goes back into the caravan.
+            foreach (var thing in goods)
+                _caravan.AddPawnOrItem(thing, addCarriedPawnToWorldPawnsIfAny: true);
         }
         else
         {

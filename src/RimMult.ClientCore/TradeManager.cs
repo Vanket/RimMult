@@ -26,13 +26,17 @@ public sealed class TradeManager
 
     public bool Busy => Current is { IsActive: true };
 
-    /// <summary>Starts a trade with <paramref name="partnerId"/>. Fails while another trade is open.</summary>
-    public PlayerTrade? Invite(int partnerId)
+    /// <summary>
+    /// Starts a trade with <paramref name="partnerId"/>, from home or from a caravan (<paramref name="caravanId"/>)
+    /// standing at their colony. Fails while another trade is open.
+    /// </summary>
+    public PlayerTrade? Invite(int partnerId, int caravanId = 0)
     {
         if (Busy || partnerId == _session.PlayerId)
             return null;
         var trade = Create(partnerId, TradeState.Inviting);
-        Send(partnerId, new TradeMessage { Kind = TradeMessageKind.Invite });
+        trade.MyCaravanId = caravanId;
+        Send(partnerId, new TradeMessage { Kind = TradeMessageKind.Invite, CaravanId = caravanId });
         return trade;
     }
 
@@ -69,7 +73,9 @@ public sealed class TradeManager
                 Send(senderId, new TradeMessage { Kind = TradeMessageKind.Cancel });
                 return;
             }
-            Invited?.Invoke(Create(senderId, TradeState.Invited));
+            var invited = Create(senderId, TradeState.Invited);
+            invited.PartnerCaravanId = message.CaravanId;
+            Invited?.Invoke(invited);
             return;
         }
 

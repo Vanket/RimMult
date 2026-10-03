@@ -57,6 +57,12 @@ public sealed class PlayerTrade
 
     public int PartnerId { get; }
     public string PartnerName { get; }
+
+    /// <summary>We trade from a caravan standing at the partner's colony (its id in our game), or 0.</summary>
+    public int MyCaravanId { get; internal set; }
+
+    /// <summary>The partner trades from a caravan at our colony (its id in their game), or 0.</summary>
+    public int PartnerCaravanId { get; internal set; }
     public TradeState State { get; private set; }
 
     public IReadOnlyList<TradeLine> MyOffer { get; private set; } = Array.Empty<TradeLine>();
