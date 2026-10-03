@@ -15,7 +15,8 @@ namespace RimMult.Sync;
 /// </summary>
 internal static class TimeSync
 {
-    private const float ReportInterval = 0.25f;
+    /// <summary>Frequent reports keep the server's view of this colony fresh, so others rarely wait for it.</summary>
+    private const float ReportInterval = 0.1f;
     private const float MeasureWindow = 1f;
 
     /// <summary>Reported until a real measurement exists: "not a bottleneck".</summary>
@@ -73,6 +74,10 @@ internal static class TimeSync
             MyVote = (GameSpeed)(byte)observed;
             session.VoteSpeed(MyVote);
         }
+
+        // Our pause was lifted by someone else: it no longer is our vote.
+        if (MyVote == GameSpeed.Paused && grant != null && grant.Speed != GameSpeed.Paused)
+            MyVote = null;
 
         var target = (TimeSpeed)(byte)(grant?.Speed ?? GameSpeed.Paused);
         if (tickManager.CurTimeSpeed != target)

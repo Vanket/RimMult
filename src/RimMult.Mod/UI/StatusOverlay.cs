@@ -12,7 +12,7 @@ namespace RimMult.UI;
 /// </summary>
 internal static class StatusOverlay
 {
-    private const float Width = 420f;
+    private const float MinWidth = 300f;
     private const float Height = 24f;
 
     public static void OnGUI()
@@ -23,15 +23,18 @@ internal static class StatusOverlay
 
         HandleChatKey(session);
 
-        var rect = new Rect((Verse.UI.screenWidth - Width) / 2f, 2f, Width, Height);
-        Widgets.DrawBoxSolid(rect, new Color(0f, 0f, 0f, 0.45f));
-        Widgets.DrawHighlightIfMouseover(rect);
-
         var font = Text.Font;
         var anchor = Text.Anchor;
         Text.Font = GameFont.Small;
         Text.Anchor = TextAnchor.MiddleCenter;
-        Widgets.Label(rect, Describe(session));
+
+        // Sized to the text, so a long status stays on one line.
+        var text = Describe(session);
+        var width = Mathf.Max(MinWidth, Text.CalcSize(text).x + 24f);
+        var rect = new Rect((Verse.UI.screenWidth - width) / 2f, 2f, width, Height);
+        Widgets.DrawBoxSolid(rect, new Color(0f, 0f, 0f, 0.45f));
+        Widgets.DrawHighlightIfMouseover(rect);
+        Widgets.Label(rect, text);
         Text.Anchor = anchor;
         Text.Font = font;
 
