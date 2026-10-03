@@ -24,7 +24,20 @@ public sealed class RemoteColony : WorldObject
     /// <summary>The owner's color, both zoomed out (icon) and zoomed in (settlement graphic).</summary>
     public override Color ExpandingIconColor => PlayerPalette.Get(ColorIndex);
 
-    public override Material Material => PlayerPalette.WorldMaterial(def.texture, ColorIndex);
+    public override Material Material
+    {
+        get
+        {
+            try
+            {
+                return PlayerPalette.WorldMaterial(def.texture, ColorIndex);
+            }
+            catch (Exception)
+            {
+                return base.Material;
+            }
+        }
+    }
 
     public override string GetInspectString()
     {

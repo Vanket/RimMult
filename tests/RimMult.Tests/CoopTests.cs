@@ -72,6 +72,7 @@ public class CoopTests
                     Despawned = { 11, 12 },
                     Things = { "<root><li Class=\"Pawn\"><id>Human10</id></li></root>" },
                     Patches = { new ThingPatch(40, 90, 75, 0.35f, -1f, 1), new ThingPatch(41, 10, 1, -1f, 120.5f, ThingPatch.NoForbid) },
+                    Shots = { new CoopShot("Bullet_Revolver", 1.5f, 2.5f, 10.25f, 20f, 12, "Shot_Revolver") },
                     Designations = [new DesignationEntry("Mine", -1, 4, 9), new DesignationEntry("CutPlant", 77, 0, 0)],
                     Grids = "<root><topGrid>AAAA</topGrid></root>",
                     Zones = "<root><allZones /></root>",
@@ -94,6 +95,8 @@ public class CoopTests
         var patch = first.Patches[0];
         Assert.Equal((40, 90, 75, 0.35f, -1f, (byte)1), (patch.ThingId, patch.HitPoints, patch.StackCount, patch.Growth, patch.WorkDone, patch.Forbidden));
         Assert.Equal(120.5f, first.Patches[1].WorkDone);
+        var shot = Assert.Single(first.Shots);
+        Assert.Equal(("Bullet_Revolver", 1.5f, 2.5f, 10.25f, 20f, 12, "Shot_Revolver"), (shot.ProjectileDef, shot.FromX, shot.FromZ, shot.ToX, shot.ToZ, shot.Ticks, shot.Sound));
         Assert.Equal(ThingPatch.NoForbid, first.Patches[1].Forbidden);
         Assert.Equal(2, first.Designations!.Count);
         Assert.Equal("CutPlant", first.Designations[1].DefName);
@@ -136,13 +139,16 @@ public class CoopTests
         host.Pump(a, b);
         var atB = Record(b);
 
-        var frame = new PositionsFrame { Tick = 9, Maps = { (1, [new PawnPosition(3, 4, 5, 1)]) } }.Encode();
+        var frame = new PositionsFrame { Tick = 9, Maps = { (1, [new PawnPosition(3, 4, 5, 1, 437, 512)]) } }.Encode();
         a.SendCoop(CoopChannel.Positions, frame);
         host.Pump(a, b);
 
         var got = Assert.Single(atB);
         Assert.Equal(CoopChannel.Positions, got.Channel);
-        Assert.Equal(9, PositionsFrame.Decode(got.Data).Tick);
+        var decoded = PositionsFrame.Decode(got.Data);
+        Assert.Equal(9, decoded.Tick);
+        var position = decoded.Maps.Single().Positions.Single();
+        Assert.Equal((4, 5, 437, 512), (position.X, position.Z, position.DrawX, position.DrawZ));
     }
 
     [Fact]
