@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using RimMult.Net.LiteNet;
 using RimMult.Server;
 using RimMult.ServerCore;
 using RimMult.Shared;
@@ -18,11 +19,13 @@ else
     Log($"No config found, wrote defaults to {Path.GetFullPath(configPath)}");
 }
 
-var transport = new LiteNetServerTransport(config.Server.MaxPlayers);
-var server = new GameServer(config.Server, transport, Log);
-transport.Attach(server);
+var hub = new TransportHub();
+var server = new GameServer(config.Server, hub, Log);
+hub.Attach(server);
+var udp = new LiteNetServerEndpoint(hub, config.Server.MaxPlayers);
+hub.AddEndpoint(udp);
 
-if (!transport.Start(config.Port))
+if (!udp.Start(config.Port))
 {
     Log($"Could not bind UDP port {config.Port}");
     return 1;
@@ -38,15 +41,14 @@ using var sigTerm = PosixSignalRegistration.Create(PosixSignal.SIGTERM, RequestS
 var clock = Stopwatch.StartNew();
 while (!stop.IsCancellationRequested)
 {
-    transport.Poll();
+    hub.Poll();
     server.Update(clock.Elapsed.TotalSeconds);
     Thread.Sleep(5);
 }
 
 Log("Shutting down");
 server.Shutdown();
-transport.Poll();
-transport.Stop();
+hub.Stop();
 return 0;
 
 void RequestStop(PosixSignalContext context)

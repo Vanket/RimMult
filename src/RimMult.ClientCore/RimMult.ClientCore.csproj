@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Engine-independent client logic: unit-testable outside the game, used by the mod. -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>RimMult.ClientCore</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RimMult.Shared\RimMult.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

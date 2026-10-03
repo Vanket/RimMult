@@ -1,0 +1,289 @@
+using System.Collections.Generic;
+using System.Linq;
+using RimMult.ClientCore;
+using RimMult.Shared.Mods;
+using RimMult.Shared.Packets;
+using RimMult.Steam;
+using UnityEngine;
+using Verse;
+
+namespace RimMult.UI;
+
+/// <summary>
+/// The multiplayer window: join/host when not connected, lobby (players + chat) when connected,
+/// and the reason (with the mod list differences) when a connection ended.
+/// </summary>
+internal sealed class Dialog_Multiplayer : Window
+{
+    private const float RowHeight = 30f;
+    private const float Gap = 10f;
+
+    private readonly ChatPanel _chat = new("RimMultLobbyChatInput");
+    private string _password = "";
+    private string _hostPassword = "";
+    private string _hostPortBuffer = "";
+    private string? _error;
+    private Vector2 _friendsScroll;
+    private Vector2 _playersScroll;
+    private Vector2 _diffScroll;
+
+    public Dialog_Multiplayer()
+    {
+        doCloseX = true;
+        forcePause = false;
+        absorbInputAroundWindow = true;
+        closeOnClickedOutside = false;
+        closeOnAccept = false;
+        onlyOneOfTypeAllowed = true;
+        optionalTitle = "RimMult.Multiplayer".Translate();
+    }
+
+    public override Vector2 InitialSize => new(860f, 700f);
+
+    private static RimMultSettings Settings => RimMultMod.Instance.Settings;
+
+    public override void PreClose()
+    {
+        base.PreClose();
+        RimMultMod.Instance.WriteSettings();
+    }
+
+    public override void DoWindowContents(Rect inRect)
+    {
+        Text.Font = GameFont.Small;
+        var session = Multiplayer.Session;
+
+        if (!SteamIntegration.Available)
+        {
+            Widgets.Label(inRect, "RimMult.SteamRequired".Translate());
+            return;
+        }
+
+        if (session != null && session.State != ClientState.Disconnected)
+        {
+            DrawLobby(inRect, session);
+            return;
+        }
+
+        var setupRect = inRect;
+        if (session != null)
+        {
+            // The last connection ended: say why, on top of the join/host controls.
+            var endedHeight = session.ModDiff != null ? 230f : 60f;
+            DrawEnded(new Rect(inRect.x, inRect.y, inRect.width, endedHeight), session);
+            setupRect.yMin += endedHeight + Gap;
+        }
+        DrawSetup(setupRect);
+    }
+
+    private void DrawSetup(Rect rect)
+    {
+        if (_error != null)
+        {
+            var errorRect = new Rect(rect.x, rect.y, rect.width, RowHeight);
+            GUI.color = ColorLibrary.RedReadable;
+            Widgets.Label(errorRect, _error);
+            GUI.color = Color.white;
+            rect.yMin += RowHeight;
+        }
+
+        var left = rect.LeftHalf().ContractedBy(4f);
+        var right = rect.RightHalf().ContractedBy(4f);
+        DrawJoin(left);
+        DrawHost(right);
+    }
+
+    private void DrawJoin(Rect rect)
+    {
+        Widgets.DrawMenuSection(rect);
+        var list = new Listing_Standard();
+        list.Begin(rect.ContractedBy(10f));
+
+        Text.Font = GameFont.Medium;
+        list.Label("RimMult.Join".Translate());
+        Text.Font = GameFont.Small;
+
+        list.Label("RimMult.FriendsHosting".Translate());
+        var friends = SteamIntegration.FriendHosts();
+        var friendsRect = list.GetRect(120f);
+        Widgets.DrawMenuSection(friendsRect);
+        var inner = friendsRect.ContractedBy(4f);
+        if (friends.Count == 0)
+        {
+            GUI.color = Color.gray;
+            Widgets.Label(inner, "RimMult.NoFriendsHosting".Translate());
+            GUI.color = Color.white;
+        }
+        else
+        {
+            var view = new Rect(0f, 0f, inner.width - 16f, friends.Count * RowHeight);
+            Widgets.BeginScrollView(inner, ref _friendsScroll, view);
+            for (var i = 0; i < friends.Count; i++)
+            {
+                var row = new Rect(0f, i * RowHeight, view.width, RowHeight - 2f);
+                Widgets.Label(row.LeftPart(0.65f), friends[i].Name);
+                if (Widgets.ButtonText(row.RightPart(0.33f), "RimMult.JoinButton".Translate()))
+                    Multiplayer.JoinSteam(friends[i].SteamId, _password);
+            }
+            Widgets.EndScrollView();
+        }
+
+        list.Gap();
+        Settings.LastServerAddress = list.TextEntryLabeled("RimMult.Address".Translate(), Settings.LastServerAddress);
+        _password = list.TextEntryLabeled("RimMult.Password".Translate(), _password);
+        if (list.ButtonText("RimMult.JoinByAddress".Translate()))
+        {
+            _error = Multiplayer.JoinAddress(Settings.LastServerAddress, _password, out var error) ? null : error;
+        }
+
+        list.Gap();
+        GUI.color = Color.gray;
+        list.Label("RimMult.JoinHint".Translate());
+        GUI.color = Color.white;
+        list.End();
+    }
+
+    private void DrawHost(Rect rect)
+    {
+        Widgets.DrawMenuSection(rect);
+        var list = new Listing_Standard();
+        list.Begin(rect.ContractedBy(10f));
+
+        Text.Font = GameFont.Medium;
+        list.Label("RimMult.Host".Translate());
+        Text.Font = GameFont.Small;
+
+        Settings.HostServerName = list.TextEntryLabeled("RimMult.ServerName".Translate(), Settings.HostServerName);
+        Settings.HostMaxPlayers = Mathf.RoundToInt(list.SliderLabeled(
+            "RimMult.MaxPlayers".Translate(Settings.HostMaxPlayers), Settings.HostMaxPlayers, 2f, 10f));
+        _hostPassword = list.TextEntryLabeled("RimMult.Password".Translate(), _hostPassword);
+
+        list.CheckboxLabeled("RimMult.OpenPort".Translate(), ref Settings.HostOpenPort, "RimMult.OpenPortTip".Translate());
+        if (Settings.HostOpenPort)
+            list.TextFieldNumericLabeled("RimMult.Port".Translate(), ref Settings.HostPort, ref _hostPortBuffer, 1, 65535);
+
+        list.Gap();
+        if (list.ButtonText("RimMult.HostButton".Translate()))
+        {
+            var options = new HostOptions
+            {
+                ServerName = Settings.HostServerName,
+                MaxPlayers = Settings.HostMaxPlayers,
+                Password = _hostPassword,
+                OpenPort = Settings.HostOpenPort,
+                Port = Settings.HostPort,
+            };
+            _error = Multiplayer.Host(options, out var error) ? null : error;
+        }
+
+        list.Gap();
+        GUI.color = Color.gray;
+        list.Label("RimMult.HostHint".Translate());
+        GUI.color = Color.white;
+        list.End();
+    }
+
+    private void DrawLobby(Rect rect, ClientSession session)
+    {
+        var header = new Rect(rect.x, rect.y, rect.width, RowHeight);
+        Text.Font = GameFont.Medium;
+        Widgets.Label(header, session.State == ClientState.Connected
+            ? session.ServerName
+            : (string)"RimMult.StatusConnecting".Translate());
+        Text.Font = GameFont.Small;
+
+        var bottom = new Rect(rect.x, rect.yMax - RowHeight - 4f, rect.width, RowHeight + 4f);
+        var body = new Rect(rect.x, header.yMax + Gap, rect.width, bottom.y - header.yMax - 2 * Gap);
+
+        var playersRect = body.LeftPartPixels(220f);
+        var chatRect = new Rect(playersRect.xMax + Gap, body.y, body.width - playersRect.width - Gap, body.height);
+        DrawPlayers(playersRect, session);
+        if (session.State == ClientState.Connected)
+            _chat.Draw(chatRect, session);
+        else
+            Widgets.Label(chatRect, "RimMult.StatusHandshaking".Translate());
+
+        if (Multiplayer.IsHosting)
+        {
+            var info = Multiplayer.HostedPort is { } port
+                ? "RimMult.HostingInfoPort".Translate(port)
+                : "RimMult.HostingInfo".Translate();
+            GUI.color = Color.gray;
+            Widgets.Label(bottom.LeftPart(0.7f), info);
+            GUI.color = Color.white;
+        }
+
+        var leaveLabel = Multiplayer.IsHosting ? "RimMult.StopHosting".Translate() : "RimMult.Disconnect".Translate();
+        if (Widgets.ButtonText(bottom.RightPartPixels(200f), leaveLabel))
+            Multiplayer.Stop();
+    }
+
+    private void DrawPlayers(Rect rect, ClientSession session)
+    {
+        Widgets.DrawMenuSection(rect);
+        var inner = rect.ContractedBy(6f);
+        var players = session.Players;
+        var view = new Rect(0f, 0f, inner.width - 16f, Mathf.Max(players.Count * 26f, inner.height));
+        Widgets.BeginScrollView(inner, ref _playersScroll, view);
+        for (var i = 0; i < players.Count; i++)
+        {
+            var player = players[i];
+            var label = player.Name;
+            if (player.IsHost)
+                label += " " + "RimMult.HostMark".Translate();
+            if (player.Id == session.PlayerId)
+                label = $"<b>{label}</b>";
+            Widgets.Label(new Rect(0f, i * 26f, view.width, 26f), label);
+        }
+        Widgets.EndScrollView();
+    }
+
+    private void DrawEnded(Rect rect, ClientSession session)
+    {
+        Widgets.DrawMenuSection(rect);
+        var inner = rect.ContractedBy(8f);
+
+        var headline = new Rect(inner.x, inner.y, inner.width - 110f, RowHeight);
+        GUI.color = ColorLibrary.RedReadable;
+        Widgets.Label(headline, "RimMult.ConnectionEnded".Translate(session.DisconnectReason ?? ""));
+        GUI.color = Color.white;
+        if (Widgets.ButtonText(new Rect(inner.xMax - 100f, inner.y, 100f, RowHeight - 4f), "RimMult.Dismiss".Translate()))
+            Multiplayer.Stop();
+
+        if (session.KickReason == KickReason.WrongPassword)
+        {
+            Widgets.Label(new Rect(inner.x, inner.y + RowHeight, inner.width, RowHeight), "RimMult.WrongPasswordHint".Translate());
+            return;
+        }
+
+        if (session.ModDiff is { } diff)
+            DrawModDiff(new Rect(inner.x, inner.y + RowHeight, inner.width, inner.height - RowHeight), diff);
+    }
+
+    private void DrawModDiff(Rect rect, ModListDiff diff)
+    {
+        var rows = new List<(string Text, ulong WorkshopId)>();
+        foreach (var mod in diff.Missing)
+            rows.Add(("RimMult.ModMissing".Translate(mod.Name, mod.PackageId), mod.WorkshopId));
+        foreach (var mod in diff.DifferentVersion)
+            rows.Add(("RimMult.ModDifferent".Translate(mod.Name, mod.PackageId), mod.WorkshopId));
+        foreach (var mod in diff.Extra)
+            rows.Add(("RimMult.ModExtra".Translate(mod.Name, mod.PackageId), 0UL));
+        if (diff.OrderDiffers)
+            rows.Add(("RimMult.ModOrder".Translate(), 0UL));
+        if (rows.Count == 0)
+            rows.Add(("RimMult.ModSettingsDiffer".Translate(), 0UL));
+
+        var view = new Rect(0f, 0f, rect.width - 16f, rows.Count * 26f);
+        Widgets.BeginScrollView(rect, ref _diffScroll, view);
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var row = new Rect(0f, i * 26f, view.width, 26f);
+            var (text, workshopId) = rows[i];
+            Widgets.Label(workshopId != 0 ? row.LeftPart(0.78f) : row, text);
+            if (workshopId != 0 && Widgets.ButtonText(row.RightPart(0.2f), "RimMult.OpenWorkshop".Translate()))
+                SteamIntegration.OpenWorkshopPage(workshopId);
+        }
+        Widgets.EndScrollView();
+    }
+}

@@ -1,5 +1,7 @@
 using HarmonyLib;
 using RimMult.Shared;
+using RimMult.Steam;
+using RimWorld;
 using UnityEngine;
 using Verse;
 
@@ -14,6 +16,15 @@ public sealed class RimMultMod : Mod
         Instance = this;
         Settings = GetSettings<RimMultSettings>();
         new Harmony(HarmonyId).PatchAll(typeof(RimMultMod).Assembly);
+
+        LongEventHandler.ExecuteWhenFinished(() =>
+        {
+            var runner = new GameObject("RimMult");
+            Object.DontDestroyOnLoad(runner);
+            runner.AddComponent<RimMultRunner>();
+            SteamIntegration.Init();
+        });
+
         Log.Message($"[RimMult] {content.ModMetaData.ModVersion} loaded, protocol v{ProtocolInfo.Version}");
     }
 
@@ -27,20 +38,32 @@ public sealed class RimMultMod : Mod
     {
         var list = new Listing_Standard();
         list.Begin(inRect);
-        list.Label("Server address (host:port)");
-        Settings.LastServerAddress = list.TextEntry(Settings.LastServerAddress);
-        list.Gap();
-        list.Label($"Mod list hash: {ModList.ComputeHash()}");
+        list.Label("RimMult.ModListHash".Translate(ModList.ComputeHash()));
+        list.Label("RimMult.ModListHashHint".Translate());
         list.End();
     }
 }
 
 public sealed class RimMultSettings : ModSettings
 {
-    public string LastServerAddress = $"127.0.0.1:{ProtocolInfo.DefaultPort}";
+    public string LastServerAddress = "";
+    public string HostServerName = "";
+    public int HostMaxPlayers = 10;
+    public bool HostOpenPort;
+    public int HostPort = ProtocolInfo.DefaultPort;
 
     public override void ExposeData()
     {
-        Scribe_Values.Look(ref LastServerAddress, "lastServerAddress", $"127.0.0.1:{ProtocolInfo.DefaultPort}");
+        Scribe_Values.Look(ref LastServerAddress, "lastServerAddress", "");
+        Scribe_Values.Look(ref HostServerName, "hostServerName", "");
+        Scribe_Values.Look(ref HostMaxPlayers, "hostMaxPlayers", 10);
+        Scribe_Values.Look(ref HostOpenPort, "hostOpenPort");
+        Scribe_Values.Look(ref HostPort, "hostPort", ProtocolInfo.DefaultPort);
     }
+}
+
+[DefOf]
+public static class RimMultDefOf
+{
+    public static KeyBindingDef RimMult_ToggleChat = null!;
 }

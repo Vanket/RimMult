@@ -10,11 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="LiteNetLib" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\RimMult.ServerCore\RimMult.ServerCore.csproj" />
+    <ProjectReference Include="..\RimMult.Net.LiteNet\RimMult.Net.LiteNet.csproj" />
   </ItemGroup>
 
   <ItemGroup>

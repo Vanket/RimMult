@@ -16,7 +16,10 @@ public sealed class ServerSettings
     /// </summary>
     public string? GameVersion { get; set; }
 
-    /// <summary>Required mod list hash. Null: the first player to join defines it.</summary>
+    /// <summary>
+    /// Required mod list hash (see the in-game RimMult settings). Null: the first player to join defines it,
+    /// which also lets the server show joining players exactly which mods differ.
+    /// </summary>
     public string? ModListHash { get; set; }
 
     /// <summary>How often the shared clock is broadcast. 20 Hz is plenty: clients may run ahead up to the drift limit.</summary>

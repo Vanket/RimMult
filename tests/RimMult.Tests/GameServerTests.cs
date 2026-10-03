@@ -1,5 +1,7 @@
 using RimMult.ServerCore;
 using RimMult.Shared;
+using RimMult.Shared.Mods;
+using RimMult.Shared.Net;
 using RimMult.Shared.Packets;
 using RimMult.Shared.Time;
 
@@ -16,8 +18,10 @@ public class GameServerTests
         public void Send(int connectionId, byte[] data, DeliveryMode mode) =>
             Sent.Add((connectionId, PacketCodec.Decode(data), mode));
 
-        public void Disconnect(int connectionId)
+        public void Disconnect(int connectionId, byte[]? farewell = null)
         {
+            if (farewell != null)
+                Sent.Add((connectionId, PacketCodec.Decode(farewell), DeliveryMode.ReliableOrdered));
             Disconnected.Add(connectionId);
             Server.OnDisconnected(connectionId);
         }
@@ -45,7 +49,7 @@ public class GameServerTests
         SteamId = steamId,
         DisplayName = name,
         GameVersion = "1.6",
-        ModListHash = mods,
+        Mods = [new ModEntry("ludeon.rimworld", "Core", "1.6", 0), new ModEntry(mods, mods, "v1", 42)],
         Password = password,
     };
 
@@ -71,7 +75,9 @@ public class GameServerTests
         server.OnConnected(2);
         Receive(server, 2, Hello(2, mods: "B"));
 
-        Assert.Equal(KickReason.ModListMismatch, Assert.Single(transport.To<Kick>(2)).Reason);
+        var kick = Assert.Single(transport.To<Kick>(2));
+        Assert.Equal(KickReason.ModListMismatch, kick.Reason);
+        Assert.Equal("A", kick.ServerMods![1].PackageId);
         Assert.Contains(2, transport.Disconnected);
         Assert.Equal(1, server.PlayerCount);
     }
@@ -188,5 +194,28 @@ public class GameServerTests
         Assert.Equal(GameSpeed.Fast, grant.Speed);
         Assert.Equal(560, grant.HorizonTick);
         Assert.Equal(DeliveryMode.UnreliableSequenced, transport.Sent.Single(s => s.Packet is TickGrant).Mode);
+    }
+
+    [Fact]
+    public void PinnedModHashWithoutKnownListKicksWithoutDiff()
+    {
+        var hello = Hello(1, mods: "A");
+        var (server, transport) = Create(new ServerSettings { ModListHash = ModListHash.Compute(Hello(9, mods: "B").Mods) });
+        server.OnConnected(1);
+        Receive(server, 1, hello);
+
+        var kick = Assert.Single(transport.To<Kick>(1));
+        Assert.Equal(KickReason.ModListMismatch, kick.Reason);
+        Assert.Null(kick.ServerMods);
+    }
+
+    [Fact]
+    public void MatchingPinnedModHashIsAccepted()
+    {
+        var hello = Hello(1, mods: "A");
+        var (server, transport) = Create(new ServerSettings { ModListHash = ModListHash.Compute(hello.Mods) });
+        server.OnConnected(1);
+        Receive(server, 1, hello);
+        Assert.Single(transport.To<ServerWelcome>(1));
     }
 }

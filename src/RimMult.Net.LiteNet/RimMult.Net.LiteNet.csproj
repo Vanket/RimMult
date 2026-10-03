@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- UDP transports shared by the dedicated server and the mod (direct-IP joining / hosting). -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>RimMult.Net.LiteNet</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LiteNetLib" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RimMult.ServerCore\RimMult.ServerCore.csproj" />
+  </ItemGroup>
+
+</Project>
