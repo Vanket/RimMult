@@ -1,0 +1,21 @@
+{
+  // UDP port. Open/forward it on the router for players outside your LAN.
+  "Port": 26480,
+  "Server": {
+    "Name": "RimMult server",
+    "MaxPlayers": 10,
+    "Password": null,
+    // null = the first player to join defines the RimWorld version and mod list.
+    "GameVersion": null,
+    "ModListHash": null,
+    "TickGrantIntervalSeconds": 0.05,
+    "Time": {
+      // Lowest | Majority | Host
+      "VoteMode": "Lowest",
+      "AnyoneCanPause": true,
+      // Normal | Fast | Superfast | Ultrafast
+      "MaxSpeed": "Superfast",
+      "MaxDriftTicks": 60
+    }
+  }
+}

@@ -1,0 +1,12 @@
+bin/
+obj/
+*.user
+.vs/
+.idea/
+*.swp
+TestResults/
+# Build output of the mod assembly lands here.
+mod/1.6/Assemblies/*
+!mod/1.6/Assemblies/.gitkeep
+# Dedicated server runtime data.
+saves/

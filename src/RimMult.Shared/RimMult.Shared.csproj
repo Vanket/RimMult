@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- netstandard2.0 so the same assembly loads in RimWorld (Unity Mono, net472) and in the .NET 10 server. -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>RimMult.Shared</RootNamespace>
+  </PropertyGroup>
+
+</Project>
