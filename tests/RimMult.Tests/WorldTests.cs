@@ -207,11 +207,11 @@ public class WorldTests
         a.ReportAuthority(3000, 1000);
         b.ReportAuthority(1000, 1000);
         host.Pump(a, b);
-        Assert.Equal(1060, a.LastGrant?.HorizonTick);
+        Assert.Equal(1000 + 270, a.LastGrant?.HorizonTick); // speed 2: 180 tps * 1.5 s of slack
 
         b.LeaveWorld();
         host.Pump(a, b);
-        Assert.Equal(3060, a.LastGrant?.HorizonTick);
+        Assert.Equal(3000 + 270, a.LastGrant?.HorizonTick);
         Assert.False(b.Players.Single(p => p.Name == "B").InWorld);
     }
 

@@ -5,7 +5,7 @@ namespace RimMult.Tests;
 public class TimeCoordinatorTests
 {
     private static TimeCoordinator Create(SpeedVoteMode mode = SpeedVoteMode.Lowest, bool anyoneCanPause = true) =>
-        new(new TimeSettings { VoteMode = mode, AnyoneCanPause = anyoneCanPause, MaxSpeed = GameSpeed.Ultrafast, MaxDriftTicks = 60 });
+        new(new TimeSettings { VoteMode = mode, AnyoneCanPause = anyoneCanPause, MaxSpeed = GameSpeed.Ultrafast, MaxDriftTicks = 60, MaxDriftSeconds = 0 });
 
     [Fact]
     public void NoVotesMeansPaused()
@@ -150,5 +150,45 @@ public class TimeCoordinatorTests
         Assert.Equal(GameSpeed.Fast, grant.Speed);
         Assert.Equal(1060, grant.HorizonTick);
         Assert.Equal(-1, grant.BottleneckPlayerId);
+    }
+
+    [Fact]
+    public void DriftScalesWithSpeed()
+    {
+        var time = new TimeCoordinator(new TimeSettings { MaxDriftTicks = 60, MaxDriftSeconds = 1.5f, MaxSpeed = GameSpeed.Superfast });
+        Assert.Equal(60, time.DriftTicks(GameSpeed.Paused));
+        Assert.Equal(90, time.DriftTicks(GameSpeed.Normal));     // 60 tps * 1.5 s
+        Assert.Equal(540, time.DriftTicks(GameSpeed.Superfast)); // 360 tps * 1.5 s
+
+        time.SetVote(1, GameSpeed.Superfast);
+        time.ReportAuthority(1, 1000, 1000);
+        time.ReportAuthority(2, 1000, 1000);
+        Assert.Equal(1540, time.ComputeGrant().HorizonTick);
+    }
+
+    [Fact]
+    public void AnyoneCanUnpause()
+    {
+        var time = Create();
+        time.SetVote(1, GameSpeed.Fast);
+        time.SetVote(2, GameSpeed.Paused);
+        Assert.Equal(GameSpeed.Paused, time.ResolveSpeed());
+
+        time.SetVote(1, GameSpeed.Superfast);
+        Assert.Equal(GameSpeed.Superfast, time.ResolveSpeed());
+
+        // The player who had paused can still vote again afterwards.
+        time.SetVote(2, GameSpeed.Normal);
+        Assert.Equal(GameSpeed.Normal, time.ResolveSpeed());
+    }
+
+    [Fact]
+    public void MajorityPauseIsNotLiftedBySingleVote()
+    {
+        var time = Create(SpeedVoteMode.Majority, anyoneCanPause: false);
+        time.SetVote(1, GameSpeed.Paused);
+        time.SetVote(2, GameSpeed.Paused);
+        time.SetVote(3, GameSpeed.Fast);
+        Assert.Equal(GameSpeed.Paused, time.ResolveSpeed());
     }
 }

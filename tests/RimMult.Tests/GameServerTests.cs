@@ -197,7 +197,7 @@ public class GameServerTests
 
         var grant = Assert.Single(transport.To<TickGrant>(1));
         Assert.Equal(GameSpeed.Fast, grant.Speed);
-        Assert.Equal(560, grant.HorizonTick);
+        Assert.Equal(500 + 270, grant.HorizonTick); // speed 2: 180 tps * 1.5 s of slack
         Assert.Equal(DeliveryMode.UnreliableSequenced, transport.Sent.Single(s => s.Packet is TickGrant).Mode);
     }
 

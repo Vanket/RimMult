@@ -18,7 +18,10 @@ public sealed class TimeSettings
 {
     public SpeedVoteMode VoteMode { get; set; } = SpeedVoteMode.Lowest;
 
-    /// <summary>When true a single "pause" vote pauses the world regardless of <see cref="VoteMode"/>.</summary>
+    /// <summary>
+    /// When true a single "pause" vote pauses the world regardless of <see cref="VoteMode"/>, and likewise any
+    /// player can lift it: choosing a speed while the world is paused clears everyone's pause votes.
+    /// </summary>
     public bool AnyoneCanPause { get; set; } = true;
 
     /// <summary>Upper bound on the resolved speed. Ultrafast is dev-mode only in vanilla.</summary>
@@ -30,12 +33,20 @@ public sealed class TimeSettings
     /// </summary>
     public int MaxDriftTicks { get; set; } = 60;
 
+    /// <summary>
+    /// The same slack in real seconds, so it scales with speed (1.5 s = 540 ticks at speed 3). The larger of the
+    /// two applies. A fixed tick budget is shorter than network/report delay at high speed, which makes colonies
+    /// stop and start every few frames (visible as pawns jumping).
+    /// </summary>
+    public float MaxDriftSeconds { get; set; } = 1.5f;
+
     public void Write(ByteWriter writer)
     {
         writer.WriteByte((byte)VoteMode);
         writer.WriteBool(AnyoneCanPause);
         writer.WriteByte((byte)MaxSpeed);
         writer.WriteVarInt(MaxDriftTicks);
+        writer.WriteFloat(MaxDriftSeconds);
     }
 
     public static TimeSettings Read(ByteReader reader)
@@ -46,8 +57,10 @@ public sealed class TimeSettings
             AnyoneCanPause = reader.ReadBool(),
             MaxSpeed = (GameSpeed)reader.ReadByte(),
             MaxDriftTicks = (int)reader.ReadVarInt(),
+            MaxDriftSeconds = reader.ReadFloat(),
         };
-        if (settings.VoteMode > SpeedVoteMode.Host || !settings.MaxSpeed.IsDefined() || settings.MaxDriftTicks < 0)
+        if (settings.VoteMode > SpeedVoteMode.Host || !settings.MaxSpeed.IsDefined() || settings.MaxDriftTicks < 0
+            || float.IsNaN(settings.MaxDriftSeconds) || settings.MaxDriftSeconds < 0)
             throw new ProtocolException("Invalid time settings");
         return settings;
     }

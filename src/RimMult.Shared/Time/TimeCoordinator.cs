@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace RimMult.Shared.Time;
 
@@ -29,7 +30,8 @@ public readonly struct TickGrantInfo
 /// Keeps one shared clock for a world whose maps are simulated on different machines.
 /// Each simulation authority reports its current tick and how many ticks per second it can sustain;
 /// players vote on speed. The coordinator resolves the vote and hands out a tick horizon that keeps
-/// every authority within <see cref="TimeSettings.MaxDriftTicks"/> of the slowest one.
+/// every authority within the allowed drift (<see cref="TimeSettings.MaxDriftTicks"/> /
+/// <see cref="TimeSettings.MaxDriftSeconds"/>) of the slowest one.
 /// Pure logic, no I/O: runs inside the in-game host and the dedicated server alike.
 /// </summary>
 public sealed class TimeCoordinator
@@ -57,11 +59,23 @@ public sealed class TimeCoordinator
     /// <summary>Records a vote; <c>null</c> withdraws it (the player abstains).</summary>
     public void SetVote(int playerId, GameSpeed? speed)
     {
+        // "Anyone can pause" goes both ways: choosing a speed while paused lifts the others' pause votes,
+        // otherwise only the player who paused could ever resume.
+        if (speed is { } chosen && chosen != GameSpeed.Paused && Settings.AnyoneCanPause && ResolveSpeed() == GameSpeed.Paused)
+        {
+            foreach (var other in _votes.Where(v => v.Value == GameSpeed.Paused && v.Key != playerId).Select(v => v.Key).ToList())
+                _votes.Remove(other);
+        }
+
         if (speed is { } value)
             _votes[playerId] = value;
         else
             _votes.Remove(playerId);
     }
+
+    /// <summary>How far ahead of the slowest authority the others may run at <paramref name="speed"/>.</summary>
+    public long DriftTicks(GameSpeed speed) =>
+        Math.Max(Settings.MaxDriftTicks, (long)(speed.TicksPerSecond() * Settings.MaxDriftSeconds));
 
     public void ReportAuthority(int playerId, long tick, float sustainableTicksPerSecond)
     {
@@ -139,7 +153,7 @@ public sealed class TimeCoordinator
         }
 
         // While paused, let laggards catch up to the leader so everyone resumes from the same tick.
-        var candidate = speed == GameSpeed.Paused ? maxTick : minTick + Settings.MaxDriftTicks;
+        var candidate = speed == GameSpeed.Paused ? maxTick : minTick + DriftTicks(speed);
 
         // The horizon never moves backwards: an authority may already have simulated up to the old one.
         _horizon = Math.Max(_horizon, candidate);

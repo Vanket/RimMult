@@ -17,7 +17,9 @@
       "AnyoneCanPause": true,
       // Normal | Fast | Superfast | Ultrafast
       "MaxSpeed": "Superfast",
-      "MaxDriftTicks": 60
+      "MaxDriftTicks": 60,
+      // Allowed lead in real seconds; scales with speed so fast speeds don't stutter.
+      "MaxDriftSeconds": 1.5
     }
   }
 }
