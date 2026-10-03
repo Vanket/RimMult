@@ -43,7 +43,12 @@ internal static class CoopGuest
     private static readonly Action<ZoneManager> UpdateZoneLinks = AccessTools.MethodDelegate<Action<ZoneManager>>(AccessTools.Method(typeof(ZoneManager), "UpdateZoneManagerLinks"));
     private static readonly Action<ZoneManager> RebuildZoneGrid = AccessTools.MethodDelegate<Action<ZoneManager>>(AccessTools.Method(typeof(ZoneManager), "RebuildZoneGrid"));
 
+    /// <summary>State batches received and not applied yet; merged and applied once per frame.</summary>
     private static readonly List<byte[]> Pending = new();
+
+    /// <summary>Latest known position per pawn (map id → pawn id → position), applied once per frame.</summary>
+    private static readonly Dictionary<int, Dictionary<int, PawnPosition>> PendingPositions = new();
+    private static int _positionsTick = -1;
     private static readonly HashSet<Thing> Expected = new();
     private static readonly List<Thing> Strays = new();
     private static Game? _game;
@@ -72,6 +77,9 @@ internal static class CoopGuest
     {
         State = Phase.None;
         Pending.Clear();
+        PendingPositions.Clear();
+        _positionsTick = -1;
+        ScribeMemory.ResetCache();
         Expected.Clear();
         Strays.Clear();
         _game = null;
@@ -130,6 +138,8 @@ internal static class CoopGuest
                 break;
             case Phase.Active:
                 UpdateSpeed(session);
+                ApplyPending();
+                ApplyPositions();
                 break;
         }
     }
@@ -149,11 +159,12 @@ internal static class CoopGuest
             case CoopChannel.Game when State == Phase.Requested:
                 Load(session, data);
                 break;
-            case CoopChannel.State when State == Phase.Loading:
+            case CoopChannel.State when State == Phase.Loading || Active:
+                // Applied together once per frame: a slow machine catches up instead of falling further behind.
                 Pending.Add(data);
                 break;
-            case CoopChannel.State when Active:
-                Apply(data);
+            case CoopChannel.Positions when State == Phase.Loading || Active:
+                QueuePositions(data);
                 break;
         }
     }
@@ -193,10 +204,10 @@ internal static class CoopGuest
             _hasApplied = false;
             MyVote = null;
             DeleteSave();
+            ScribeMemory.ResetCache();
             session.SendCoop(CoopChannel.Ready, Array.Empty<byte>());
-            foreach (var batch in Pending)
-                Apply(batch);
-            Pending.Clear();
+            ApplyPending();
+            ApplyPositions();
             Messages.Message("RimMult.CoopJoined".Translate(session.NameOf(HostId(session))), MessageTypeDefOf.PositiveEvent, historical: false);
         }
         else if (Current.ProgramState == ProgramState.Entry && Time.realtimeSinceStartup - _loadStarted > LoadFailAfter)
@@ -269,33 +280,158 @@ internal static class CoopGuest
             Strays.Add(thing);
     }
 
-    private static void Apply(byte[] data)
+    /// <summary>Everything one map got from several batches, reduced to the latest state.</summary>
+    private sealed class MergedDelta
     {
-        CoopBatch batch;
+        public readonly HashSet<int> Despawned = new();
+        public readonly Dictionary<int, XmlNode> Fragments = new();
+        public readonly Dictionary<int, ThingPatch> Patches = new();
+        public List<DesignationEntry>? Designations;
+        public string? Grids;
+        public string? Zones;
+    }
+
+    private static void QueuePositions(byte[] data)
+    {
+        PositionsFrame frame;
         try
         {
-            batch = CoopBatch.Decode(CoopHost.Decompress(data));
+            frame = PositionsFrame.Decode(data);
         }
         catch (Exception e)
         {
-            Log.Warning($"[RimMult] Co-op: bad state from the host: {e.Message}");
+            Log.WarningOnce($"[RimMult] Co-op: bad positions from the host: {e.Message}", 0x434F5053);
             return;
         }
-        if (!ScribeMemory.Idle)
+        if (frame.Tick > _positionsTick)
+            _positionsTick = frame.Tick;
+        foreach (var (mapId, positions) in frame.Maps)
+        {
+            if (!PendingPositions.TryGetValue(mapId, out var byPawn))
+                PendingPositions[mapId] = byPawn = new Dictionary<int, PawnPosition>();
+            foreach (var position in positions)
+                byPawn[position.ThingId] = position;
+        }
+    }
+
+    /// <summary>Moves pawns to where the host has them. Runs every frame; cheap.</summary>
+    private static void ApplyPositions()
+    {
+        if (PendingPositions.Count == 0 || !Active)
             return;
+
+        var tickManager = Find.TickManager;
+        if (_positionsTick > tickManager.TicksGame)
+            TicksGame(tickManager) = _positionsTick;
+
+        // Paused (or too fast to tween): snap. Otherwise the pawn glides to its new cell.
+        var snap = tickManager.Paused || tickManager.TickRateMultiplier >= 5f;
+        Applying = true;
+        try
+        {
+            foreach (var pair in PendingPositions)
+            {
+                var map = Find.Maps.FirstOrDefault(m => m.uniqueID == pair.Key);
+                if (map == null)
+                    continue;
+                foreach (var pawn in map.mapPawns.AllPawnsSpawned.ToList())
+                {
+                    if (!pair.Value.TryGetValue(pawn.thingIDNumber, out var position))
+                        continue;
+                    var cell = new IntVec3(position.X, 0, position.Z);
+                    if (cell.InBounds(map) && pawn.Position != cell)
+                    {
+                        pawn.Position = cell;
+                        pawn.Notify_Teleported(endCurrentJob: false, resetTweenedPos: snap);
+                    }
+                    var rotation = new Rot4(position.Rotation & 3);
+                    if (pawn.Rotation != rotation)
+                        pawn.Rotation = rotation;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Log.ErrorOnce($"[RimMult] Co-op: could not move pawns: {e}", 0x434F4D56);
+        }
+        finally
+        {
+            Applying = false;
+            PendingPositions.Clear();
+        }
+    }
+
+    /// <summary>Merges all batches received since the last frame and applies the result once.</summary>
+    private static void ApplyPending()
+    {
+        if (Pending.Count == 0 || !ScribeMemory.Idle)
+            return;
+
+        var merged = new Dictionary<int, MergedDelta>();
+        var tick = -1;
+        foreach (var data in Pending)
+        {
+            CoopBatch batch;
+            try
+            {
+                batch = CoopBatch.Decode(CoopHost.Decompress(data));
+            }
+            catch (Exception e)
+            {
+                Log.Warning($"[RimMult] Co-op: bad state from the host: {e.Message}");
+                continue;
+            }
+            tick = Math.Max(tick, batch.Tick);
+            foreach (var delta in batch.Maps)
+            {
+                if (!merged.TryGetValue(delta.MapId, out var m))
+                    merged[delta.MapId] = m = new MergedDelta();
+                foreach (var id in delta.Despawned)
+                {
+                    m.Fragments.Remove(id);
+                    m.Patches.Remove(id);
+                    m.Despawned.Add(id);
+                }
+                foreach (var xml in delta.Things)
+                {
+                    XmlNode? li;
+                    try
+                    {
+                        li = ScribeMemory.Parse(xml)["li"];
+                    }
+                    catch (XmlException)
+                    {
+                        continue;
+                    }
+                    if (li == null || ScribeMemory.FragmentThingId(li) is not { } id)
+                        continue;
+                    // A newer full copy wins over an older removal or patch.
+                    m.Despawned.Remove(id);
+                    m.Patches.Remove(id);
+                    m.Fragments[id] = li;
+                }
+                foreach (var patch in delta.Patches)
+                    m.Patches[patch.ThingId] = patch;
+                m.Designations = delta.Designations ?? m.Designations;
+                m.Grids = delta.Grids ?? m.Grids;
+                m.Zones = delta.Zones ?? m.Zones;
+            }
+        }
+        Pending.Clear();
 
         Applying = true;
         try
         {
-            TicksGame(Find.TickManager) = batch.Tick;
-            foreach (var delta in batch.Maps)
+            if (tick > Find.TickManager.TicksGame)
+                TicksGame(Find.TickManager) = tick;
+            foreach (var pair in merged)
             {
-                var map = Find.Maps.FirstOrDefault(m => m.uniqueID == delta.MapId);
+                var map = Find.Maps.FirstOrDefault(m => m.uniqueID == pair.Key);
                 if (map == null)
                     continue; // a map the host made after this guest joined
                 try
                 {
-                    ApplyDelta(map, delta);
+                    ApplyMerged(map, pair.Value);
                 }
                 catch (Exception e)
                 {
@@ -314,7 +450,7 @@ internal static class CoopGuest
         }
     }
 
-    private static void ApplyDelta(Map map, MapDelta delta)
+    private static void ApplyMerged(Map map, MergedDelta delta)
     {
         var byId = CoopCommands.ThingsById(map);
 
@@ -324,27 +460,16 @@ internal static class CoopGuest
                 gone.DeSpawn(DestroyMode.Vanish);
         }
 
-        if (delta.Things.Count > 0)
+        if (delta.Fragments.Count > 0)
         {
-            ApplyThings(map, delta.Things, byId);
+            ApplyThings(map, delta.Fragments.Values.ToList(), byId);
             byId = CoopCommands.ThingsById(map);
         }
 
-        // Paused (or too fast to tween): snap. Otherwise the pawn glides to its new cell.
-        var snap = Find.TickManager.Paused || Find.TickManager.TickRateMultiplier >= 5f;
-        foreach (var position in delta.Positions)
+        foreach (var patch in delta.Patches.Values)
         {
-            if (!byId.TryGetValue(position.ThingId, out var thing) || thing is not Pawn { Spawned: true } pawn)
-                continue;
-            var cell = new IntVec3(position.X, 0, position.Z);
-            if (cell.InBounds(map) && pawn.Position != cell)
-            {
-                pawn.Position = cell;
-                pawn.Notify_Teleported(endCurrentJob: false, resetTweenedPos: snap);
-            }
-            var rotation = new Rot4(position.Rotation & 3);
-            if (pawn.Rotation != rotation)
-                pawn.Rotation = rotation;
+            if (byId.TryGetValue(patch.ThingId, out var thing))
+                ApplyPatch(map, thing, patch);
         }
 
         if (delta.Designations != null)
@@ -355,23 +480,42 @@ internal static class CoopGuest
             ApplyZones(map, delta.Zones);
     }
 
+    /// <summary>Small changes in place: no reload, no respawn, only a redraw of that cell when the look changed.</summary>
+    private static void ApplyPatch(Map map, Thing thing, ThingPatch patch)
+    {
+        var redraw = false;
+        if (thing.def.useHitPoints && thing.HitPoints != patch.HitPoints)
+            thing.HitPoints = patch.HitPoints;
+        if (patch.StackCount > 0 && thing.stackCount != patch.StackCount)
+        {
+            thing.stackCount = patch.StackCount;
+            redraw = true;
+        }
+        if (patch.Growth >= 0f && thing is Plant plant && Math.Abs(plant.Growth - patch.Growth) > 0.0001f)
+        {
+            plant.Growth = patch.Growth;
+            redraw = true;
+        }
+        if (patch.WorkDone >= 0f && thing is Frame frame)
+        {
+            frame.workDone = patch.WorkDone;
+            redraw = true;
+        }
+        if (patch.Forbidden != ThingPatch.NoForbid && thing.TryGetComp<CompForbiddable>() is { } forbiddable
+                                                  && forbiddable.Forbidden != (patch.Forbidden == 1))
+            forbiddable.Forbidden = patch.Forbidden == 1;
+        if (redraw && thing.Spawned)
+            map.mapDrawer.MapMeshDirty(thing.Position, MapMeshFlagDefOf.Things);
+    }
+
     /// <summary>Spawns new things and swaps changed ones for their freshly loaded state.</summary>
-    private static void ApplyThings(Map map, List<string> fragments, Dictionary<int, Thing> byId)
+    private static void ApplyThings(Map map, List<XmlNode> fragments, Dictionary<int, Thing> byId)
     {
         var nodes = new List<XmlNode>();
         var replacedIds = new HashSet<string>();
-        foreach (var xml in fragments)
+        foreach (var li in fragments)
         {
-            XmlNode? li;
-            try
-            {
-                li = ScribeMemory.Parse(xml)["li"];
-            }
-            catch (XmlException)
-            {
-                continue;
-            }
-            if (li == null || ScribeMemory.FragmentThingId(li) is not { } id || ScribeMemory.FragmentLoadId(li) is not { } loadId)
+            if (ScribeMemory.FragmentThingId(li) is not { } id || ScribeMemory.FragmentLoadId(li) is not { } loadId)
                 continue;
 
             nodes.Add(li);
@@ -426,6 +570,7 @@ internal static class CoopGuest
                 continue;
             }
 
+            ScribeMemory.Remember(thing);
             if (designations != null)
                 foreach (var def in designations)
                     map.designationManager.AddDesignation(new Designation(thing, def));

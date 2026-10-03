@@ -14,6 +14,7 @@ namespace RimMult.Sync;
 public sealed class ParcelRecord : IExposable
 {
     public long Id;
+    public ulong FromOwner;
     public ulong ToOwner;
     public string ToName = "";
     public string ToTile = "";
@@ -25,6 +26,7 @@ public sealed class ParcelRecord : IExposable
     public void ExposeData()
     {
         Scribe_Values.Look(ref Id, "id");
+        Scribe_Values.Look(ref FromOwner, "fromOwner");
         Scribe_Values.Look(ref ToOwner, "toOwner");
         Scribe_Values.Look(ref ToName, "toName", "");
         Scribe_Values.Look(ref ToTile, "toTile", "");
@@ -49,10 +51,14 @@ internal static class Parcels
     public static void Attach(ClientSession session) => session.ParcelReceived += OnParcel;
 
     /// <summary>Packs <paramref name="things"/> and sends them. The caller removes the originals afterwards.</summary>
-    public static bool Send(ulong toOwner, string toName, string toTile, List<Thing> things)
+    /// <param name="summary">What the recipient is told; by default a list of the contents.</param>
+    /// <param name="quiet">No "parcel sent" message (raids announce themselves).</param>
+    /// <param name="allowEmpty">Send even with nothing inside (a raid that nobody came back from still has news).</param>
+    public static bool Send(ulong toOwner, string toName, string toTile, List<Thing> things,
+        string? summary = null, bool quiet = false, bool allowEmpty = false)
     {
         var comp = RimMultGameComp.Instance;
-        if (comp == null || things.Count == 0)
+        if (comp == null || (things.Count == 0 && !allowEmpty))
             return false;
 
         byte[] payload;
@@ -71,7 +77,7 @@ internal static class Parcels
             return false;
         }
 
-        var summary = ThingPackage.Summarize(things);
+        summary ??= ThingPackage.Summarize(things);
         comp.Outbox.Add(new ParcelRecord
         {
             ToOwner = toOwner,
@@ -80,7 +86,8 @@ internal static class Parcels
             Summary = summary,
             Payload = Convert.ToBase64String(payload),
         });
-        Messages.Message("RimMult.ParcelSent".Translate(toName, summary), MessageTypeDefOf.PositiveEvent);
+        if (!quiet)
+            Messages.Message("RimMult.ParcelSent".Translate(toName, summary), MessageTypeDefOf.PositiveEvent);
         return true;
     }
 
@@ -134,6 +141,7 @@ internal static class Parcels
         comp.Inbox.Add(new ParcelRecord
         {
             Id = item.Id,
+            FromOwner = item.FromOwner,
             ToTile = item.ToTile,
             FromName = item.FromName,
             Summary = item.Summary,
@@ -149,6 +157,12 @@ internal static class Parcels
     /// </summary>
     private static bool TryDeliver(ParcelRecord parcel)
     {
+        // Raids: an enemy war party arriving, or our own coming home. A refused raid comes back like any parcel.
+        if (!parcel.Returned && ParcelAddress.TryParseRaid(parcel.ToTile, out var raidId, out var arrival, out var raidTile))
+            return PlayerRaids.BeginDefense(parcel, raidId, arrival, raidTile);
+        if (ParcelAddress.TryParseRaidReturn(parcel.ToTile, out raidId, out raidTile, out var survivors, out var captives))
+            return PlayerRaids.DeliverReturn(parcel, raidTile, survivors, captives);
+
         ParcelAddress.Parse(parcel.ToTile, out var caravanId, out var tileText);
         var caravan = caravanId is { } id
             ? Find.WorldObjects.Caravans.FirstOrDefault(c => c.ID == id && !c.Destroyed && c.Faction == Faction.OfPlayer)
@@ -180,10 +194,22 @@ internal static class Parcels
         var spot = DropCellFinder.TradeDropSpot(map);
         DropPodUtility.DropThingsNear(spot, map, things, forbid: false);
 
-        var label = parcel.Returned ? "RimMult.ParcelReturnedLabel".Translate() : "RimMult.ParcelLabel".Translate(parcel.FromName);
-        var text = parcel.Returned
-            ? "RimMult.ParcelReturnedText".Translate(parcel.Summary)
-            : "RimMult.ParcelText".Translate(parcel.FromName, parcel.Summary);
+        TaggedString label, text;
+        if (parcel.Returned && ParcelAddress.IsRaid(parcel.ToTile))
+        {
+            label = "RimMult.RaidBouncedLabel".Translate();
+            text = "RimMult.RaidBouncedText".Translate(ThingPackage.Summarize(things));
+        }
+        else if (parcel.Returned)
+        {
+            label = "RimMult.ParcelReturnedLabel".Translate();
+            text = "RimMult.ParcelReturnedText".Translate(parcel.Summary);
+        }
+        else
+        {
+            label = "RimMult.ParcelLabel".Translate(parcel.FromName);
+            text = "RimMult.ParcelText".Translate(parcel.FromName, parcel.Summary);
+        }
         Find.LetterStack.ReceiveLetter(label, text, LetterDefOf.PositiveEvent, new LookTargets(new TargetInfo(spot, map)));
         return true;
     }

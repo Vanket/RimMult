@@ -39,6 +39,9 @@ public sealed class WorldUpdate : IPacket
     /// <summary>NPC settlements destroyed by any player (their tiles); removed on everyone's globe.</summary>
     public List<string> DestroyedSettlements { get; set; } = new();
 
+    /// <summary>Wars and alliances between players.</summary>
+    public List<RelationEntry> Relations { get; set; } = new();
+
     public PacketType Type => PacketType.WorldUpdate;
 
     public void Write(ByteWriter writer)
@@ -47,6 +50,7 @@ public sealed class WorldUpdate : IPacket
         Definition?.Write(writer);
         ColonyInfo.WriteList(writer, Colonies);
         WorldState.WriteStrings(writer, DestroyedSettlements);
+        RelationEntry.WriteList(writer, Relations);
     }
 
     public static WorldUpdate Read(ByteReader reader) => new()
@@ -54,6 +58,7 @@ public sealed class WorldUpdate : IPacket
         Definition = reader.ReadBool() ? WorldDefinition.Read(reader) : null,
         Colonies = ColonyInfo.ReadList(reader),
         DestroyedSettlements = WorldState.ReadStrings(reader),
+        Relations = RelationEntry.ReadList(reader),
     };
 }
 
@@ -199,4 +204,63 @@ public sealed class CoopMessage : IPacket
         Channel = (Coop.CoopChannel)reader.ReadByte(),
         Data = reader.ReadBytes(),
     };
+}
+
+/// <summary>Client → server: a diplomatic step towards another player (by owner key).</summary>
+public sealed class DiplomacyRequest : IPacket
+{
+    public ulong Target { get; set; }
+    public DiplomacyAction Action { get; set; }
+
+    public PacketType Type => PacketType.DiplomacyRequest;
+
+    public void Write(ByteWriter writer)
+    {
+        writer.WriteUInt64(Target);
+        writer.WriteByte((byte)Action);
+    }
+
+    public static DiplomacyRequest Read(ByteReader reader)
+    {
+        var request = new DiplomacyRequest { Target = reader.ReadUInt64(), Action = (DiplomacyAction)reader.ReadByte() };
+        if (request.Action < DiplomacyAction.DeclareWar || request.Action > DiplomacyAction.Decline)
+            throw new ProtocolException($"Unknown diplomacy action {(byte)request.Action}");
+        return request;
+    }
+}
+
+/// <summary>Server → client: something happened between two players (a proposal to answer, a war, a peace…).</summary>
+public sealed class DiplomacyNotice : IPacket
+{
+    public ulong From { get; set; }
+    public string FromName { get; set; } = "";
+    public ulong To { get; set; }
+    public string ToName { get; set; } = "";
+    public DiplomacyEvent Event { get; set; }
+
+    public PacketType Type => PacketType.DiplomacyNotice;
+
+    public void Write(ByteWriter writer)
+    {
+        writer.WriteUInt64(From);
+        writer.WriteString(FromName);
+        writer.WriteUInt64(To);
+        writer.WriteString(ToName);
+        writer.WriteByte((byte)Event);
+    }
+
+    public static DiplomacyNotice Read(ByteReader reader)
+    {
+        var notice = new DiplomacyNotice
+        {
+            From = reader.ReadUInt64(),
+            FromName = reader.ReadRequiredString(),
+            To = reader.ReadUInt64(),
+            ToName = reader.ReadRequiredString(),
+            Event = (DiplomacyEvent)reader.ReadByte(),
+        };
+        if (notice.Event < DiplomacyEvent.WarDeclared || notice.Event > DiplomacyEvent.ProposalDeclined)
+            throw new ProtocolException($"Unknown diplomacy event {(byte)notice.Event}");
+        return notice;
+    }
 }

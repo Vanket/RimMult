@@ -79,6 +79,21 @@ public sealed class ClientSession
 
     public Shared.Coop.GameMode Mode { get; private set; }
 
+    /// <summary>The server lets players declare war on each other and raid.</summary>
+    public bool AllowPvp { get; private set; }
+
+    /// <summary>Wars and alliances between players (pairs not listed are neutral).</summary>
+    public IReadOnlyList<RelationEntry> Relations { get; private set; } = Array.Empty<RelationEntry>();
+
+    /// <summary>Someone proposed, declared or made something diplomatic (to this player, or announced to all).</summary>
+    public event Action<DiplomacyNotice>? DiplomacyReceived;
+
+    /// <summary>How the server keys this player's colonies, parcels and relations: SteamID, or the session id without Steam.</summary>
+    public ulong MyOwnerKey => _hello.SteamId != 0 ? _hello.SteamId : (ulong)PlayerId;
+
+    /// <summary>This player's relation with another player (by owner key).</summary>
+    public PlayerRelation RelationWith(ulong owner) => RelationEntry.Between(Relations, MyOwnerKey, owner);
+
     /// <summary>Co-op traffic: (sender id, channel, data).</summary>
     public event Action<int, Shared.Coop.CoopChannel, byte[]>? CoopReceived;
     public TickGrant? LastGrant { get; private set; }
@@ -168,8 +183,17 @@ public sealed class ClientSession
     /// <summary>Co-op: as a guest always to the host; as the host to <paramref name="playerId"/> or all guests (-1).</summary>
     public void SendCoop(Shared.Coop.CoopChannel channel, byte[] data, int playerId = -1)
     {
+        if (State != ClientState.Connected)
+            return;
+        // Positions go unreliably: the next frame replaces a lost one, and nothing big queues in front of them.
+        var mode = channel == Shared.Coop.CoopChannel.Positions ? DeliveryMode.UnreliableSequenced : DeliveryMode.ReliableOrdered;
+        _transport.Send(PacketCodec.Encode(new CoopMessage { PlayerId = playerId, Channel = channel, Data = data }), mode);
+    }
+
+    public void SendDiplomacy(ulong target, DiplomacyAction action)
+    {
         if (State == ClientState.Connected)
-            Send(new CoopMessage { PlayerId = playerId, Channel = channel, Data = data });
+            Send(new DiplomacyRequest { Target = target, Action = action });
     }
 
     public void ReportSettlementDestroyed(string tile)
@@ -231,6 +255,7 @@ public sealed class ClientSession
                 TimeSettings = welcome.Time;
                 HostCreatesWorld = welcome.HostCreatesWorld;
                 Mode = welcome.Mode;
+                AllowPvp = welcome.AllowPvp;
                 SetState(ClientState.Connected);
                 break;
             case PlayerList list:
@@ -247,6 +272,7 @@ public sealed class ClientSession
                 World = world.Definition;
                 Colonies = world.Colonies;
                 DestroyedSettlements = world.DestroyedSettlements;
+                Relations = world.Relations;
                 WorldChanged?.Invoke();
                 break;
             case WorldClock clock:
@@ -257,6 +283,9 @@ public sealed class ClientSession
                 break;
             case PlayerRelay relay:
                 RelayReceived?.Invoke(relay.PlayerId, relay.Channel, relay.Data);
+                break;
+            case DiplomacyNotice notice:
+                DiplomacyReceived?.Invoke(notice);
                 break;
             case CoopMessage coop:
                 CoopReceived?.Invoke(coop.PlayerId, coop.Channel, coop.Data);

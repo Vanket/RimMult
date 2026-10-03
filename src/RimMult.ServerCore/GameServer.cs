@@ -32,6 +32,7 @@ public sealed class GameServer
         _log = log ?? (_ => { });
         Time = new TimeCoordinator(settings.Time);
         World = world ?? new WorldState();
+        Diplomacy = new DiplomacyBook(World.Relations);
         Settings.ModListHash ??= World.ModListHash;
         Settings.GameVersion ??= World.GameVersion;
     }
@@ -44,6 +45,8 @@ public sealed class GameServer
     public TimeCoordinator Time { get; }
 
     public WorldState World { get; }
+
+    public DiplomacyBook Diplomacy { get; }
 
     public IEnumerable<PlayerInfo> Players => _sessions.Values.Where(s => s.Player != null).Select(s => s.Player!);
 
@@ -65,6 +68,7 @@ public sealed class GameServer
 
         _log($"{player.Name} ({player.Id}) left");
         Time.RemovePlayer(player.Id);
+        Diplomacy.ForgetProposals(OwnerKey(player));
         UpdateWorldTick();
         if (player.IsHost)
             PromoteNextHost();
@@ -143,6 +147,9 @@ public sealed class GameServer
                 break;
             case CoopMessage coop:
                 HandleCoop(player, coop);
+                break;
+            case DiplomacyRequest diplomacy:
+                HandleDiplomacy(player, diplomacy);
                 break;
             default:
                 Kick(session, KickReason.BadData, $"Unexpected packet {packet.Type}");
@@ -251,6 +258,7 @@ public sealed class GameServer
             Time = Settings.Time,
             HostCreatesWorld = Settings.HostCreatesWorld,
             Mode = Settings.Mode,
+            AllowPvp = Settings.AllowPvp,
         });
         Send(session, WorldUpdatePacket());
         BroadcastPlayerList();
@@ -318,9 +326,20 @@ public sealed class GameServer
             Payload = parcel.Payload,
         };
 
-        // Nobody has a colony there anymore (abandoned, or a stale target): send it back rather than lose it.
-        if (!World.Colonies.Any(c => c.OwnerSteamId == parcel.ToOwner))
+        if (ParcelAddress.IsRaid(parcel.ToTile))
         {
+            // A war party only goes out to an enemy who is playing right now; otherwise it simply comes home.
+            if (RaidRefusal(from, parcel.ToOwner) is { } refusal)
+            {
+                _log($"Raid by {player.Name} refused: {refusal}");
+                item.ToOwner = from;
+                item.Returned = true;
+            }
+        }
+        else if (!ParcelAddress.IsRaidReturn(parcel.ToTile) && !World.Colonies.Any(c => c.OwnerSteamId == parcel.ToOwner))
+        {
+            // Nobody has a colony there anymore (abandoned, or a stale target): send it back rather than lose it.
+            // (Raiders going home always reach their owner, whenever they next play.)
             item.ToOwner = from;
             item.ToTile = "";
             item.Returned = true;
@@ -384,7 +403,65 @@ public sealed class GameServer
         Definition = World.Definition,
         Colonies = World.Colonies,
         DestroyedSettlements = World.DestroyedSettlements,
+        Relations = World.Relations,
     };
+
+    /// <summary>Why a raid from <paramref name="attacker"/> on <paramref name="defender"/> can't happen, or null if it can.</summary>
+    private string? RaidRefusal(ulong attacker, ulong defender)
+    {
+        if (!Settings.AllowPvp)
+            return "PvP is off on this server";
+        if (Diplomacy.Get(attacker, defender) != PlayerRelation.Hostile)
+            return "not at war";
+        if (!Players.Any(p => p.InWorld && OwnerKey(p) == defender))
+            return "the defender is not playing";
+        return null;
+    }
+
+    /// <summary>
+    /// War, peace and alliances. Relation changes are announced to everyone; a proposal only to the player it is
+    /// for, and a refusal only to the player who proposed.
+    /// </summary>
+    private void HandleDiplomacy(PlayerInfo player, DiplomacyRequest request)
+    {
+        var from = OwnerKey(player);
+        var target = Players.FirstOrDefault(p => OwnerKey(p) == request.Target);
+        // Proposals need someone to answer them; war can be declared on anyone with a colony.
+        var targetKnown = target != null || World.Colonies.Any(c => c.OwnerSteamId == request.Target);
+        var needsOnline = request.Action is DiplomacyAction.ProposePeace or DiplomacyAction.ProposeAlliance;
+        if (!targetKnown || (needsOnline && target == null))
+            return;
+
+        var happened = Diplomacy.Apply(from, request.Target, request.Action, Settings.AllowPvp);
+        if (happened is not { } kind)
+            return;
+
+        var notice = new DiplomacyNotice
+        {
+            From = from,
+            FromName = player.Name,
+            To = request.Target,
+            ToName = target?.Name ?? World.Colonies.FirstOrDefault(c => c.OwnerSteamId == request.Target)?.OwnerName ?? "",
+            Event = kind,
+        };
+        _log($"Diplomacy: {notice.FromName} → {notice.ToName}: {kind}");
+
+        switch (kind)
+        {
+            case DiplomacyEvent.PeaceProposed or DiplomacyEvent.AllianceProposed or DiplomacyEvent.ProposalDeclined:
+                foreach (var session in _sessions.Values)
+                {
+                    if (session.Player is { } p && OwnerKey(p) == request.Target)
+                        Send(session, notice);
+                }
+                break;
+            default:
+                WorldChanged?.Invoke();
+                Broadcast(PacketCodec.Encode(WorldUpdatePacket()), DeliveryMode.ReliableOrdered);
+                Broadcast(PacketCodec.Encode(notice), DeliveryMode.ReliableOrdered);
+                break;
+        }
+    }
 
     /// <summary>A player's color: kept from earlier sessions, otherwise the first one nobody has yet.</summary>
     private byte ColorFor(ulong owner)
@@ -427,10 +504,11 @@ public sealed class GameServer
         if (sender.IsHost)
         {
             var data = PacketCodec.Encode(new CoopMessage { PlayerId = sender.Id, Channel = message.Channel, Data = message.Data });
+            var mode = message.Channel == Shared.Coop.CoopChannel.Positions ? DeliveryMode.UnreliableSequenced : DeliveryMode.ReliableOrdered;
             foreach (var session in _sessions.Values)
             {
                 if (session.Player is { } guest && !guest.IsHost && (message.PlayerId == -1 || guest.Id == message.PlayerId))
-                    _transport.Send(session.ConnectionId, data, DeliveryMode.ReliableOrdered);
+                    _transport.Send(session.ConnectionId, data, mode);
             }
             return;
         }

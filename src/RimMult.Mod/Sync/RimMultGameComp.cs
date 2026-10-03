@@ -25,6 +25,9 @@ public sealed class RimMultGameComp : GameComponent
     /// <summary>Ids of parcels already received, to ignore the server's repeats.</summary>
     public List<long> ReceivedParcels = new();
 
+    /// <summary>Other players' raids on this colony that are still going on.</summary>
+    public List<RaidRecord> Raids = new();
+
     public RimMultGameComp(Game game)
     {
     }
@@ -43,7 +46,17 @@ public sealed class RimMultGameComp : GameComponent
         Scribe_Collections.Look(ref ReceivedParcels, "receivedParcels", LookMode.Value);
         Outbox ??= new List<ParcelRecord>();
         Inbox ??= new List<ParcelRecord>();
+        Scribe_Collections.Look(ref Raids, "playerRaids", LookMode.Deep);
         ReceivedParcels ??= new List<long>();
+        Raids ??= new List<RaidRecord>();
+        if (Scribe.mode == LoadSaveMode.PostLoadInit)
+            Raids.RemoveAll(r => r == null);
+    }
+
+    public override void GameComponentTick()
+    {
+        if (Raids.Count > 0 && Find.TickManager.TicksGame % PlayerRaids.CheckIntervalTicks == 0)
+            PlayerRaids.CheckRaids(this);
     }
 
     public override void StartedNewGame() => WorldSync.OnStartedNewGame(this);

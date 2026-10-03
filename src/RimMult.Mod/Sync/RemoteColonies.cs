@@ -26,7 +26,13 @@ public sealed class RemoteColony : WorldObject
 
     public override Material Material => PlayerPalette.WorldMaterial(def.texture, ColorIndex);
 
-    public override string GetInspectString() => "RimMult.RemoteColonyInspect".Translate(OwnerName);
+    public override string GetInspectString()
+    {
+        var text = "RimMult.RemoteColonyInspect".Translate(OwnerName).ToString();
+        if (Multiplayer.Session is { } session)
+            text += "\n" + "RimMult.RelationInspect".Translate(DiplomacyUi.Label(session.RelationWith(OwnerSteamId)));
+        return text;
+    }
 
     /// <summary>Transport pods can be launched here: the items arrive at this player's colony.</summary>
     public override IEnumerable<FloatMenuOption> GetTransportersFloatMenuOptions(
@@ -41,6 +47,16 @@ public sealed class RemoteColony : WorldObject
                      launchAction,
                      Tile))
             yield return option;
+        if (Multiplayer.Session is { AllowPvp: true } session && session.RelationWith(OwnerSteamId) == Shared.World.PlayerRelation.Hostile)
+        {
+            foreach (var option in TransportersArrivalActionUtility.GetFloatMenuOptions(
+                         () => TransportersArrivalAction_RaidPlayer.CanAttack(pods, this),
+                         () => new TransportersArrivalAction_RaidPlayer(this),
+                         "RimMult.RaidPods".Translate(OwnerName),
+                         launchAction,
+                         Tile))
+                yield return option;
+        }
     }
 
     /// <summary>"Offer a trade" while the owner is playing in the world too.</summary>
@@ -62,7 +78,11 @@ public sealed class RemoteColony : WorldObject
             command.Disable("RimMult.TradeOwnerAway".Translate(OwnerName));
         else if (!WorldSync.InWorld)
             command.Disable("RimMult.TradeNotInWorld".Translate());
+        else if (session!.RelationWith(OwnerSteamId) == Shared.World.PlayerRelation.Hostile)
+            command.Disable("RimMult.TradeAtWar".Translate(OwnerName));
         yield return command;
+
+        yield return DiplomacyUi.Gizmo(OwnerSteamId, OwnerName);
     }
 
     private static Texture2D? _tradeIcon;
@@ -77,6 +97,19 @@ public sealed class RemoteColony : WorldObject
     {
         foreach (var option in base.GetFloatMenuOptions(caravan))
             yield return option;
+        if (Multiplayer.Session is { AllowPvp: true } session && session.RelationWith(OwnerSteamId) == Shared.World.PlayerRelation.Hostile)
+        {
+            foreach (var option in CaravanArrivalActionUtility.GetFloatMenuOptions(
+                         () => CaravanArrivalAction_RaidPlayer.CanAttack(caravan, this),
+                         () => new CaravanArrivalAction_RaidPlayer(this),
+                         "RimMult.RaidAttack".Translate(OwnerName),
+                         caravan,
+                         Tile,
+                         this))
+                yield return option;
+            // No trading, gifts or moving in with an enemy.
+            yield break;
+        }
         foreach (var option in CaravanArrivalActionUtility.GetFloatMenuOptions(
                      () => true,
                      () => new CaravanArrivalAction_TradeWithPlayer(this),

@@ -71,6 +71,7 @@ public class CoopTests
                     Positions = { new PawnPosition(10, 5, 7, 2) },
                     Despawned = { 11, 12 },
                     Things = { "<root><li Class=\"Pawn\"><id>Human10</id></li></root>" },
+                    Patches = { new ThingPatch(40, 90, 75, 0.35f, -1f, 1), new ThingPatch(41, 10, 1, -1f, 120.5f, ThingPatch.NoForbid) },
                     Designations = [new DesignationEntry("Mine", -1, 4, 9), new DesignationEntry("CutPlant", 77, 0, 0)],
                     Grids = "<root><topGrid>AAAA</topGrid></root>",
                     Zones = "<root><allZones /></root>",
@@ -89,6 +90,11 @@ public class CoopTests
         Assert.Equal((10, 5, 7, (byte)2), (position.ThingId, position.X, position.Z, position.Rotation));
         Assert.Equal([11, 12], first.Despawned);
         Assert.Equal(batch.Maps[0].Things, first.Things);
+        Assert.Equal(2, first.Patches.Count);
+        var patch = first.Patches[0];
+        Assert.Equal((40, 90, 75, 0.35f, -1f, (byte)1), (patch.ThingId, patch.HitPoints, patch.StackCount, patch.Growth, patch.WorkDone, patch.Forbidden));
+        Assert.Equal(120.5f, first.Patches[1].WorkDone);
+        Assert.Equal(ThingPatch.NoForbid, first.Patches[1].Forbidden);
         Assert.Equal(2, first.Designations!.Count);
         Assert.Equal("CutPlant", first.Designations[1].DefName);
         Assert.Equal(77, first.Designations[1].ThingId);
@@ -100,6 +106,43 @@ public class CoopTests
         Assert.Null(copy.Maps[1].Designations);
         Assert.Null(copy.Maps[1].Grids);
         Assert.Null(copy.Maps[1].Zones);
+    }
+
+    [Fact]
+    public void PositionsSplitIntoSmallSelfContainedFrames()
+    {
+        var many = Enumerable.Range(1, 300).Select(i => new PawnPosition(100_000 + i, i % 250, i / 2, (byte)(i % 4))).ToList();
+        var maps = new List<(int, List<PawnPosition>)> { (7, many), (8, [new PawnPosition(5, 1, 2, 3)]) };
+
+        var frames = PositionsFrame.Split(4242, maps, maxBytes: 900);
+
+        Assert.True(frames.Count > 1);
+        Assert.All(frames, f => Assert.True(f.Length <= 900, $"frame of {f.Length} bytes"));
+        var decoded = frames.Select(PositionsFrame.Decode).ToList();
+        Assert.All(decoded, f => Assert.Equal(4242, f.Tick));
+        var all = decoded.SelectMany(f => f.Maps).ToList();
+        Assert.Equal(many, all.Where(m => m.MapId == 7).SelectMany(m => m.Positions).ToList());
+        var single = Assert.Single(all.Where(m => m.MapId == 8).SelectMany(m => m.Positions));
+        Assert.Equal((5, 1, 2, (byte)3), (single.ThingId, single.X, single.Z, single.Rotation));
+    }
+
+    [Fact]
+    public void HostPositionsReachGuests()
+    {
+        var host = new Host(GameMode.Coop);
+        var a = host.Join("Host", 100);
+        host.Pump(a);
+        var b = host.Join("B", 200);
+        host.Pump(a, b);
+        var atB = Record(b);
+
+        var frame = new PositionsFrame { Tick = 9, Maps = { (1, [new PawnPosition(3, 4, 5, 1)]) } }.Encode();
+        a.SendCoop(CoopChannel.Positions, frame);
+        host.Pump(a, b);
+
+        var got = Assert.Single(atB);
+        Assert.Equal(CoopChannel.Positions, got.Channel);
+        Assert.Equal(9, PositionsFrame.Decode(got.Data).Tick);
     }
 
     [Fact]

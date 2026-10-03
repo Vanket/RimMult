@@ -99,7 +99,7 @@ internal static class ScribeMemory
         Scribe.loader.curPathRelToParent = null;
         try
         {
-            RegisterExisting(replacedIds);
+            RegisterReferenced(root, replacedIds);
             expose();
             Scribe.mode = LoadSaveMode.ResolvingCrossRefs;
             Scribe.loader.crossRefs.ResolveAllCrossReferences();
@@ -120,25 +120,99 @@ internal static class ScribeMemory
         return doc.DocumentElement!;
     }
 
-    /// <summary>Puts everything a loaded object might reference into the loader's directory.</summary>
-    private static void RegisterExisting(ISet<string> skip)
+    // Load id → existing object. Rebuilding it walks the whole game, so it is kept and topped up instead:
+    // things the guest spawns are added as they come, and a full rebuild happens only now and then, or when a
+    // fragment refers to something the cache doesn't know yet.
+    private static readonly Dictionary<string, ILoadReferenceable> Known = new();
+
+    // "Thing", "Faction", … : a token only counts as an unknown id if it looks like one (def names have '_' too).
+    private static readonly HashSet<string> Prefixes = new();
+    private static float _knownBuilt = float.NegativeInfinity;
+    private const float RebuildEvery = 10f;
+    private const float RebuildAtMostEvery = 1f;
+
+    /// <summary>Forget the cache (another game loaded).</summary>
+    public static void ResetCache()
     {
-        var seen = new HashSet<string>();
-        var directory = Directory(Scribe.loader.crossRefs);
-        foreach (var reffable in Referenceables())
+        Known.Clear();
+        Prefixes.Clear();
+        _knownBuilt = float.NegativeInfinity;
+    }
+
+    /// <summary>A thing (with a pawn's gear) the cache should know from now on.</summary>
+    public static void Remember(Thing thing)
+    {
+        TryAdd(thing);
+        if (thing is Pawn pawn)
+            foreach (var gear in PawnGear(pawn))
+                TryAdd(gear);
+    }
+
+    private static void TryAdd(ILoadReferenceable reffable)
+    {
+        try
         {
-            string id;
-            try
+            var id = reffable.GetUniqueLoadID();
+            Known[id] = reffable;
+            var bar = id.IndexOf('_');
+            if (bar > 0)
+                Prefixes.Add(id.Substring(0, bar));
+        }
+        catch (Exception)
+        {
+            // An object that can't name itself can't be referenced either.
+        }
+    }
+
+    private static void Rebuild()
+    {
+        Known.Clear();
+        foreach (var reffable in Referenceables())
+            TryAdd(reffable);
+        _knownBuilt = UnityEngine.Time.realtimeSinceStartup;
+    }
+
+    /// <summary>
+    /// Puts the existing objects a fragment refers to (by load id, e.g. "Faction_3") into the loader's directory.
+    /// Only those: registering everything for every fragment is what made guests slow.
+    /// </summary>
+    private static void RegisterReferenced(XmlNode root, ISet<string> skip)
+    {
+        var now = UnityEngine.Time.realtimeSinceStartup;
+        if (now - _knownBuilt > RebuildEvery)
+            Rebuild();
+
+        var tokens = new HashSet<string>();
+        CollectTokens(root, tokens);
+        tokens.ExceptWith(skip);
+
+        var missing = tokens.Any(t => !Known.ContainsKey(t) && Prefixes.Contains(t.Substring(0, t.IndexOf('_'))));
+        if (missing && now - _knownBuilt > RebuildAtMostEvery)
+            Rebuild();
+
+        var directory = Directory(Scribe.loader.crossRefs);
+        foreach (var token in tokens)
+        {
+            if (Known.TryGetValue(token, out var reffable))
+                directory.RegisterLoaded(reffable);
+        }
+    }
+
+    /// <summary>Every short text value that could be a load id ("Thing_Steel123", "Faction_5", …).</summary>
+    private static void CollectTokens(XmlNode node, HashSet<string> tokens)
+    {
+        foreach (XmlNode child in node.ChildNodes)
+        {
+            if (child.NodeType == XmlNodeType.Text)
             {
-                id = reffable.GetUniqueLoadID();
+                var value = child.Value?.Trim();
+                if (value != null && value.Length < 128 && value.IndexOf('_') > 0)
+                    tokens.Add(value);
             }
-            catch (Exception)
+            else if (child.HasChildNodes)
             {
-                continue;
+                CollectTokens(child, tokens);
             }
-            if (skip.Contains(id) || !seen.Add(id))
-                continue;
-            directory.RegisterLoaded(reffable);
         }
     }
 

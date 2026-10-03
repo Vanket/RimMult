@@ -60,7 +60,8 @@ internal static class ThingPackage
         }
     }
 
-    public static List<Thing> Unpack(byte[] payload)
+    /// <param name="welcome">Make arriving pawns members of this colony (false: the caller decides who they are).</param>
+    public static List<Thing> Unpack(byte[] payload, bool welcome = true)
     {
         var path = TempPath();
         List<Thing>? things = null;
@@ -86,7 +87,7 @@ internal static class ThingPackage
         foreach (var thing in result)
         {
             GiveNewIds(thing);
-            if (thing is Pawn pawn)
+            if (welcome && thing is Pawn pawn)
                 PawnTransfer.WelcomeArrived(pawn);
         }
         return result;

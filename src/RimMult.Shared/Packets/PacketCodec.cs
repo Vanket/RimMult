@@ -40,6 +40,8 @@ public static class PacketCodec
             PacketType.SettlementDestroyed => SettlementDestroyed.Read(reader),
             PacketType.PlayerRelay => PlayerRelay.Read(reader),
             PacketType.CoopMessage => CoopMessage.Read(reader),
+            PacketType.DiplomacyRequest => DiplomacyRequest.Read(reader),
+            PacketType.DiplomacyNotice => DiplomacyNotice.Read(reader),
             _ => throw new ProtocolException($"Unknown packet type {(ushort)type}"),
         };
         reader.EnsureFullyRead();

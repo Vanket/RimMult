@@ -11,6 +11,8 @@
     "GameVersion": null,
     "ModListHash": null,
     "TickGrantIntervalSeconds": 0.05,
+    // Players may declare war on each other and raid each other's colonies.
+    "AllowPvp": true,
     "Time": {
       // Lowest | Majority | Host
       "VoteMode": "Lowest",

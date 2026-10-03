@@ -180,6 +180,7 @@ internal sealed class Dialog_Multiplayer : Window
             OpenPort = Settings.HostOpenPort,
             Port = Settings.HostPort,
             Mode = Settings.HostMode,
+            AllowPvp = Settings.HostAllowPvp,
         };
         if (list.ButtonText("RimMult.HostButton".Translate()))
             _error = Multiplayer.Host(options, out var error) ? null : error;
@@ -206,6 +207,8 @@ internal sealed class Dialog_Multiplayer : Window
         list.Label("RimMult.GameMode".Translate());
         DrawMode(list, GameMode.SeparateColonies, "RimMult.ModeSeparate", "RimMult.ModeSeparateDesc");
         DrawMode(list, GameMode.Coop, "RimMult.ModeCoop", "RimMult.ModeCoopDesc");
+        if (Settings.HostMode == GameMode.SeparateColonies)
+            list.CheckboxLabeled("RimMult.AllowPvp".Translate(), ref Settings.HostAllowPvp, "RimMult.AllowPvpTip".Translate());
         list.Gap(4f);
     }
 
@@ -384,6 +387,8 @@ internal sealed class Dialog_Multiplayer : Window
             label += player.InWorld ? " " + "RimMult.PlayingMark".Translate() : " " + "RimMult.LobbyMark".Translate();
             if (player.Id == session.PlayerId)
                 label = $"<b>{label}</b>";
+            else if (DiplomacyUi.Tag(session.RelationWith(Multiplayer.OwnerKey(player))) is { Length: > 0 } tag)
+                label += " " + tag;
             rows.Add(label);
 
             var key = player.SteamId != 0 ? player.SteamId : (ulong)player.Id;
