@@ -167,8 +167,9 @@ public class TradeTests
     [Fact]
     public void TradeMessagesRoundTrip()
     {
-        var message = new TradeMessage { Kind = TradeMessageKind.Commit, Version = 3, OtherVersion = 7, Lines = Offer("Сталь", 200, 380.5f) };
+        var message = new TradeMessage { Kind = TradeMessageKind.Commit, Version = 3, OtherVersion = 7, CaravanId = 42, Lines = Offer("Сталь", 200, 380.5f) };
         var copy = TradeMessage.Decode(message.Encode());
+        Assert.Equal(42, copy.CaravanId);
         Assert.Equal(TradeMessageKind.Commit, copy.Kind);
         Assert.Equal(3, copy.Version);
         Assert.Equal(7, copy.OtherVersion);
@@ -325,5 +326,48 @@ public class TradeTests
         a.SendRelay(bId, RelayChannel.Trade, [1]);
         host.Pump(a, b);
         Assert.Equal(1, received);
+    }
+
+    [Fact]
+    public void CaravanTradeTellsThePartnerWhichCaravanToLoad()
+    {
+        var host = new Host();
+        var a = host.Join("A", 1);
+        var b = host.Join("B", 2);
+        var ta = new TradeManager(a);
+        var tb = new TradeManager(b);
+        PlayerTrade? invited = null;
+        tb.Invited += t => invited = t;
+        host.Pump(a, b);
+        a.EnterWorld("w");
+        b.EnterWorld("w");
+        host.Pump(a, b);
+
+        var trade = ta.Invite(a.Players.Single(p => p.Name == "B").Id, caravanId: 1234)!;
+        host.Pump(a, b);
+
+        Assert.Equal(1234, trade.MyCaravanId);
+        Assert.Equal(1234, invited!.PartnerCaravanId);
+        Assert.Equal(0, invited.MyCaravanId);
+    }
+
+    [Theory]
+    [InlineData("1234", null, "1234")]
+    [InlineData("caravan:77|1234", 77, "1234")]
+    [InlineData("caravan:77|", 77, "")]
+    [InlineData("caravan:x|1234", null, "1234")]
+    public void ParcelAddressesParse(string address, int? caravan, string tile)
+    {
+        ParcelAddress.Parse(address, out var parsedCaravan, out var parsedTile);
+        Assert.Equal(caravan, parsedCaravan);
+        Assert.Equal(tile, parsedTile);
+    }
+
+    [Fact]
+    public void CaravanAddressRoundTrips()
+    {
+        ParcelAddress.Parse(ParcelAddress.ForCaravan(5, "99@1"), out var caravan, out var tile);
+        Assert.Equal(5, caravan);
+        Assert.Equal("99@1", tile);
     }
 }

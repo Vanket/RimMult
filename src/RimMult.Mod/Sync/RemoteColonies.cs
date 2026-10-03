@@ -72,10 +72,18 @@ public sealed class RemoteColony : WorldObject
         ?? ContentFinder<Texture2D>.Get("UI/Commands/FormCaravan", reportFailure: false)
         ?? BaseContent.BadTex;
 
-    /// <summary>A caravan can travel here and hand over its cargo.</summary>
+    /// <summary>A caravan can travel here to trade, hand over its cargo, or join the colony.</summary>
     public override IEnumerable<FloatMenuOption> GetFloatMenuOptions(Caravan caravan)
     {
         foreach (var option in base.GetFloatMenuOptions(caravan))
+            yield return option;
+        foreach (var option in CaravanArrivalActionUtility.GetFloatMenuOptions(
+                     () => true,
+                     () => new CaravanArrivalAction_TradeWithPlayer(this),
+                     "RimMult.CaravanTrade".Translate(OwnerName),
+                     caravan,
+                     Tile,
+                     this))
             yield return option;
         foreach (var option in CaravanArrivalActionUtility.GetFloatMenuOptions(
                      () => CaravanArrivalAction_GiveToPlayer.CanGive(caravan),

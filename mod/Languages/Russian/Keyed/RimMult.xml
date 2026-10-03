@@ -138,4 +138,13 @@
   <RimMult.TradeAccept>Принять</RimMult.TradeAccept>
   <RimMult.TradeUnaccept>Отменить согласие</RimMult.TradeUnaccept>
   <RimMult.TradeCancel>Отменить обмен</RimMult.TradeCancel>
+  <RimMult.CaravanTrade>Торговать с {0}</RimMult.CaravanTrade>
+  <RimMult.CaravanTradeReport>Идёт торговать с {0}.</RimMult.CaravanTradeReport>
+  <RimMult.CaravanTradeAway>{0} сейчас не играет в мире. Подождите здесь и выберите «Торговать» позже или передайте груз.</RimMult.CaravanTradeAway>
+  <RimMult.TradeInviteCaravan>Караван {0} прибыл к вашей колонии и хочет торговать.</RimMult.TradeInviteCaravan>
+  <RimMult.TradeCaravanGives>Ваш караван отдаёт ({0})</RimMult.TradeCaravanGives>
+  <RimMult.TradeHintCaravan>Слева — что везёт {0}. Купленное погрузится в караван.</RimMult.TradeHintCaravan>
+  <RimMult.TradeHintPartnerCaravan>{0} торгует караваном у вашей колонии: купленное уйдёт в его караван, а его товар спустится к вам.</RimMult.TradeHintPartnerCaravan>
+  <RimMult.ParcelToCaravanLabel>Товары от {0}</RimMult.ParcelToCaravanLabel>
+  <RimMult.ParcelToCaravanText>{0} принял товары, купленные у {1}:\n\n{2}</RimMult.ParcelToCaravanText>
 </LanguageData>

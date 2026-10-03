@@ -138,4 +138,13 @@
   <RimMult.TradeAccept>Accept</RimMult.TradeAccept>
   <RimMult.TradeUnaccept>Withdraw acceptance</RimMult.TradeUnaccept>
   <RimMult.TradeCancel>Cancel trade</RimMult.TradeCancel>
+  <RimMult.CaravanTrade>Trade with {0}</RimMult.CaravanTrade>
+  <RimMult.CaravanTradeReport>Going to trade with {0}.</RimMult.CaravanTradeReport>
+  <RimMult.CaravanTradeAway>{0} is not playing in the world right now. Wait here and choose "Trade" again later, or hand over the cargo.</RimMult.CaravanTradeAway>
+  <RimMult.TradeInviteCaravan>{0}'s caravan has arrived at your colony and wants to trade.</RimMult.TradeInviteCaravan>
+  <RimMult.TradeCaravanGives>Your caravan gives ({0})</RimMult.TradeCaravanGives>
+  <RimMult.TradeHintCaravan>On the left is what {0} carries. What you buy is loaded into the caravan.</RimMult.TradeHintCaravan>
+  <RimMult.TradeHintPartnerCaravan>{0} trades from a caravan at your colony: what they buy goes into their caravan, what they give lands here.</RimMult.TradeHintPartnerCaravan>
+  <RimMult.ParcelToCaravanLabel>Goods from {0}</RimMult.ParcelToCaravanLabel>
+  <RimMult.ParcelToCaravanText>{0} took on the goods bought from {1}:\n\n{2}</RimMult.ParcelToCaravanText>
 </LanguageData>

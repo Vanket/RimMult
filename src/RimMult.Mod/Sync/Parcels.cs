@@ -143,11 +143,21 @@ internal static class Parcels
         _lastInboxTry = float.NegativeInfinity;
     }
 
-    /// <summary>Drops the parcel by pod on the colony it was addressed to (or any home colony).</summary>
+    /// <summary>
+    /// Loads the parcel into the caravan it was bought for, or drops it by pod on the colony it was addressed to
+    /// (or any home colony).
+    /// </summary>
     private static bool TryDeliver(ParcelRecord parcel)
     {
+        ParcelAddress.Parse(parcel.ToTile, out var caravanId, out var tileText);
+        var caravan = caravanId is { } id
+            ? Find.WorldObjects.Caravans.FirstOrDefault(c => c.ID == id && !c.Destroyed && c.Faction == Faction.OfPlayer)
+            : null;
+        if (caravan != null)
+            return DeliverToCaravan(parcel, caravan);
+
         Map? map = null;
-        if (PlanetTile.TryParse(parcel.ToTile, out var tile) && tile.Valid)
+        if (PlanetTile.TryParse(tileText, out var tile) && tile.Valid)
             map = Find.Maps.FirstOrDefault(m => m.IsPlayerHome && m.Tile == tile);
         map ??= Find.AnyPlayerHomeMap;
         if (map == null)
@@ -165,6 +175,8 @@ internal static class Parcels
             return true; // acknowledge anyway: retrying a broken parcel forever helps nobody
         }
 
+        if (things.Count == 0)
+            return true;
         var spot = DropCellFinder.TradeDropSpot(map);
         DropPodUtility.DropThingsNear(spot, map, things, forbid: false);
 
@@ -173,6 +185,36 @@ internal static class Parcels
             ? "RimMult.ParcelReturnedText".Translate(parcel.Summary)
             : "RimMult.ParcelText".Translate(parcel.FromName, parcel.Summary);
         Find.LetterStack.ReceiveLetter(label, text, LetterDefOf.PositiveEvent, new LookTargets(new TargetInfo(spot, map)));
+        return true;
+    }
+
+    /// <summary>Goods bought by a trading caravan go straight into it (animals join it).</summary>
+    private static bool DeliverToCaravan(ParcelRecord parcel, Caravan caravan)
+    {
+        List<Thing> things;
+        try
+        {
+            things = ThingPackage.Unpack(Convert.FromBase64String(parcel.Payload));
+        }
+        catch (Exception e)
+        {
+            Log.Error($"[RimMult] Could not unpack parcel {parcel.Id} from {parcel.FromName}: {e}");
+            Find.LetterStack.ReceiveLetter("RimMult.ParcelBrokenLabel".Translate(), "RimMult.ParcelBrokenText".Translate(parcel.FromName), LetterDefOf.NegativeEvent);
+            return true;
+        }
+
+        foreach (var thing in things)
+        {
+            caravan.AddPawnOrItem(thing, addCarriedPawnToWorldPawnsIfAny: true);
+            if (thing is Pawn pawn && !Find.WorldPawns.Contains(pawn))
+                Find.WorldPawns.PassToWorld(pawn);
+        }
+
+        Find.LetterStack.ReceiveLetter(
+            "RimMult.ParcelToCaravanLabel".Translate(parcel.FromName),
+            "RimMult.ParcelToCaravanText".Translate(caravan.LabelCap, parcel.FromName, parcel.Summary),
+            LetterDefOf.PositiveEvent,
+            new LookTargets(caravan));
         return true;
     }
 }

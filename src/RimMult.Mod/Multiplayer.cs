@@ -11,6 +11,7 @@ using RimMult.Steam;
 using RimMult.Sync;
 using RimMult.UI;
 using RimWorld;
+using RimWorld.Planet;
 using UnityEngine;
 using Verse;
 
@@ -289,10 +290,31 @@ internal static class Multiplayer
             Find.WindowStack.Add(new Dialog_PlayerTrade(trade));
     }
 
+    /// <summary>A caravan reached another player's colony and wants to trade there.</summary>
+    public static void StartCaravanTrade(Caravan caravan, ulong ownerKey, string ownerName)
+    {
+        var partner = Session?.Players.FirstOrDefault(p => OwnerKey(p) == ownerKey && p.InWorld);
+        if (Trades == null || partner == null || !WorldSync.InWorld)
+        {
+            Messages.Message("RimMult.CaravanTradeAway".Translate(ownerName), caravan, MessageTypeDefOf.RejectInput, historical: false);
+            return;
+        }
+        if (Trades.Busy)
+        {
+            Messages.Message("RimMult.TradeBusy".Translate(), MessageTypeDefOf.RejectInput, historical: false);
+            return;
+        }
+        if (Trades.Invite(partner.Id, caravan.ID) is { } trade)
+            Find.WindowStack.Add(new Dialog_PlayerTrade(trade));
+    }
+
     private static void OnTradeInvited(PlayerTrade trade)
     {
+        var text = trade.PartnerCaravanId != 0
+            ? "RimMult.TradeInviteCaravan".Translate(trade.PartnerName)
+            : "RimMult.TradeInvite".Translate(trade.PartnerName);
         Find.WindowStack.Add(new Dialog_MessageBox(
-            "RimMult.TradeInvite".Translate(trade.PartnerName),
+            text,
             "RimMult.TradeOpen".Translate(),
             () =>
             {
