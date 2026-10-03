@@ -183,8 +183,11 @@ public sealed class ClientSession
     /// <summary>Co-op: as a guest always to the host; as the host to <paramref name="playerId"/> or all guests (-1).</summary>
     public void SendCoop(Shared.Coop.CoopChannel channel, byte[] data, int playerId = -1)
     {
-        if (State == ClientState.Connected)
-            Send(new CoopMessage { PlayerId = playerId, Channel = channel, Data = data });
+        if (State != ClientState.Connected)
+            return;
+        // Positions go unreliably: the next frame replaces a lost one, and nothing big queues in front of them.
+        var mode = channel == Shared.Coop.CoopChannel.Positions ? DeliveryMode.UnreliableSequenced : DeliveryMode.ReliableOrdered;
+        _transport.Send(PacketCodec.Encode(new CoopMessage { PlayerId = playerId, Channel = channel, Data = data }), mode);
     }
 
     public void SendDiplomacy(ulong target, DiplomacyAction action)

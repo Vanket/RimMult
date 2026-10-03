@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using RimMult.ClientCore;
 using RimMult.Shared.Coop;
+using RimWorld;
 using UnityEngine;
 using Verse;
 
@@ -12,29 +13,57 @@ namespace RimMult.Coop;
 
 /// <summary>
 /// Co-op, host side: the host's game is the only one that runs. Joining guests get a save of it; then the host
-/// streams what changes, ten times a second: where pawns are, what spawned or vanished, a rolling re-send of every
-/// thing whose saved state changed (this is what carries construction progress, plant growth, health and any mod's
-/// data), the designations, the zones and the terrain/roof/fog grids. Guests' orders arrive as <see cref="CoopCommand"/>s.
+/// streams what changes:
+/// <list type="bullet">
+/// <item>pawn positions ~30 times a second on their own unreliable channel (nothing big ever waits in front of them);</item>
+/// <item>every 0.1 s a state batch: what spawned or vanished, small in-place patches (hit points, stack size, plant
+/// growth, construction progress, forbidden), full copies of pawns whose look changed and of things whose saved
+/// state changed (any mod's data), designations and zones as soon as they change, and the terrain/roof/fog grids.</item>
+/// </list>
+/// Everything is change-driven and capped per batch, so a slow guest machine is never flooded.
+/// Guests' orders arrive as <see cref="CoopCommand"/>s.
 /// </summary>
 internal static class CoopHost
 {
+    private const float PositionsInterval = 1f / 30f;
+    private const float PositionsKeepAlive = 0.5f;
+    private const int PositionsFrameBytes = 900;
     private const float BatchInterval = 0.1f;
-    private const float SlowInterval = 3f;
-    private const int ThingsPerBatch = 30;
+    private const float ZoneCheckInterval = 0.25f;
+    private const float ZoneFullInterval = 3f;
+    private const float GridInterval = 1f;
+    private const float PawnRollInterval = 0.5f;
+    private const int ScanPerBatch = 80;
+    private const int XmlChecksPerBatch = 6;
+    private const int MaxFragmentsPerBatch = 12;
     private const string TransferSaveName = "RimMult_CoopTransfer";
 
-    /// <summary>Guests that asked for the game (playing or loading it): batches are only made while there are any.</summary>
+    /// <summary>Guests that asked for the game (playing or loading it): nothing is streamed while there are none.</summary>
     private static readonly HashSet<int> Guests = new();
     private static readonly HashSet<Thing> Spawned = new();
     private static readonly Dictionary<int, List<int>> Despawned = new();
-    private static readonly Dictionary<int, int> SentHash = new();
+
+    /// <summary>Things (mostly pawns) waiting for a full copy, oldest first; capped per batch.</summary>
+    private static readonly List<Thing> Pending = new();
+
+    private static readonly Dictionary<int, int> CheapSignature = new();
+    private static readonly Dictionary<int, int> XmlHash = new();
+    private static readonly Dictionary<int, int> PawnSignature = new();
     private static readonly Dictionary<int, int> ThingCursor = new();
+    private static readonly Dictionary<int, int> XmlCursor = new();
     private static readonly Dictionary<int, int> PawnCursor = new();
     private static readonly Dictionary<int, int> DesignationHash = new();
-    private static readonly Dictionary<int, int> GridHash = new();
+    private static readonly Dictionary<int, int> ZoneCheapHash = new();
     private static readonly Dictionary<int, int> ZoneHash = new();
+    private static readonly Dictionary<int, int> GridHash = new();
+    private static float _lastPositions;
+    private static float _lastPositionsSent;
+    private static byte[] _lastPositionsData = Array.Empty<byte>();
     private static float _lastBatch;
-    private static float _lastSlow;
+    private static float _lastZoneCheck;
+    private static float _lastZoneFull;
+    private static float _lastGrid;
+    private static float _lastPawnRoll;
 
     /// <summary>Hosting a co-op game with the colony loaded: changes are recorded and streamed.</summary>
     public static bool Active =>
@@ -50,12 +79,24 @@ internal static class CoopHost
         Guests.Clear();
         Spawned.Clear();
         Despawned.Clear();
-        SentHash.Clear();
+        Pending.Clear();
+        CheapSignature.Clear();
+        XmlHash.Clear();
+        PawnSignature.Clear();
         ThingCursor.Clear();
+        XmlCursor.Clear();
         PawnCursor.Clear();
+        ForgetSentState();
+    }
+
+    /// <summary>Designations, zones and grids go out in full again (a guest just loaded the game).</summary>
+    private static void ForgetSentState()
+    {
         DesignationHash.Clear();
-        GridHash.Clear();
+        ZoneCheapHash.Clear();
         ZoneHash.Clear();
+        GridHash.Clear();
+        _lastPositionsData = Array.Empty<byte>();
     }
 
     public static void NotifySpawned(Thing thing)
@@ -69,6 +110,7 @@ internal static class CoopHost
         if (!Active || thing.Map == null || thing.thingIDNumber < 0)
             return;
         Spawned.Remove(thing);
+        Pending.Remove(thing);
         if (!Despawned.TryGetValue(thing.Map.uniqueID, out var list))
             Despawned[thing.Map.uniqueID] = list = new List<int>();
         list.Add(thing.thingIDNumber);
@@ -81,134 +123,303 @@ internal static class CoopHost
         {
             Spawned.Clear();
             Despawned.Clear();
+            Pending.Clear();
             return;
         }
 
         var now = Time.realtimeSinceStartup;
+        if (now - _lastPositions >= PositionsInterval)
+        {
+            _lastPositions = now;
+            SendPositions(session, now);
+        }
+
         if (now - _lastBatch < BatchInterval)
             return;
         _lastBatch = now;
-        var slow = now - _lastSlow >= SlowInterval;
-        if (slow)
-            _lastSlow = now;
+
+        var checkZones = now - _lastZoneCheck >= ZoneCheckInterval;
+        if (checkZones)
+            _lastZoneCheck = now;
+        var fullZones = now - _lastZoneFull >= ZoneFullInterval;
+        if (fullZones)
+            _lastZoneFull = now;
+        var grids = now - _lastGrid >= GridInterval;
+        if (grids)
+            _lastGrid = now;
+        var rollPawn = now - _lastPawnRoll >= PawnRollInterval;
+        if (rollPawn)
+            _lastPawnRoll = now;
 
         var batch = new CoopBatch { Tick = Find.TickManager.TicksGame };
+        var budget = MaxFragmentsPerBatch;
         foreach (var map in Find.Maps)
-            batch.Maps.Add(BuildDelta(map, slow));
+        {
+            var delta = BuildDelta(map, checkZones, fullZones, grids, rollPawn, ref budget);
+            if (!IsEmpty(delta))
+                batch.Maps.Add(delta);
+        }
         Spawned.Clear();
         Despawned.Clear();
-        session.SendCoop(CoopChannel.State, Compress(batch.Encode()));
+        if (batch.Maps.Count > 0)
+            session.SendCoop(CoopChannel.State, Compress(batch.Encode()));
     }
 
-    private static MapDelta BuildDelta(Map map, bool slow)
+    private static bool IsEmpty(MapDelta delta) =>
+        delta.Despawned.Count == 0 && delta.Things.Count == 0 && delta.Patches.Count == 0
+        && delta.Designations == null && delta.Grids == null && delta.Zones == null;
+
+    /// <summary>Where every pawn stands; sent when something moved (and now and then anyway, the channel may drop).</summary>
+    private static void SendPositions(ClientSession session, float now)
+    {
+        var maps = Find.Maps.Select(map => (map.uniqueID, map.mapPawns.AllPawnsSpawned
+                .Where(p => p.thingIDNumber >= 0)
+                .Select(p => new PawnPosition(p.thingIDNumber, p.Position.x, p.Position.z, (byte)p.Rotation.AsInt))
+                .ToList()))
+            .ToList();
+        var key = new PositionsFrame { Maps = maps }.Encode();
+        if (key.SequenceEqual(_lastPositionsData) && now - _lastPositionsSent < PositionsKeepAlive)
+            return;
+        _lastPositionsData = key;
+        _lastPositionsSent = now;
+        foreach (var frame in PositionsFrame.Split(Find.TickManager.TicksGame, maps, PositionsFrameBytes))
+            session.SendCoop(CoopChannel.Positions, frame);
+    }
+
+    private static MapDelta BuildDelta(Map map, bool checkZones, bool fullZones, bool grids, bool rollPawn, ref int budget)
     {
         var delta = new MapDelta { MapId = map.uniqueID };
-
-        foreach (var pawn in map.mapPawns.AllPawnsSpawned)
-            delta.Positions.Add(new PawnPosition(pawn.thingIDNumber, pawn.Position.x, pawn.Position.z, (byte)pawn.Rotation.AsInt));
 
         if (Despawned.TryGetValue(map.uniqueID, out var gone))
             delta.Despawned.AddRange(gone);
 
+        // New things always go out right away (they are small and the guest must see them).
         foreach (var thing in Spawned.Where(t => t.Spawned && t.Map == map))
-            AddThing(delta, thing, force: true);
+            AddFragment(delta, thing);
 
-        // Rolling re-send: a few things per batch; only those whose saved state changed since last time.
-        var things = map.listerThings.AllThings;
-        if (things.Count > 0)
-        {
-            var cursor = ThingCursor.TryGetValue(map.uniqueID, out var c) ? c : 0;
-            for (var i = 0; i < ThingsPerBatch && i < things.Count; i++)
-            {
-                cursor = (cursor + 1) % things.Count;
-                var thing = things[cursor];
-                if (thing is not Pawn && !Spawned.Contains(thing))
-                    AddThing(delta, thing, force: false);
-            }
-            ThingCursor[map.uniqueID] = cursor;
-        }
-
-        // One pawn per batch: health, needs, gear, everything on the inspect tabs.
+        // Pawns whose look changed (carrying, drafted, downed, gear…) get a fresh copy; one more now and then for
+        // needs and health.
         var pawns = map.mapPawns.AllPawnsSpawned;
-        if (pawns.Count > 0)
+        foreach (var pawn in pawns)
+        {
+            var signature = Signature(pawn);
+            if (PawnSignature.TryGetValue(pawn.thingIDNumber, out var old) && old != signature)
+                Queue(pawn);
+            PawnSignature[pawn.thingIDNumber] = signature;
+        }
+        if (rollPawn && pawns.Count > 0)
         {
             var cursor = PawnCursor.TryGetValue(map.uniqueID, out var c) ? (c + 1) % pawns.Count : 0;
             PawnCursor[map.uniqueID] = cursor;
-            if (!Spawned.Contains(pawns[cursor]))
-                AddThing(delta, pawns[cursor], force: false);
+            Queue(pawns[cursor]);
         }
 
-        if (slow)
+        var things = map.listerThings.AllThings;
+        if (things.Count > 0)
         {
-            var designations = map.designationManager.AllDesignations
+            // Quick look at many things: small changes become patches.
+            var cursor = ThingCursor.TryGetValue(map.uniqueID, out var c) ? c : 0;
+            for (var i = 0; i < ScanPerBatch && i < things.Count; i++)
+            {
+                cursor = (cursor + 1) % things.Count;
+                var thing = things[cursor];
+                if (thing is Pawn || thing.thingIDNumber < 0)
+                    continue;
+                var signature = Signature(thing);
+                if (CheapSignature.TryGetValue(thing.thingIDNumber, out var old) && old != signature)
+                    delta.Patches.Add(PatchOf(thing));
+                CheapSignature[thing.thingIDNumber] = signature;
+            }
+            ThingCursor[map.uniqueID] = cursor;
+
+            // Slow, thorough look at a few: anything else in the saved state (fuel, power, a mod's data) means a full copy.
+            var xmlCursor = XmlCursor.TryGetValue(map.uniqueID, out var x) ? x : 0;
+            for (var i = 0; i < XmlChecksPerBatch && i < things.Count; i++)
+            {
+                xmlCursor = (xmlCursor + 1) % things.Count;
+                var thing = things[xmlCursor];
+                if (thing is Pawn or Plant || thing.thingIDNumber < 0)
+                    continue;
+                if (Save(thing) is not { } xml)
+                    continue;
+                var hash = Hash(xml);
+                if (XmlHash.TryGetValue(thing.thingIDNumber, out var old) && old != hash)
+                    Queue(thing);
+                XmlHash[thing.thingIDNumber] = hash;
+            }
+            XmlCursor[map.uniqueID] = xmlCursor;
+        }
+
+        foreach (var thing in Pending.Where(t => t.Map == map).ToList())
+        {
+            if (budget <= 0)
+                break;
+            Pending.Remove(thing);
+            if (thing.Spawned && !delta.Despawned.Contains(thing.thingIDNumber))
+            {
+                AddFragment(delta, thing);
+                budget--;
+            }
+        }
+
+        // Designations: a cheap hash every batch, so a guest's "mine here" shows up at once.
+        var designationHash = DesignationsHash(map);
+        if (!DesignationHash.TryGetValue(map.uniqueID, out var oldDesignations) || oldDesignations != designationHash)
+        {
+            DesignationHash[map.uniqueID] = designationHash;
+            delta.Designations = map.designationManager.AllDesignations
                 .Select(d => new DesignationEntry(d.def.defName, d.target.HasThing ? d.target.Thing.thingIDNumber : -1, d.target.Cell.x, d.target.Cell.z))
                 .ToList();
-            var hash = Hash(designations.Select(d => $"{d.DefName}:{d.ThingId}:{d.X}:{d.Z}"));
-            if (!DesignationHash.TryGetValue(map.uniqueID, out var old) || old != hash)
-            {
-                DesignationHash[map.uniqueID] = hash;
-                delta.Designations = designations;
-            }
+        }
 
-            var grids = ScribeMemory.Save(() =>
+        // Zones: cheap check often (new stockpile, cells added), full comparison now and then (settings).
+        if (checkZones)
+        {
+            var cheap = ZonesHash(map);
+            var cheapChanged = !ZoneCheapHash.TryGetValue(map.uniqueID, out var oldCheap) || oldCheap != cheap;
+            ZoneCheapHash[map.uniqueID] = cheap;
+            if (cheapChanged || fullZones)
+            {
+                var zones = ScribeMemory.Save(() => map.zoneManager.ExposeData());
+                var zoneHash = Hash(zones);
+                if (!ZoneHash.TryGetValue(map.uniqueID, out var oldZones) || oldZones != zoneHash)
+                {
+                    ZoneHash[map.uniqueID] = zoneHash;
+                    delta.Zones = zones;
+                }
+            }
+        }
+
+        if (grids)
+        {
+            var gridXml = ScribeMemory.Save(() =>
             {
                 map.terrainGrid.ExposeData();
                 map.roofGrid.ExposeData();
                 map.fogGrid.ExposeData();
             });
-            var gridHash = grids.GetHashCode() ^ grids.Length;
+            var gridHash = Hash(gridXml);
             if (!GridHash.TryGetValue(map.uniqueID, out var oldGrid) || oldGrid != gridHash)
             {
                 GridHash[map.uniqueID] = gridHash;
-                delta.Grids = grids;
-            }
-
-            var zones = ScribeMemory.Save(() => map.zoneManager.ExposeData());
-            var zoneHash = zones.GetHashCode() ^ zones.Length;
-            if (!ZoneHash.TryGetValue(map.uniqueID, out var oldZones) || oldZones != zoneHash)
-            {
-                ZoneHash[map.uniqueID] = zoneHash;
-                delta.Zones = zones;
+                delta.Grids = gridXml;
             }
         }
 
         return delta;
     }
 
-    private static void AddThing(MapDelta delta, Thing thing, bool force)
+    private static void Queue(Thing thing)
+    {
+        if (!Pending.Contains(thing))
+            Pending.Add(thing);
+    }
+
+    private static void AddFragment(MapDelta delta, Thing thing)
     {
         // Things without an id (rare, purely visual ones) can't be matched up on the guest's side.
-        if (thing.thingIDNumber < 0)
+        if (thing.thingIDNumber < 0 || Save(thing) is not { } xml)
             return;
+        delta.Things.Add(xml);
+        XmlHash[thing.thingIDNumber] = Hash(xml);
+        if (thing is Pawn pawn)
+            PawnSignature[pawn.thingIDNumber] = Signature(pawn);
+        else
+            CheapSignature[thing.thingIDNumber] = Signature(thing);
+    }
 
-        string xml;
+    private static string? Save(Thing thing)
+    {
         try
         {
-            xml = ScribeMemory.SaveThing(thing);
+            return ScribeMemory.SaveThing(thing);
         }
         catch (Exception e)
         {
             Log.WarningOnce($"[RimMult] Co-op: could not save {thing}: {e.Message}", thing.thingIDNumber ^ 0x434F4F50);
-            return;
+            return null;
         }
-
-        var hash = xml.GetHashCode() ^ xml.Length;
-        if (!force && SentHash.TryGetValue(thing.thingIDNumber, out var old) && old == hash)
-            return;
-        SentHash[thing.thingIDNumber] = hash;
-        delta.Things.Add(xml);
     }
 
-    private static int Hash(IEnumerable<string> parts)
+    private static ThingPatch PatchOf(Thing thing) => new(
+        thing.thingIDNumber,
+        thing.HitPoints,
+        thing.stackCount,
+        thing is Plant plant ? plant.Growth : -1f,
+        thing is Frame frame ? frame.workDone : -1f,
+        thing.TryGetComp<CompForbiddable>() is { } forbiddable ? (byte)(forbiddable.Forbidden ? 1 : 0) : ThingPatch.NoForbid);
+
+    /// <summary>What a patch carries, coarsely: plants only count once their growth moved a visible step.</summary>
+    private static int Signature(Thing thing)
+    {
+        unchecked
+        {
+            var hash = thing.HitPoints;
+            hash = hash * 31 + thing.stackCount;
+            if (thing is Plant plant)
+                hash = hash * 31 + (int)(plant.Growth * 20f);
+            if (thing is Frame frame)
+                hash = hash * 31 + (int)(frame.workDone / 10f);
+            if (thing.TryGetComp<CompForbiddable>() is { } forbiddable)
+                hash = hash * 31 + (forbiddable.Forbidden ? 1 : 2);
+            return hash;
+        }
+    }
+
+    /// <summary>What a guest would see change on a pawn without a fresh copy.</summary>
+    private static int Signature(Pawn pawn)
+    {
+        unchecked
+        {
+            var hash = pawn.carryTracker?.CarriedThing?.thingIDNumber ?? 0;
+            hash = hash * 31 + (pawn.Drafted ? 1 : 0);
+            hash = hash * 31 + (pawn.Downed ? 1 : 0);
+            hash = hash * 31 + (pawn.Dead ? 1 : 0);
+            hash = hash * 31 + (int)pawn.GetPosture();
+            hash = hash * 31 + (pawn.equipment?.Primary?.thingIDNumber ?? 0);
+            hash = hash * 31 + (pawn.mindState?.mentalStateHandler?.CurStateDef?.shortHash ?? 0);
+            hash = hash * 31 + (pawn.health?.hediffSet?.hediffs.Count ?? 0);
+            if (pawn.apparel != null)
+                foreach (var apparel in pawn.apparel.WornApparel)
+                    hash = hash * 31 + apparel.thingIDNumber;
+            return hash;
+        }
+    }
+
+    private static int DesignationsHash(Map map)
     {
         unchecked
         {
             var hash = 17;
-            foreach (var part in parts)
-                hash = hash * 31 + part.GetHashCode();
+            foreach (var designation in map.designationManager.AllDesignations)
+            {
+                hash = hash * 31 + designation.def.shortHash;
+                hash = hash * 31 + (designation.target.HasThing ? designation.target.Thing.thingIDNumber : map.cellIndices.CellToIndex(designation.target.Cell));
+            }
             return hash;
         }
     }
+
+    private static int ZonesHash(Map map)
+    {
+        unchecked
+        {
+            var hash = 17;
+            foreach (var zone in map.zoneManager.AllZones)
+            {
+                hash = hash * 31 + zone.ID;
+                hash = hash * 31 + zone.Cells.Count;
+                hash = hash * 31 + (zone.label?.GetHashCode() ?? 0);
+                foreach (var cell in zone.Cells)
+                    hash = hash * 31 + map.cellIndices.CellToIndex(cell);
+                if (zone is Zone_Growing growing)
+                    hash = hash * 31 + (growing.GetPlantDefToGrow()?.shortHash ?? 0);
+            }
+            return hash;
+        }
+    }
+
+    private static int Hash(string text) => text.GetHashCode() ^ text.Length;
 
     private static void OnCoop(int guestId, CoopChannel channel, byte[] data)
     {
@@ -226,10 +437,8 @@ internal static class CoopHost
                 }
                 session.SendCoop(CoopChannel.Game, SaveCurrentGame(), guestId);
                 Guests.Add(guestId);
-                // Everything after this save reaches the guest as batches; grids and designations go out in full again.
-                DesignationHash.Clear();
-                GridHash.Clear();
-                ZoneHash.Clear();
+                // Everything after this save reaches the guest as batches; grids, zones and designations go out in full again.
+                ForgetSentState();
                 Messages.Message("RimMult.CoopGuestJoining".Translate(session.NameOf(guestId)), RimWorld.MessageTypeDefOf.NeutralEvent, historical: false);
                 break;
             case CoopChannel.Ready:

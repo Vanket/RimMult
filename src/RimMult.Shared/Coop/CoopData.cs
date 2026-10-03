@@ -31,6 +31,139 @@ public enum CoopChannel : byte
 
     /// <summary>Host → guest: there is no game to join yet (host in the main menu).</summary>
     NotReady = 6,
+
+    /// <summary>
+    /// Host → guests: where the pawns are (a <see cref="PositionsFrame"/>), many times a second. Sent unreliably:
+    /// a lost frame is simply replaced by the next one, and big state never holds it up.
+    /// </summary>
+    Positions = 7,
+}
+
+/// <summary>
+/// The small, frequently changing state of a thing (hit points, stack size, plant growth, construction progress,
+/// forbidden), applied to the guest's copy in place instead of reloading the whole thing.
+/// </summary>
+public readonly struct ThingPatch
+{
+    public const byte NoForbid = 2;
+
+    public ThingPatch(int thingId, int hitPoints, int stackCount, float growth, float workDone, byte forbidden)
+    {
+        ThingId = thingId;
+        HitPoints = hitPoints;
+        StackCount = stackCount;
+        Growth = growth;
+        WorkDone = workDone;
+        Forbidden = forbidden;
+    }
+
+    public int ThingId { get; }
+    public int HitPoints { get; }
+    public int StackCount { get; }
+
+    /// <summary>Plant growth 0..1, or -1 for a thing that isn't a plant.</summary>
+    public float Growth { get; }
+
+    /// <summary>Construction work done on a frame, or -1.</summary>
+    public float WorkDone { get; }
+
+    /// <summary>0/1 forbidden, or <see cref="NoForbid"/> for a thing that can't be forbidden.</summary>
+    public byte Forbidden { get; }
+
+    public void Write(ByteWriter writer)
+    {
+        writer.WriteVarInt(ThingId);
+        writer.WriteVarInt(HitPoints);
+        writer.WriteVarInt(StackCount);
+        writer.WriteFloat(Growth);
+        writer.WriteFloat(WorkDone);
+        writer.WriteByte(Forbidden);
+    }
+
+    public static ThingPatch Read(ByteReader reader) =>
+        new((int)reader.ReadVarInt(), (int)reader.ReadVarInt(), (int)reader.ReadVarInt(), reader.ReadFloat(), reader.ReadFloat(), reader.ReadByte());
+}
+
+/// <summary>Pawn positions on the guests' maps, in frames small enough for one unreliable packet.</summary>
+public sealed class PositionsFrame
+{
+    /// <summary>The host's game tick, so the guest's clock follows between state batches too.</summary>
+    public int Tick { get; set; }
+
+    public List<(int MapId, List<PawnPosition> Positions)> Maps { get; set; } = new();
+
+    public byte[] Encode()
+    {
+        var writer = new ByteWriter(256);
+        writer.WriteVarInt(Tick);
+        writer.WriteVarUInt((ulong)Maps.Count);
+        foreach (var (mapId, positions) in Maps)
+        {
+            writer.WriteVarInt(mapId);
+            writer.WriteVarUInt((ulong)positions.Count);
+            foreach (var p in positions)
+            {
+                writer.WriteVarInt(p.ThingId);
+                writer.WriteVarInt(p.X);
+                writer.WriteVarInt(p.Z);
+                writer.WriteByte(p.Rotation);
+            }
+        }
+        return writer.ToArray();
+    }
+
+    public static PositionsFrame Decode(byte[] data)
+    {
+        var reader = new ByteReader(data);
+        var frame = new PositionsFrame { Tick = (int)reader.ReadVarInt() };
+        var maps = MapDelta.Count(reader, 1000);
+        for (var i = 0; i < maps; i++)
+        {
+            var mapId = (int)reader.ReadVarInt();
+            var count = MapDelta.Count(reader, 100_000);
+            var positions = new List<PawnPosition>(count);
+            for (var j = 0; j < count; j++)
+                positions.Add(new PawnPosition((int)reader.ReadVarInt(), (int)reader.ReadVarInt(), (int)reader.ReadVarInt(), reader.ReadByte()));
+            frame.Maps.Add((mapId, positions));
+        }
+        reader.EnsureFullyRead();
+        return frame;
+    }
+
+    /// <summary>
+    /// Splits positions into frames of at most about <paramref name="maxBytes"/> each (an unreliable packet must
+    /// stay small); every frame stands on its own.
+    /// </summary>
+    public static List<byte[]> Split(int tick, IEnumerable<(int MapId, List<PawnPosition> Positions)> maps, int maxBytes)
+    {
+        // Worst case per entry: 4 varints of up to 5 bytes + rotation; map header ~10 bytes.
+        const int entryBytes = 16;
+        var perFrame = System.Math.Max(1, (maxBytes - 24) / entryBytes);
+        var frames = new List<byte[]>();
+        var current = new PositionsFrame { Tick = tick };
+        var inCurrent = 0;
+        foreach (var (mapId, positions) in maps)
+        {
+            var index = 0;
+            do
+            {
+                var take = System.Math.Min(perFrame - inCurrent, positions.Count - index);
+                current.Maps.Add((mapId, positions.GetRange(index, take)));
+                index += take;
+                inCurrent += take;
+                if (inCurrent >= perFrame)
+                {
+                    frames.Add(current.Encode());
+                    current = new PositionsFrame { Tick = tick };
+                    inCurrent = 0;
+                }
+            }
+            while (index < positions.Count);
+        }
+        if (current.Maps.Count > 0)
+            frames.Add(current.Encode());
+        return frames;
+    }
 }
 
 public readonly struct PawnPosition
@@ -77,6 +210,9 @@ public sealed class MapDelta
     /// <summary>Things spawned or changed: each a standalone Scribe XML fragment (opaque here).</summary>
     public List<string> Things { get; set; } = new();
 
+    /// <summary>Small changes to things the guest already has, applied in place.</summary>
+    public List<ThingPatch> Patches { get; set; } = new();
+
     /// <summary>The full designation list of the map, when it changed; null otherwise.</summary>
     public List<DesignationEntry>? Designations { get; set; }
 
@@ -103,6 +239,9 @@ public sealed class MapDelta
         writer.WriteVarUInt((ulong)Things.Count);
         foreach (var thing in Things)
             writer.WriteString(thing);
+        writer.WriteVarUInt((ulong)Patches.Count);
+        foreach (var patch in Patches)
+            patch.Write(writer);
         writer.WriteBool(Designations != null);
         if (Designations != null)
         {
@@ -132,6 +271,9 @@ public sealed class MapDelta
         var things = Count(reader, maxEntries);
         for (var i = 0; i < things; i++)
             delta.Things.Add(reader.ReadRequiredString());
+        var patches = Count(reader, maxEntries);
+        for (var i = 0; i < patches; i++)
+            delta.Patches.Add(ThingPatch.Read(reader));
         if (reader.ReadBool())
         {
             var designations = Count(reader, maxEntries);

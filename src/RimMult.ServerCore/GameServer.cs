@@ -504,10 +504,11 @@ public sealed class GameServer
         if (sender.IsHost)
         {
             var data = PacketCodec.Encode(new CoopMessage { PlayerId = sender.Id, Channel = message.Channel, Data = message.Data });
+            var mode = message.Channel == Shared.Coop.CoopChannel.Positions ? DeliveryMode.UnreliableSequenced : DeliveryMode.ReliableOrdered;
             foreach (var session in _sessions.Values)
             {
                 if (session.Player is { } guest && !guest.IsHost && (message.PlayerId == -1 || guest.Id == message.PlayerId))
-                    _transport.Send(session.ConnectionId, data, DeliveryMode.ReliableOrdered);
+                    _transport.Send(session.ConnectionId, data, mode);
             }
             return;
         }
