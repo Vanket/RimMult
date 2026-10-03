@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using RimMult.Shared;
+using RimMult.Shared.Mods;
+using RimMult.Shared.Net;
 using RimMult.Shared.Packets;
 using RimMult.Shared.Serialization;
 using RimMult.Shared.Time;
@@ -17,6 +19,7 @@ public sealed class GameServer
     private readonly IServerTransport _transport;
     private readonly Action<string> _log;
     private readonly Dictionary<int, Session> _sessions = new();
+    private List<ModEntry>? _requiredMods;
     private int _nextPlayerId = 1;
     private double _lastGrantTime = double.NegativeInfinity;
 
@@ -156,12 +159,20 @@ public sealed class GameServer
             return;
         }
 
-        Settings.ModListHash ??= hello.ModListHash;
-        if (hello.ModListHash != Settings.ModListHash)
+        var modListHash = ModListHash.Compute(hello.Mods);
+        if (Settings.ModListHash == null)
         {
-            Kick(session, KickReason.ModListMismatch, "Your mod list differs from the server's");
+            Settings.ModListHash = modListHash;
+            _requiredMods = hello.Mods;
+        }
+        if (modListHash != Settings.ModListHash)
+        {
+            // A hash pinned in server.json has no list behind it until a matching player joins;
+            // until then all we can say is "different".
+            Kick(session, KickReason.ModListMismatch, "Your mod list differs from the server's", _requiredMods);
             return;
         }
+        _requiredMods ??= hello.Mods;
 
         var name = hello.DisplayName.Trim();
         if (name.Length == 0)
@@ -232,11 +243,11 @@ public sealed class GameServer
     private void Send(Session session, IPacket packet) =>
         _transport.Send(session.ConnectionId, PacketCodec.Encode(packet), DeliveryMode.ReliableOrdered);
 
-    private void Kick(Session session, KickReason reason, string message)
+    private void Kick(Session session, KickReason reason, string message, List<ModEntry>? serverMods = null)
     {
         _log($"Dropping connection {session.ConnectionId}: {reason} ({message})");
-        Send(session, new Kick { Reason = reason, Message = message });
-        _transport.Disconnect(session.ConnectionId);
+        var kick = new Kick { Reason = reason, Message = message, ServerMods = serverMods };
+        _transport.Disconnect(session.ConnectionId, PacketCodec.Encode(kick));
     }
 
     private sealed class Session

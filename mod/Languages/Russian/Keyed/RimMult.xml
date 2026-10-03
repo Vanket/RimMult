@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+  <RimMult.Multiplayer>Мультиплеер</RimMult.Multiplayer>
+  <RimMult.SteamRequired>Для RimMult нужен Steam: запустите RimWorld через Steam.</RimMult.SteamRequired>
+  <RimMult.DefaultServerName>Игра {0}</RimMult.DefaultServerName>
+  <RimMult.PortInUse>Не удалось открыть UDP-порт {0}. Возможно, его уже занял другой сервер.</RimMult.PortInUse>
+  <RimMult.CannotJoinSelf>Нельзя подключиться к своей же игре.</RimMult.CannotJoinSelf>
+  <RimMult.BadAddress>Введите адрес вида 203.0.113.5 или myserver.net:26480.</RimMult.BadAddress>
+
+  <RimMult.Join>Подключиться</RimMult.Join>
+  <RimMult.FriendsHosting>Друзья в Steam, которые создали игру:</RimMult.FriendsHosting>
+  <RimMult.NoFriendsHosting>Сейчас никто из друзей не создал игру.</RimMult.NoFriendsHosting>
+  <RimMult.JoinButton>Войти</RimMult.JoinButton>
+  <RimMult.Address>Адрес сервера</RimMult.Address>
+  <RimMult.Password>Пароль</RimMult.Password>
+  <RimMult.JoinByAddress>Подключиться по адресу</RimMult.JoinByAddress>
+  <RimMult.JoinHint>К другу можно зайти и из списка друзей Steam: правый клик → «Присоединиться к игре».</RimMult.JoinHint>
+
+  <RimMult.Host>Создать игру</RimMult.Host>
+  <RimMult.ServerName>Название игры</RimMult.ServerName>
+  <RimMult.MaxPlayers>Максимум игроков: {0}</RimMult.MaxPlayers>
+  <RimMult.OpenPort>Разрешить вход по адресу (UDP-порт)</RimMult.OpenPort>
+  <RimMult.OpenPortTip>Друзья из Steam могут зайти и без этого. Включите для игроков, которые подключаются по IP-адресу; порт нужно пробросить на роутере.</RimMult.OpenPortTip>
+  <RimMult.Port>Порт</RimMult.Port>
+  <RimMult.HostButton>Создать</RimMult.HostButton>
+  <RimMult.HostHint>Ваши друзья в Steam увидят игру в своём списке. У всех должны быть одинаковые моды в одинаковом порядке.</RimMult.HostHint>
+
+  <RimMult.HostMark>(хост)</RimMult.HostMark>
+  <RimMult.HostingInfo>Друзья могут зайти из списка друзей Steam.</RimMult.HostingInfo>
+  <RimMult.HostingInfoPort>Друзья могут зайти из списка друзей Steam, остальные — по адресу, UDP-порт {0}.</RimMult.HostingInfoPort>
+  <RimMult.StopHosting>Закрыть игру</RimMult.StopHosting>
+  <RimMult.Disconnect>Отключиться</RimMult.Disconnect>
+  <RimMult.Chat>Чат</RimMult.Chat>
+  <RimMult.Send>Отправить</RimMult.Send>
+
+  <RimMult.ConnectionEnded>Соединение закрыто: {0}</RimMult.ConnectionEnded>
+  <RimMult.Dismiss>OK</RimMult.Dismiss>
+  <RimMult.WrongPasswordHint>Введите пароль в поле «Пароль» и подключитесь снова.</RimMult.WrongPasswordHint>
+  <RimMult.ModMissing>Нет мода: {0} ({1}) — включите или подпишитесь</RimMult.ModMissing>
+  <RimMult.ModDifferent>Другая версия: {0} ({1}) — обновите</RimMult.ModDifferent>
+  <RimMult.ModExtra>Нет на сервере: {0} ({1}) — выключите</RimMult.ModExtra>
+  <RimMult.ModOrder>Моды те же, но порядок загрузки другой. Сделайте как у хоста.</RimMult.ModOrder>
+  <RimMult.ModSettingsDiffer>Ваш список модов отличается от серверного.</RimMult.ModSettingsDiffer>
+  <RimMult.OpenWorkshop>Мастерская</RimMult.OpenWorkshop>
+
+  <RimMult.StatusConnecting>RimMult: подключение…</RimMult.StatusConnecting>
+  <RimMult.StatusHandshaking>RimMult: вход…</RimMult.StatusHandshaking>
+  <RimMult.StatusConnected>RimMult: игроков {0} · {1}</RimMult.StatusConnected>
+  <RimMult.StatusDisconnected>RimMult: отключено</RimMult.StatusDisconnected>
+  <RimMult.SpeedPaused>пауза</RimMult.SpeedPaused>
+  <RimMult.SpeedNormal>скорость 1</RimMult.SpeedNormal>
+  <RimMult.SpeedFast>скорость 2</RimMult.SpeedFast>
+  <RimMult.SpeedSuperfast>скорость 3</RimMult.SpeedSuperfast>
+  <RimMult.SpeedUltrafast>скорость 4</RimMult.SpeedUltrafast>
+
+  <RimMult.ModListHash>Хэш списка модов: {0}</RimMult.ModListHash>
+  <RimMult.ModListHashHint>Укажите его в «ModListHash» в server.json выделенного сервера, чтобы закрепить нужный список модов.</RimMult.ModListHashHint>
+</LanguageData>

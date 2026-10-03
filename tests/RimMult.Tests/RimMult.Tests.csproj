@@ -16,7 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\RimMult.ServerCore\RimMult.ServerCore.csproj" />
+    <ProjectReference Include="..\..\src\RimMult.ClientCore\RimMult.ClientCore.csproj" />
+    <ProjectReference Include="..\..\src\RimMult.Net.LiteNet\RimMult.Net.LiteNet.csproj" />
   </ItemGroup>
 
 </Project>

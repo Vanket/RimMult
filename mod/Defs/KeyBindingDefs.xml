@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <KeyBindingDef>
+    <defName>RimMult_ToggleChat</defName>
+    <label>toggle multiplayer chat</label>
+    <category>MainTabs</category>
+    <defaultKeyCodeA>Y</defaultKeyCodeA>
+  </KeyBindingDef>
+</Defs>

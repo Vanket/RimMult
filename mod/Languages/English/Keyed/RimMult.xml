@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LanguageData>
+  <RimMult.Multiplayer>Multiplayer</RimMult.Multiplayer>
+  <RimMult.SteamRequired>RimMult needs Steam: start RimWorld through Steam to play multiplayer.</RimMult.SteamRequired>
+  <RimMult.DefaultServerName>{0}'s game</RimMult.DefaultServerName>
+  <RimMult.PortInUse>Could not open UDP port {0}. Is another server already using it?</RimMult.PortInUse>
+  <RimMult.CannotJoinSelf>You can't join your own game.</RimMult.CannotJoinSelf>
+  <RimMult.BadAddress>Enter an address like 203.0.113.5 or myserver.net:26480.</RimMult.BadAddress>
+
+  <RimMult.Join>Join</RimMult.Join>
+  <RimMult.FriendsHosting>Steam friends hosting a game:</RimMult.FriendsHosting>
+  <RimMult.NoFriendsHosting>None of your friends is hosting right now.</RimMult.NoFriendsHosting>
+  <RimMult.JoinButton>Join</RimMult.JoinButton>
+  <RimMult.Address>Server address</RimMult.Address>
+  <RimMult.Password>Password</RimMult.Password>
+  <RimMult.JoinByAddress>Join by address</RimMult.JoinByAddress>
+  <RimMult.JoinHint>You can also join a friend from the Steam friends list: right-click them → "Join game".</RimMult.JoinHint>
+
+  <RimMult.Host>Host</RimMult.Host>
+  <RimMult.ServerName>Game name</RimMult.ServerName>
+  <RimMult.MaxPlayers>Max players: {0}</RimMult.MaxPlayers>
+  <RimMult.OpenPort>Also allow joining by address (UDP port)</RimMult.OpenPort>
+  <RimMult.OpenPortTip>Steam friends can always join without this. Enable it for players joining by IP address; the port must be forwarded on your router.</RimMult.OpenPortTip>
+  <RimMult.Port>Port</RimMult.Port>
+  <RimMult.HostButton>Host game</RimMult.HostButton>
+  <RimMult.HostHint>Your Steam friends will see your game in their list. Everyone needs the same mods in the same order.</RimMult.HostHint>
+
+  <RimMult.HostMark>(host)</RimMult.HostMark>
+  <RimMult.HostingInfo>Friends can join from the Steam friends list.</RimMult.HostingInfo>
+  <RimMult.HostingInfoPort>Friends can join from the Steam friends list, others by address on UDP port {0}.</RimMult.HostingInfoPort>
+  <RimMult.StopHosting>Stop hosting</RimMult.StopHosting>
+  <RimMult.Disconnect>Disconnect</RimMult.Disconnect>
+  <RimMult.Chat>Chat</RimMult.Chat>
+  <RimMult.Send>Send</RimMult.Send>
+
+  <RimMult.ConnectionEnded>Connection ended: {0}</RimMult.ConnectionEnded>
+  <RimMult.Dismiss>OK</RimMult.Dismiss>
+  <RimMult.WrongPasswordHint>Enter the password in the "Password" field and join again.</RimMult.WrongPasswordHint>
+  <RimMult.ModMissing>Missing: {0} ({1}) — enable or subscribe</RimMult.ModMissing>
+  <RimMult.ModDifferent>Different version: {0} ({1}) — update it</RimMult.ModDifferent>
+  <RimMult.ModExtra>Not on the server: {0} ({1}) — disable it</RimMult.ModExtra>
+  <RimMult.ModOrder>Same mods, but in a different load order. Match the host's order.</RimMult.ModOrder>
+  <RimMult.ModSettingsDiffer>Your mod list differs from the server's.</RimMult.ModSettingsDiffer>
+  <RimMult.OpenWorkshop>Workshop</RimMult.OpenWorkshop>
+
+  <RimMult.StatusConnecting>RimMult: connecting…</RimMult.StatusConnecting>
+  <RimMult.StatusHandshaking>RimMult: joining…</RimMult.StatusHandshaking>
+  <RimMult.StatusConnected>RimMult: {0} players · {1}</RimMult.StatusConnected>
+  <RimMult.StatusDisconnected>RimMult: disconnected</RimMult.StatusDisconnected>
+  <RimMult.SpeedPaused>paused</RimMult.SpeedPaused>
+  <RimMult.SpeedNormal>speed 1</RimMult.SpeedNormal>
+  <RimMult.SpeedFast>speed 2</RimMult.SpeedFast>
+  <RimMult.SpeedSuperfast>speed 3</RimMult.SpeedSuperfast>
+  <RimMult.SpeedUltrafast>speed 4</RimMult.SpeedUltrafast>
+
+  <RimMult.ModListHash>Mod list hash: {0}</RimMult.ModListHash>
+  <RimMult.ModListHashHint>Put this into "ModListHash" in a dedicated server's server.json to pin the required mod list.</RimMult.ModListHashHint>
+</LanguageData>

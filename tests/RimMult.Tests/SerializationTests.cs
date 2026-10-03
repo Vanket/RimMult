@@ -1,3 +1,4 @@
+using RimMult.Shared.Mods;
 using RimMult.Shared.Packets;
 using RimMult.Shared.Serialization;
 using RimMult.Shared.Time;
@@ -86,7 +87,7 @@ public class SerializationTests
             SteamId = 76561198000000001,
             DisplayName = "Vanket",
             GameVersion = "1.6.4633 rev1261",
-            ModListHash = "abc",
+            Mods = [new ModEntry("ludeon.rimworld", "Core", "1.6", 0), new ModEntry("ceteam.combatextended", "Combat Extended", "abc", 2890901044)],
             Password = null,
         };
 
@@ -95,7 +96,10 @@ public class SerializationTests
         Assert.Equal(hello.SteamId, decoded.SteamId);
         Assert.Equal(hello.DisplayName, decoded.DisplayName);
         Assert.Equal(hello.GameVersion, decoded.GameVersion);
-        Assert.Equal(hello.ModListHash, decoded.ModListHash);
+        Assert.Equal(2, decoded.Mods.Count);
+        Assert.Equal("Combat Extended", decoded.Mods[1].Name);
+        Assert.Equal(2890901044UL, decoded.Mods[1].WorkshopId);
+        Assert.Equal(ModListHash.Compute(hello.Mods), ModListHash.Compute(decoded.Mods));
         Assert.Null(decoded.Password);
     }
 
@@ -150,5 +154,17 @@ public class SerializationTests
     {
         var data = PacketCodec.Encode(new SpeedVote { Speed = GameSpeed.Normal }).Append((byte)0).ToArray();
         Assert.Throws<ProtocolException>(() => PacketCodec.Decode(data));
+    }
+
+    [Fact]
+    public void KickRoundTripsWithAndWithoutModList()
+    {
+        var plain = Assert.IsType<Kick>(PacketCodec.Decode(PacketCodec.Encode(new Kick { Reason = KickReason.ServerFull, Message = "full" })));
+        Assert.Equal(KickReason.ServerFull, plain.Reason);
+        Assert.Null(plain.ServerMods);
+
+        var withMods = new Kick { Reason = KickReason.ModListMismatch, Message = "mods", ServerMods = [new ModEntry("a.b", "AB", "1", 7)] };
+        var decoded = Assert.IsType<Kick>(PacketCodec.Decode(PacketCodec.Encode(withMods)));
+        Assert.Equal("a.b", Assert.Single(decoded.ServerMods!).PackageId);
     }
 }

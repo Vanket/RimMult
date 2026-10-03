@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using RimMult.Shared.Mods;
 using RimMult.Shared.Serialization;
 using RimMult.Shared.Time;
 
@@ -11,7 +12,10 @@ public sealed class ClientHello : IPacket
     public ulong SteamId { get; set; }
     public string DisplayName { get; set; } = "";
     public string GameVersion { get; set; } = "";
-    public string ModListHash { get; set; } = "";
+
+    /// <summary>Active mods in load order. The server hashes it itself rather than trusting a client-sent hash.</summary>
+    public List<ModEntry> Mods { get; set; } = new();
+
     public string? Password { get; set; }
 
     public PacketType Type => PacketType.ClientHello;
@@ -23,7 +27,7 @@ public sealed class ClientHello : IPacket
         writer.WriteUInt64(SteamId);
         writer.WriteString(DisplayName);
         writer.WriteString(GameVersion);
-        writer.WriteString(ModListHash);
+        ModEntry.WriteList(writer, Mods);
         writer.WriteString(Password);
     }
 
@@ -33,7 +37,7 @@ public sealed class ClientHello : IPacket
         SteamId = reader.ReadUInt64(),
         DisplayName = reader.ReadRequiredString(),
         GameVersion = reader.ReadRequiredString(),
-        ModListHash = reader.ReadRequiredString(),
+        Mods = ModEntry.ReadList(reader),
         Password = reader.ReadString(),
     };
 }
@@ -78,11 +82,14 @@ public enum KickReason : byte
     BadData = 9,
 }
 
-/// <summary>Sent right before the server drops a connection, so the client can show why.</summary>
+/// <summary>The last packet before the server drops a connection, so the client can show why.</summary>
 public sealed class Kick : IPacket
 {
     public KickReason Reason { get; set; }
     public string Message { get; set; } = "";
+
+    /// <summary>For <see cref="KickReason.ModListMismatch"/>: the server's mod list, so the client can show exactly what differs.</summary>
+    public List<ModEntry>? ServerMods { get; set; }
 
     public PacketType Type => PacketType.Kick;
 
@@ -90,12 +97,16 @@ public sealed class Kick : IPacket
     {
         writer.WriteByte((byte)Reason);
         writer.WriteString(Message);
+        writer.WriteBool(ServerMods != null);
+        if (ServerMods != null)
+            ModEntry.WriteList(writer, ServerMods);
     }
 
     public static Kick Read(ByteReader reader) => new()
     {
         Reason = (KickReason)reader.ReadByte(),
         Message = reader.ReadRequiredString(),
+        ServerMods = reader.ReadBool() ? ModEntry.ReadList(reader) : null,
     };
 }
 
