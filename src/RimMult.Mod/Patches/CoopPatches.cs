@@ -151,6 +151,7 @@ internal static class CoopGizmoPatch
             return false;
         }
         CoopCommands.SendGizmo(__instance);
+        Log.Message($"[RimMult] Co-op guest: button '{__instance.Label}' sent to the host");
         return false;
     }
 }
