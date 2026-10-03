@@ -25,6 +25,8 @@ public enum PacketType : ushort
     SettlementDestroyed = 43,
     PlayerRelay = 50,
     CoopMessage = 60,
+    DiplomacyRequest = 70,
+    DiplomacyNotice = 71,
 }
 
 /// <summary>A message body. <see cref="PacketCodec"/> adds the type header.</summary>

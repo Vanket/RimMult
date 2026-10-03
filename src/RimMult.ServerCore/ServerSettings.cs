@@ -38,4 +38,7 @@ public sealed class ServerSettings
     /// available when hosting from inside RimWorld; a dedicated server always runs separate colonies.
     /// </summary>
     public Shared.Coop.GameMode Mode { get; set; }
+
+    /// <summary>Players may declare war on each other and raid each other's colonies.</summary>
+    public bool AllowPvp { get; set; } = true;
 }

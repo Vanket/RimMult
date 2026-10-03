@@ -54,6 +54,9 @@ public sealed class ServerWelcome : IPacket
 
     public Coop.GameMode Mode { get; set; }
 
+    /// <summary>Players may declare war on each other and raid.</summary>
+    public bool AllowPvp { get; set; }
+
     public PacketType Type => PacketType.ServerWelcome;
 
     public void Write(ByteWriter writer)
@@ -64,6 +67,7 @@ public sealed class ServerWelcome : IPacket
         Time.Write(writer);
         writer.WriteBool(HostCreatesWorld);
         writer.WriteByte((byte)Mode);
+        writer.WriteBool(AllowPvp);
     }
 
     public static ServerWelcome Read(ByteReader reader) => new()
@@ -74,6 +78,7 @@ public sealed class ServerWelcome : IPacket
         Time = TimeSettings.Read(reader),
         HostCreatesWorld = reader.ReadBool(),
         Mode = (Coop.GameMode)reader.ReadByte(),
+        AllowPvp = reader.ReadBool(),
     };
 }
 

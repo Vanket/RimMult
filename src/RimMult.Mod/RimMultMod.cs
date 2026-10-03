@@ -84,6 +84,7 @@ public sealed class RimMultSettings : ModSettings
     public bool HostOpenPort;
     public int HostPort = ProtocolInfo.DefaultPort;
     public Shared.Coop.GameMode HostMode = Shared.Coop.GameMode.SeparateColonies;
+    public bool HostAllowPvp = true;
 
     /// <summary>Lower-case package ids of mods left out of the mod comparison (visual / interface only).</summary>
     public List<string> ClientOnlyMods = ModList.DefaultClientOnly.ToList();
@@ -98,6 +99,7 @@ public sealed class RimMultSettings : ModSettings
         Scribe_Values.Look(ref HostOpenPort, "hostOpenPort");
         Scribe_Values.Look(ref HostPort, "hostPort", ProtocolInfo.DefaultPort);
         Scribe_Values.Look(ref HostMode, "hostMode");
+        Scribe_Values.Look(ref HostAllowPvp, "hostAllowPvp", true);
     }
 }
 

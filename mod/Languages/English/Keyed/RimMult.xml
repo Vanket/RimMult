@@ -151,8 +151,8 @@
   <RimMult.GameMode>Game mode:</RimMult.GameMode>
   <RimMult.ModeSeparate>Separate colonies</RimMult.ModeSeparate>
   <RimMult.ModeSeparateDesc>Everyone founds their own colony on one shared planet. Each computer simulates only its own colony, so a weak PC doesn't slow down the others. Visit each other with caravans, send pods, trade.</RimMult.ModeSeparateDesc>
-  <RimMult.ModeCoop>Co-op on one map</RimMult.ModeCoop>
-  <RimMult.ModeCoopDesc>Everyone plays the host's colony together. The host's game runs the simulation, friends see it live and give orders: designate, build, draft, right-click orders, work priorities, research. The host's computer does all the work.</RimMult.ModeCoopDesc>
+  <RimMult.ModeCoop>Co-op on one map (experimental)</RimMult.ModeCoop>
+  <RimMult.ModeCoopDesc>Everyone plays the host's colony together. The host's game runs the simulation, friends see it live and give orders: designate, build, draft, right-click orders, work priorities, research. The host's computer does all the work. Experimental: actions show up with a delay and the host may lag.</RimMult.ModeCoopDesc>
   <RimMult.ModeCoopHostInfo>Co-op: friends join your colony from their lobby.</RimMult.ModeCoopHostInfo>
   <RimMult.ModeCoopGuestInfo>Co-op: you play {0}'s colony together.</RimMult.ModeCoopGuestInfo>
   <RimMult.CoopJoinHint>The host's game will be loaded here (your current game is closed without saving).</RimMult.CoopJoinHint>
@@ -173,4 +173,61 @@
   <RimMult.CoopKeepCopy>Stay</RimMult.CoopKeepCopy>
   <RimMult.CoopNoSave>In co-op only the host saves the game.</RimMult.CoopNoSave>
   <RimMult.CoopTargetUnsupported>Targeting commands don't work for co-op guests yet. Use right-click orders instead.</RimMult.CoopTargetUnsupported>
+  <!-- Stage 5: diplomacy and PvP raids -->
+  <RimMult.AllowPvp>Allow wars between players (PvP)</RimMult.AllowPvp>
+  <RimMult.AllowPvpTip>Players can declare war on each other and raid each other's colonies with caravans and drop pods.</RimMult.AllowPvpTip>
+  <RimMult.RelationNeutral>neutral</RimMult.RelationNeutral>
+  <RimMult.RelationAllied>ally</RimMult.RelationAllied>
+  <RimMult.RelationHostile>war</RimMult.RelationHostile>
+  <RimMult.RelationInspect>Relations: {0}</RimMult.RelationInspect>
+  <RimMult.TradeAtWar>You are at war with {0}</RimMult.TradeAtWar>
+  <RimMult.Diplomacy>Diplomacy</RimMult.Diplomacy>
+  <RimMult.DiplomacyDesc>Declare war on {0}, offer peace or an alliance.</RimMult.DiplomacyDesc>
+  <RimMult.DiplomacyOffline>{0} is not online</RimMult.DiplomacyOffline>
+  <RimMult.DeclareWar>Declare war</RimMult.DeclareWar>
+  <RimMult.DeclareWarConfirm>Declare war on {0}? You will be able to raid each other's colonies. Peace needs both of you to agree.</RimMult.DeclareWarConfirm>
+  <RimMult.ProposeAlliance>Offer an alliance</RimMult.ProposeAlliance>
+  <RimMult.ProposePeace>Offer peace</RimMult.ProposePeace>
+  <RimMult.BreakAlliance>Break the alliance</RimMult.BreakAlliance>
+  <RimMult.BreakAllianceConfirm>Break the alliance with {0}?</RimMult.BreakAllianceConfirm>
+  <RimMult.ProposalSent>Proposal sent.</RimMult.ProposalSent>
+  <RimMult.PeaceProposedText>{0} offers you peace.</RimMult.PeaceProposedText>
+  <RimMult.AllianceProposedText>{0} offers you an alliance.</RimMult.AllianceProposedText>
+  <RimMult.DiplomacyAccept>Accept</RimMult.DiplomacyAccept>
+  <RimMult.DiplomacyDecline>Decline</RimMult.DiplomacyDecline>
+  <RimMult.ProposalDeclined>{0} declined your proposal.</RimMult.ProposalDeclined>
+  <RimMult.WarOnYouLabel>{0} declared war</RimMult.WarOnYouLabel>
+  <RimMult.WarOnYouText>{0} has declared war on you. Expect raids by caravan or drop pods. You can offer peace through "Diplomacy" on their colony.</RimMult.WarOnYouText>
+  <RimMult.DiplomacyPeaceMadeLabel>Peace with {0}</RimMult.DiplomacyPeaceMadeLabel>
+  <RimMult.DiplomacyPeaceMadeText>You made peace with {0}. No more raids between you.</RimMult.DiplomacyPeaceMadeText>
+  <RimMult.DiplomacyAllianceMadeLabel>Alliance with {0}</RimMult.DiplomacyAllianceMadeLabel>
+  <RimMult.DiplomacyAllianceMadeText>You are now allied with {0}.</RimMult.DiplomacyAllianceMadeText>
+  <RimMult.DiplomacyAllianceBrokenLabel>Alliance with {0} is over</RimMult.DiplomacyAllianceBrokenLabel>
+  <RimMult.DiplomacyAllianceBrokenText>The alliance with {0} has been broken. You are neutral again.</RimMult.DiplomacyAllianceBrokenText>
+  <RimMult.DiplomacyNewsWarDeclared>{0} declared war on {1}.</RimMult.DiplomacyNewsWarDeclared>
+  <RimMult.DiplomacyNewsPeaceMade>{0} and {1} made peace.</RimMult.DiplomacyNewsPeaceMade>
+  <RimMult.DiplomacyNewsAllianceMade>{0} and {1} are now allies.</RimMult.DiplomacyNewsAllianceMade>
+  <RimMult.DiplomacyNewsAllianceBroken>{0} broke the alliance with {1}.</RimMult.DiplomacyNewsAllianceBroken>
+  <RimMult.RaidPvpOff>PvP is off on this server</RimMult.RaidPvpOff>
+  <RimMult.RaidNotAtWar>you are not at war with {0}</RimMult.RaidNotAtWar>
+  <RimMult.RaidOwnerAway>{0} is not playing right now</RimMult.RaidOwnerAway>
+  <RimMult.RaidNoFighters>no colonist able to fight</RimMult.RaidNoFighters>
+  <RimMult.RaidAttack>Attack {0}'s colony</RimMult.RaidAttack>
+  <RimMult.RaidAttackReport>Going to attack {0}.</RimMult.RaidAttackReport>
+  <RimMult.RaidPods>Drop pod assault on {0}</RimMult.RaidPods>
+  <RimMult.RaidLaunched>Your war party attacks {0}! You will hear how it went when it's over.</RimMult.RaidLaunched>
+  <RimMult.RaidCancelled>The attack on {0} is off: {1}</RimMult.RaidCancelled>
+  <RimMult.RaidArrivedLabel>Raid by {0}!</RimMult.RaidArrivedLabel>
+  <RimMult.RaidArrivedText>{0} is attacking your colony with {1} fighters: {2}.\n\nThey are another player's colonists: whoever escapes alive goes back to {0}, with whatever they stole and whoever they carry off.</RimMult.RaidArrivedText>
+  <RimMult.RaidOverLabel>{0}'s raid is over</RimMult.RaidOverLabel>
+  <RimMult.RaidOverText>The raid by {0} is over.\n\nKilled: {1}. Left behind (wounded or captured): {2}. Escaped: {3}.</RimMult.RaidOverText>
+  <RimMult.RaidOverKidnapped>Kidnapped: {0}.</RimMult.RaidOverKidnapped>
+  <RimMult.RaidOverStolen>Stolen: {0}.</RimMult.RaidOverStolen>
+  <RimMult.RaidReturnLabel>Raid on {0}: results</RimMult.RaidReturnLabel>
+  <RimMult.RaidReturnText>Your raid on {0} is over.\n\nComing back: {1}.\nKilled: {2}.\nLeft behind (wounded or captured): {3}.</RimMult.RaidReturnText>
+  <RimMult.RaidReturnCaptives>Prisoners taken: {0}.</RimMult.RaidReturnCaptives>
+  <RimMult.RaidReturnLoot>Loot: {0}.</RimMult.RaidReturnLoot>
+  <RimMult.RaidNobody>nobody</RimMult.RaidNobody>
+  <RimMult.RaidBouncedLabel>The raid didn't happen</RimMult.RaidBouncedLabel>
+  <RimMult.RaidBouncedText>The attack could not take place (peace was made, or the enemy left the game). Your people are back home: {0}.</RimMult.RaidBouncedText>
 </LanguageData>

@@ -151,8 +151,8 @@
   <RimMult.GameMode>Режим игры:</RimMult.GameMode>
   <RimMult.ModeSeparate>Раздельные колонии</RimMult.ModeSeparate>
   <RimMult.ModeSeparateDesc>Каждый основывает свою колонию на общей планете. Каждый компьютер считает только свою колонию, поэтому слабый ПК не тормозит остальных. Ходите друг к другу караванами, шлите капсулы, торгуйте.</RimMult.ModeSeparateDesc>
-  <RimMult.ModeCoop>Кооп на одной карте</RimMult.ModeCoop>
-  <RimMult.ModeCoopDesc>Все вместе играют в колонии хоста. Симуляцию считает игра хоста, друзья видят её вживую и отдают приказы: разметка, стройка, призыв, приказы правой кнопкой, приоритеты работ, исследования. Всю нагрузку несёт компьютер хоста.</RimMult.ModeCoopDesc>
+  <RimMult.ModeCoop>Кооп на одной карте (экспериментально)</RimMult.ModeCoop>
+  <RimMult.ModeCoopDesc>Все вместе играют в колонии хоста. Симуляцию считает игра хоста, друзья видят её вживую и отдают приказы: разметка, стройка, призыв, приказы правой кнопкой, приоритеты работ, исследования. Всю нагрузку несёт компьютер хоста. Экспериментально: действия видны с задержкой, у хоста возможны лаги.</RimMult.ModeCoopDesc>
   <RimMult.ModeCoopHostInfo>Кооп: друзья входят в вашу колонию из своего лобби.</RimMult.ModeCoopHostInfo>
   <RimMult.ModeCoopGuestInfo>Кооп: вы играете вместе в колонии {0}.</RimMult.ModeCoopGuestInfo>
   <RimMult.CoopJoinHint>Здесь загрузится игра хоста (текущая игра закроется без сохранения).</RimMult.CoopJoinHint>
@@ -173,4 +173,61 @@
   <RimMult.CoopKeepCopy>Остаться</RimMult.CoopKeepCopy>
   <RimMult.CoopNoSave>В коопе игру сохраняет только хост.</RimMult.CoopNoSave>
   <RimMult.CoopTargetUnsupported>Команды с выбором цели пока не работают у гостей коопа. Используйте приказы правой кнопкой.</RimMult.CoopTargetUnsupported>
+  <!-- Этап 5: дипломатия и PvP-рейды -->
+  <RimMult.AllowPvp>Разрешить войны между игроками (PvP)</RimMult.AllowPvp>
+  <RimMult.AllowPvpTip>Игроки могут объявлять друг другу войну и нападать на колонии друг друга караванами и десантными капсулами.</RimMult.AllowPvpTip>
+  <RimMult.RelationNeutral>нейтралитет</RimMult.RelationNeutral>
+  <RimMult.RelationAllied>союз</RimMult.RelationAllied>
+  <RimMult.RelationHostile>война</RimMult.RelationHostile>
+  <RimMult.RelationInspect>Отношения: {0}</RimMult.RelationInspect>
+  <RimMult.TradeAtWar>Вы воюете с {0}</RimMult.TradeAtWar>
+  <RimMult.Diplomacy>Дипломатия</RimMult.Diplomacy>
+  <RimMult.DiplomacyDesc>Объявить войну {0}, предложить мир или союз.</RimMult.DiplomacyDesc>
+  <RimMult.DiplomacyOffline>{0} не в сети</RimMult.DiplomacyOffline>
+  <RimMult.DeclareWar>Объявить войну</RimMult.DeclareWar>
+  <RimMult.DeclareWarConfirm>Объявить войну {0}? Вы сможете нападать на колонии друг друга. Для мира нужно согласие обоих.</RimMult.DeclareWarConfirm>
+  <RimMult.ProposeAlliance>Предложить союз</RimMult.ProposeAlliance>
+  <RimMult.ProposePeace>Предложить мир</RimMult.ProposePeace>
+  <RimMult.BreakAlliance>Разорвать союз</RimMult.BreakAlliance>
+  <RimMult.BreakAllianceConfirm>Разорвать союз с {0}?</RimMult.BreakAllianceConfirm>
+  <RimMult.ProposalSent>Предложение отправлено.</RimMult.ProposalSent>
+  <RimMult.PeaceProposedText>{0} предлагает вам мир.</RimMult.PeaceProposedText>
+  <RimMult.AllianceProposedText>{0} предлагает вам союз.</RimMult.AllianceProposedText>
+  <RimMult.DiplomacyAccept>Принять</RimMult.DiplomacyAccept>
+  <RimMult.DiplomacyDecline>Отказаться</RimMult.DiplomacyDecline>
+  <RimMult.ProposalDeclined>{0} отклонил ваше предложение.</RimMult.ProposalDeclined>
+  <RimMult.WarOnYouLabel>{0} объявил войну</RimMult.WarOnYouLabel>
+  <RimMult.WarOnYouText>{0} объявил вам войну. Ждите рейдов караванами или десантными капсулами. Предложить мир можно через «Дипломатию» на его колонии.</RimMult.WarOnYouText>
+  <RimMult.DiplomacyPeaceMadeLabel>Мир с {0}</RimMult.DiplomacyPeaceMadeLabel>
+  <RimMult.DiplomacyPeaceMadeText>Вы заключили мир с {0}. Рейдов между вами больше не будет.</RimMult.DiplomacyPeaceMadeText>
+  <RimMult.DiplomacyAllianceMadeLabel>Союз с {0}</RimMult.DiplomacyAllianceMadeLabel>
+  <RimMult.DiplomacyAllianceMadeText>Теперь вы союзники с {0}.</RimMult.DiplomacyAllianceMadeText>
+  <RimMult.DiplomacyAllianceBrokenLabel>Союз с {0} расторгнут</RimMult.DiplomacyAllianceBrokenLabel>
+  <RimMult.DiplomacyAllianceBrokenText>Союз с {0} разорван. Вы снова нейтральны.</RimMult.DiplomacyAllianceBrokenText>
+  <RimMult.DiplomacyNewsWarDeclared>{0} объявил войну {1}.</RimMult.DiplomacyNewsWarDeclared>
+  <RimMult.DiplomacyNewsPeaceMade>{0} и {1} заключили мир.</RimMult.DiplomacyNewsPeaceMade>
+  <RimMult.DiplomacyNewsAllianceMade>{0} и {1} теперь союзники.</RimMult.DiplomacyNewsAllianceMade>
+  <RimMult.DiplomacyNewsAllianceBroken>{0} разорвал союз с {1}.</RimMult.DiplomacyNewsAllianceBroken>
+  <RimMult.RaidPvpOff>на этом сервере PvP выключено</RimMult.RaidPvpOff>
+  <RimMult.RaidNotAtWar>вы не воюете с {0}</RimMult.RaidNotAtWar>
+  <RimMult.RaidOwnerAway>{0} сейчас не играет</RimMult.RaidOwnerAway>
+  <RimMult.RaidNoFighters>нет колонистов, способных сражаться</RimMult.RaidNoFighters>
+  <RimMult.RaidAttack>Напасть на колонию {0}</RimMult.RaidAttack>
+  <RimMult.RaidAttackReport>Идёт нападать на {0}.</RimMult.RaidAttackReport>
+  <RimMult.RaidPods>Десант в капсулах на {0}</RimMult.RaidPods>
+  <RimMult.RaidLaunched>Ваш отряд атакует {0}! Когда бой закончится, вы узнаете результат.</RimMult.RaidLaunched>
+  <RimMult.RaidCancelled>Нападение на {0} отменено: {1}</RimMult.RaidCancelled>
+  <RimMult.RaidArrivedLabel>Рейд игрока {0}!</RimMult.RaidArrivedLabel>
+  <RimMult.RaidArrivedText>{0} нападает на вашу колонию, бойцов: {1} ({2}).\n\nЭто колонисты другого игрока: кто уйдёт живым, вернётся к {0} — вместе с украденным и с теми, кого унесёт.</RimMult.RaidArrivedText>
+  <RimMult.RaidOverLabel>Рейд {0} закончился</RimMult.RaidOverLabel>
+  <RimMult.RaidOverText>Рейд игрока {0} закончился.\n\nУбито: {1}. Осталось на поле боя (ранены или в плену): {2}. Ушли: {3}.</RimMult.RaidOverText>
+  <RimMult.RaidOverKidnapped>Похищены: {0}.</RimMult.RaidOverKidnapped>
+  <RimMult.RaidOverStolen>Украдено: {0}.</RimMult.RaidOverStolen>
+  <RimMult.RaidReturnLabel>Рейд на {0}: итоги</RimMult.RaidReturnLabel>
+  <RimMult.RaidReturnText>Ваш рейд на {0} закончился.\n\nВозвращаются: {1}.\nПогибли: {2}.\nОстались у врага (ранены или в плену): {3}.</RimMult.RaidReturnText>
+  <RimMult.RaidReturnCaptives>Взяты в плен: {0}.</RimMult.RaidReturnCaptives>
+  <RimMult.RaidReturnLoot>Добыча: {0}.</RimMult.RaidReturnLoot>
+  <RimMult.RaidNobody>никто</RimMult.RaidNobody>
+  <RimMult.RaidBouncedLabel>Нападение не состоялось</RimMult.RaidBouncedLabel>
+  <RimMult.RaidBouncedText>Атака не состоялась (заключён мир или противник вышел из игры). Ваши люди вернулись домой: {0}.</RimMult.RaidBouncedText>
 </LanguageData>

@@ -30,6 +30,9 @@ internal sealed class HostOptions
 
     /// <summary>Separate colonies on one planet, or everyone in the host's colony.</summary>
     public Shared.Coop.GameMode Mode;
+
+    /// <summary>Players may declare war on each other and raid.</summary>
+    public bool AllowPvp = true;
 }
 
 /// <summary>
@@ -81,6 +84,7 @@ internal static class Multiplayer
             // Hosting from inside the game: the host's planet is the world, friends don't get to pick another.
             HostCreatesWorld = true,
             Mode = options.Mode,
+            AllowPvp = options.AllowPvp,
         };
 
         // Hosting from a loaded game shares its planet right away; from the main menu the first colony decides.
@@ -282,6 +286,7 @@ internal static class Multiplayer
         Parcels.Attach(session);
         CoopHost.Attach(session);
         CoopGuest.Attach(session);
+        DiplomacyUi.Attach(session);
         Trades = new TradeManager(session);
         Trades.Invited += OnTradeInvited;
         Session = session;
@@ -322,6 +327,14 @@ internal static class Multiplayer
 
     private static void OnTradeInvited(PlayerTrade trade)
     {
+        // No trading with an enemy (an older client could still ask).
+        var partner = Session?.Players.FirstOrDefault(p => p.Id == trade.PartnerId);
+        if (partner != null && Session!.RelationWith(OwnerKey(partner)) == Shared.World.PlayerRelation.Hostile)
+        {
+            trade.Cancel();
+            return;
+        }
+
         var text = trade.PartnerCaravanId != 0
             ? "RimMult.TradeInviteCaravan".Translate(trade.PartnerName)
             : "RimMult.TradeInvite".Translate(trade.PartnerName);

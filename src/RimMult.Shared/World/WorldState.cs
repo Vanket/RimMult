@@ -167,8 +167,11 @@ public sealed class MailItem
 /// <summary>The server's view of the shared world. Persisted by the dedicated server and by an in-game host's save.</summary>
 public sealed class WorldState
 {
-    /// <summary>1: world, clock, colonies, mods. 2: + parcels in transit. 3: + player colors, destroyed NPC settlements.</summary>
-    private const byte FormatVersion = 3;
+    /// <summary>
+    /// 1: world, clock, colonies, mods. 2: + parcels in transit. 3: + player colors, destroyed NPC settlements.
+    /// 4: + relations between players.
+    /// </summary>
+    private const byte FormatVersion = 4;
 
     /// <summary>Null until the first player creates the world (picks the planet when starting their colony).</summary>
     public WorldDefinition? Definition { get; set; }
@@ -196,6 +199,9 @@ public sealed class WorldState
     /// <summary>Tiles of NPC settlements that some player destroyed; they are gone for everyone.</summary>
     public List<string> DestroyedSettlements { get; set; } = new();
 
+    /// <summary>Wars and alliances between players (pairs not listed are neutral).</summary>
+    public List<RelationEntry> Relations { get; set; } = new();
+
     public void Write(ByteWriter writer)
     {
         writer.WriteBool(Definition != null);
@@ -215,6 +221,7 @@ public sealed class WorldState
             writer.WriteByte(pair.Value);
         }
         WriteStrings(writer, DestroyedSettlements);
+        RelationEntry.WriteList(writer, Relations);
     }
 
     public static void WriteStrings(ByteWriter writer, IReadOnlyList<string> values)
@@ -263,6 +270,8 @@ public sealed class WorldState
                 state.PlayerColors[reader.ReadUInt64()] = reader.ReadByte();
             state.DestroyedSettlements = ReadStrings(reader);
         }
+        if (version >= 4)
+            state.Relations = RelationEntry.ReadList(reader);
         return state;
     }
 
