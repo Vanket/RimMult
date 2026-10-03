@@ -170,16 +170,18 @@ public sealed class GameServer
             return;
         }
 
+        // The same Steam account again: their old connection is dead but hasn't timed out yet (game restarted,
+        // network switched). The newcomer wins; refusing it would lock them out for the whole timeout.
+        // SteamId 0 means "no Steam" and is only seen in local development builds.
+        if (hello.SteamId != 0
+            && _sessions.Values.FirstOrDefault(s => s.Player?.SteamId == hello.SteamId) is { } stale)
+        {
+            Kick(stale, KickReason.AlreadyConnected, "Replaced by a new connection from the same Steam account");
+        }
+
         if (PlayerCount >= Settings.MaxPlayers)
         {
             Kick(session, KickReason.ServerFull, $"Server is full ({Settings.MaxPlayers} players)");
-            return;
-        }
-
-        // SteamId 0 means "no Steam" and is only seen in local development builds.
-        if (hello.SteamId != 0 && Players.Any(p => p.SteamId == hello.SteamId))
-        {
-            Kick(session, KickReason.AlreadyConnected, "This Steam account is already connected");
             return;
         }
 

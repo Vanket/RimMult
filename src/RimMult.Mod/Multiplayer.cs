@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using RimMult.ClientCore;
 using RimMult.Net.LiteNet;
 using RimMult.ServerCore;
@@ -169,8 +170,31 @@ internal static class Multiplayer
     }
 
     /// <summary>Called every frame.</summary>
+    /// <summary>Host with these options as soon as the save picked in the main menu has finished loading.</summary>
+    public static void HostAfterLoad(HostOptions options) => _hostAfterLoad = options;
+
+    private static HostOptions? _hostAfterLoad;
+
     public static void Update()
     {
+        if (_hostAfterLoad != null && !LongEventHandler.AnyEventNowOrWaiting)
+        {
+            if (Current.ProgramState == ProgramState.Playing)
+            {
+                var options = _hostAfterLoad;
+                _hostAfterLoad = null;
+                if (Host(options, out var error))
+                    OpenDialog();
+                else
+                    Messages.Message(error, MessageTypeDefOf.RejectInput, historical: false);
+            }
+            else if (!Find.WindowStack.Windows.Any(w => w is Dialog_SaveFileList_Load or Dialog_MessageBox))
+            {
+                // The load dialog (or the game's "mods changed" warning after it) was closed without loading.
+                _hostAfterLoad = null;
+            }
+        }
+
         _hub?.Poll();
         _server?.Update(Time.realtimeSinceStartupAsDouble);
         Session?.Poll();

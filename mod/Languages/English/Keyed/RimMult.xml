@@ -80,4 +80,21 @@
   <RimMult.SameWorldSave>This save is on the same planet as the shared world. Attach it to play it in multiplayer.</RimMult.SameWorldSave>
   <RimMult.AttachSave>Attach this save</RimMult.AttachSave>
   <RimMult.StatusLobby>RimMult: {0} players · in lobby</RimMult.StatusLobby>
+  <RimMult.LoadAndHost>Load a save and host it</RimMult.LoadAndHost>
+  <RimMult.ClientOnlyTitle>Client-side mods</RimMult.ClientOnlyTitle>
+  <RimMult.ClientOnlyHint>Checked mods are not compared with other players: use it for purely visual or interface mods (map previews, camera, HUD). Mods that add content (items, animals, factions, biomes) must stay unchecked and match.</RimMult.ClientOnlyHint>
+  <RimMult.ClientOnlyDiffHint>If a mod above only changes visuals or the interface, mark it as client-side in the RimMult mod settings instead.</RimMult.ClientOnlyDiffHint>
+  <RimMult.ErrorHostNoResponse>The host did not respond. They may still be loading; press "Try again".</RimMult.ErrorHostNoResponse>
+  <RimMult.ErrorSteamConnect>Steam lost the connection to the host.</RimMult.ErrorSteamConnect>
+  <RimMult.ErrorTimeout>The connection timed out.</RimMult.ErrorTimeout>
+  <RimMult.ErrorHostClosed>The host closed the connection.</RimMult.ErrorHostClosed>
+  <RimMult.KickProtocolMismatch>different RimMult versions. Both players need the latest build.</RimMult.KickProtocolMismatch>
+  <RimMult.KickGameVersionMismatch>different RimWorld versions ({0}).</RimMult.KickGameVersionMismatch>
+  <RimMult.KickModListMismatch>your mods differ from the host's (see below).</RimMult.KickModListMismatch>
+  <RimMult.KickWrongPassword>wrong password.</RimMult.KickWrongPassword>
+  <RimMult.KickServerFull>the server is full.</RimMult.KickServerFull>
+  <RimMult.KickAlreadyConnected>you connected again from another place.</RimMult.KickAlreadyConnected>
+  <RimMult.KickKicked>you were kicked.</RimMult.KickKicked>
+  <RimMult.KickServerShutdown>the host closed the game.</RimMult.KickServerShutdown>
+  <RimMult.KickBadData>connection error ({0}).</RimMult.KickBadData>
 </LanguageData>

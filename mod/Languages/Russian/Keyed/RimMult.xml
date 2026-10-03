@@ -80,4 +80,21 @@
   <RimMult.SameWorldSave>Этот сейв на той же планете, что и общий мир. Подключите его, чтобы играть им в мультиплеере.</RimMult.SameWorldSave>
   <RimMult.AttachSave>Подключить этот сейв</RimMult.AttachSave>
   <RimMult.StatusLobby>RimMult: игроков {0} · в лобби</RimMult.StatusLobby>
+  <RimMult.LoadAndHost>Загрузить сейв и создать игру</RimMult.LoadAndHost>
+  <RimMult.ClientOnlyTitle>Клиентские моды</RimMult.ClientOnlyTitle>
+  <RimMult.ClientOnlyHint>Отмеченные моды не сравниваются с другими игроками: для чисто визуальных модов и модов интерфейса (превью карты, камера, HUD). Моды, добавляющие контент (предметы, животных, фракции, биомы), отмечать нельзя — они должны совпадать.</RimMult.ClientOnlyHint>
+  <RimMult.ClientOnlyDiffHint>Если мод выше меняет только картинку или интерфейс — отметьте его как клиентский в настройках мода RimMult.</RimMult.ClientOnlyDiffHint>
+  <RimMult.ErrorHostNoResponse>Хост не отвечает. Возможно, он ещё загружается — нажмите «Повторить».</RimMult.ErrorHostNoResponse>
+  <RimMult.ErrorSteamConnect>Steam потерял соединение с хостом.</RimMult.ErrorSteamConnect>
+  <RimMult.ErrorTimeout>Соединение прервалось по таймауту.</RimMult.ErrorTimeout>
+  <RimMult.ErrorHostClosed>Хост закрыл соединение.</RimMult.ErrorHostClosed>
+  <RimMult.KickProtocolMismatch>разные версии RimMult. Обоим нужна последняя сборка.</RimMult.KickProtocolMismatch>
+  <RimMult.KickGameVersionMismatch>разные версии RimWorld ({0}).</RimMult.KickGameVersionMismatch>
+  <RimMult.KickModListMismatch>ваши моды отличаются от модов хоста (см. ниже).</RimMult.KickModListMismatch>
+  <RimMult.KickWrongPassword>неверный пароль.</RimMult.KickWrongPassword>
+  <RimMult.KickServerFull>сервер заполнен.</RimMult.KickServerFull>
+  <RimMult.KickAlreadyConnected>вы подключились заново из другого места.</RimMult.KickAlreadyConnected>
+  <RimMult.KickKicked>вас выгнали.</RimMult.KickKicked>
+  <RimMult.KickServerShutdown>хост закрыл игру.</RimMult.KickServerShutdown>
+  <RimMult.KickBadData>ошибка соединения ({0}).</RimMult.KickBadData>
 </LanguageData>

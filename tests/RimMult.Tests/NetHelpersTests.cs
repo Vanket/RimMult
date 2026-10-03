@@ -46,6 +46,11 @@ public class NetHelpersTests
         Assert.Equal(65535, sequence);
         Assert.Equal([9], payload);
 
+        var connect = P2PFrame.Connect(0xDEADBEEF);
+        Assert.True(P2PFrame.TryParse(connect, connect.Length, out kind, out _, out payload));
+        Assert.Equal(P2PFrameKind.Connect, kind);
+        Assert.Equal(0xDEADBEEF, P2PFrame.ConnectNonce(payload));
+
         var control = P2PFrame.Control(P2PFrameKind.Accept);
         Assert.True(P2PFrame.TryParse(control, control.Length, out kind, out _, out payload));
         Assert.Equal(P2PFrameKind.Accept, kind);
@@ -69,6 +74,8 @@ public class NetHelpersTests
     [InlineData(new byte[] { 99, 1 })]
     [InlineData(new byte[] { (byte)P2PFrameKind.Sequenced, 1 })]
     [InlineData(new byte[] { (byte)P2PFrameKind.Accept, 1 })]
+    [InlineData(new byte[] { (byte)P2PFrameKind.Connect })]
+    [InlineData(new byte[] { (byte)P2PFrameKind.Connect, 1, 2 })]
     public void MalformedFramesAreRejected(byte[] frame)
     {
         Assert.False(P2PFrame.TryParse(frame, frame.Length, out _, out _, out _));

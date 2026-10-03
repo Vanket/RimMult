@@ -90,12 +90,21 @@ internal sealed class SteamServerEndpoint : IServerEndpoint
             return;
 
         _bySteamId.TryGetValue(remote.m_SteamID, out var peer);
+
+        // A Connect with a new nonce from a known SteamID is a fresh start (their game restarted or they pressed
+        // "try again"): the old connection is dead even if it hasn't timed out yet.
+        if (peer != null && kind == P2PFrameKind.Connect && P2PFrame.ConnectNonce(payload) != peer.Nonce)
+        {
+            Drop(peer);
+            peer = null;
+        }
+
         if (peer == null)
         {
             if (kind != P2PFrameKind.Connect)
                 return;
 
-            peer = new Peer(remote) { LastHeard = now };
+            peer = new Peer(remote) { LastHeard = now, Nonce = P2PFrame.ConnectNonce(payload) };
             _bySteamId[remote.m_SteamID] = peer;
             peer.ConnectionId = _hub.RegisterConnection(this);
             _byConnection[peer.ConnectionId] = peer;
@@ -149,6 +158,7 @@ internal sealed class SteamServerEndpoint : IServerEndpoint
         public int ConnectionId { get; set; }
         public float LastHeard { get; set; }
         public float LastSent { get; set; }
+        public uint Nonce { get; set; }
         public ushort OutSequence { get; set; }
         public ushort InSequence { get; set; }
         public bool HasInSequence { get; set; }

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using HarmonyLib;
 using RimMult.Shared;
 using RimMult.Steam;
@@ -34,10 +36,38 @@ public sealed class RimMultMod : Mod
 
     public override string SettingsCategory() => "RimMult";
 
+    private Vector2 _modsScroll;
+
     public override void DoSettingsWindowContents(Rect inRect)
     {
         var list = new Listing_Standard();
         list.Begin(inRect);
+        list.Label("RimMult.ClientOnlyTitle".Translate());
+        GUI.color = Color.gray;
+        list.Label("RimMult.ClientOnlyHint".Translate());
+        GUI.color = Color.white;
+
+        // Checkbox per mod: client-side mods are not compared with other players.
+        var mods = ModList.Running.Where(ModList.CanBeClientOnly).ToList();
+        var outer = list.GetRect(inRect.height - list.CurHeight - 70f);
+        Widgets.DrawMenuSection(outer);
+        var inner = outer.ContractedBy(4f);
+        var view = new Rect(0f, 0f, inner.width - 16f, mods.Count * 26f);
+        Widgets.BeginScrollView(inner, ref _modsScroll, view);
+        for (var i = 0; i < mods.Count; i++)
+        {
+            var id = mods[i].PackageId.ToLowerInvariant();
+            var on = Settings.ClientOnlyMods.Contains(id);
+            var was = on;
+            Widgets.CheckboxLabeled(new Rect(0f, i * 26f, view.width, 24f), $"{mods[i].Name}  <color=#888888>({mods[i].PackageIdPlayerFacing})</color>", ref on);
+            if (on && !was)
+                Settings.ClientOnlyMods.Add(id);
+            else if (!on && was)
+                Settings.ClientOnlyMods.Remove(id);
+        }
+        Widgets.EndScrollView();
+
+        list.Gap(6f);
         list.Label("RimMult.ModListHash".Translate(ModList.ComputeHash()));
         list.Label("RimMult.ModListHashHint".Translate());
         list.End();
@@ -52,8 +82,13 @@ public sealed class RimMultSettings : ModSettings
     public bool HostOpenPort;
     public int HostPort = ProtocolInfo.DefaultPort;
 
+    /// <summary>Lower-case package ids of mods left out of the mod comparison (visual / interface only).</summary>
+    public List<string> ClientOnlyMods = ModList.DefaultClientOnly.ToList();
+
     public override void ExposeData()
     {
+        Scribe_Collections.Look(ref ClientOnlyMods, "clientOnlyMods", LookMode.Value);
+        ClientOnlyMods ??= ModList.DefaultClientOnly.ToList();
         Scribe_Values.Look(ref LastServerAddress, "lastServerAddress", "");
         Scribe_Values.Look(ref HostServerName, "hostServerName", "");
         Scribe_Values.Look(ref HostMaxPlayers, "hostMaxPlayers", 10);

@@ -4,7 +4,10 @@ namespace RimMult.Shared.Net;
 
 public enum P2PFrameKind : byte
 {
-    /// <summary>Client → host: open a connection. Re-sent until accepted.</summary>
+    /// <summary>
+    /// Client → host: open a connection. Re-sent until accepted. Carries a random 4-byte nonce per attempt, so
+    /// the host tells a repeat of the same attempt from a fresh reconnect (game restarted) of the same SteamID.
+    /// </summary>
     Connect = 1,
 
     /// <summary>Host → client: connection accepted.</summary>
@@ -30,7 +33,18 @@ public static class P2PFrame
 {
     public const int SequencedHeaderSize = 3;
 
+    public const int ConnectFrameSize = 5;
+
     public static byte[] Control(P2PFrameKind kind) => new[] { (byte)kind };
+
+    public static byte[] Connect(uint nonce) => new[]
+    {
+        (byte)P2PFrameKind.Connect, (byte)nonce, (byte)(nonce >> 8), (byte)(nonce >> 16), (byte)(nonce >> 24),
+    };
+
+    /// <summary>The nonce of a parsed <see cref="P2PFrameKind.Connect"/> frame (its payload).</summary>
+    public static uint ConnectNonce(byte[] payload) =>
+        (uint)(payload[0] | (payload[1] << 8) | (payload[2] << 16) | (payload[3] << 24));
 
     public static byte[] Reliable(byte[] payload)
     {
@@ -63,6 +77,10 @@ public static class P2PFrame
         switch (kind)
         {
             case P2PFrameKind.Connect:
+                if (length != ConnectFrameSize)
+                    return false;
+                payload = Slice(frame, 1, 4);
+                return true;
             case P2PFrameKind.Accept:
             case P2PFrameKind.Disconnect:
             case P2PFrameKind.Heartbeat:
