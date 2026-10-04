@@ -6,10 +6,17 @@
 ## Одной командой (основной способ)
 
 ```powershell
-./tools/workshop/publish.ps1            # сборка, тесты, упаковка mod/ и загрузка; описание — из последнего коммита
-./tools/workshop/publish.ps1 -Note "…"  # своё описание изменений
-./tools/workshop/publish.ps1 -Check     # всё, кроме загрузки: проверяет и связь со Steam
+./tools/workshop/publish.ps1 -Note "Fixes …" -NoteRu "Исправлено …"  # сборка, тесты, упаковка mod/ и загрузка
+./tools/workshop/publish.ps1 -Description      # заодно обновить описание страницы (tools/workshop/description.bbcode)
+./tools/workshop/publish.ps1 -DescriptionOnly  # только описание: без сборки и файлов
+./tools/workshop/publish.ps1 -Check            # всё, кроме загрузки: проверяет и связь со Steam
 ```
+
+* **Заметка об изменениях — на двух языках**: `-Note` по-английски, `-NoteRu` по-русски (идут друг за другом).
+  Без `-Note` берётся строка последнего коммита.
+* **Описание страницы** живёт в `tools/workshop/description.bbcode` (BBCode Steam, английский и русский) и
+  заливается только с `-Description`/`-DescriptionOnly` — правки на сайте Steam без этого не затираются. Лимит
+  Steam — 8000 байт UTF-8 на всё описание (кириллица — 2 байта на букву), утилита проверяет его до загрузки.
 
 Загружает утилита `tools/WorkshopUpload` через **запущенный клиент Steam** (тот же путь, что кнопка в игре): пароль и
 steamcmd не нужны, нужен Steam, залогиненный аккаунтом-владельцем предмета. Название, описание, теги и видимость на
