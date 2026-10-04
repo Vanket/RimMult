@@ -220,4 +220,4 @@
 | Рейды и визиты | `Sync/PlayerRaids.cs`, `Sync/PlayerVisits.cs` |
 | API для модов | `src/RimMult.Mod/API/RimMultAPI.cs`, `Coop/ModSync.cs`, `docs/API.md` |
 | Переводы | `mod/Languages/{Russian,English}/Keyed/RimMult.xml` |
-| Документация | `README.md` (как проверять), `docs/DESIGN.md`, `docs/MODS.md`, `docs/SERVER.md`, `docs/WORKSHOP.md` |
+| Документация | `README.md` (для игроков, RU + EN), `docs/TESTING.md` (как проверять по этапам), `docs/DESIGN.md`, `docs/MODS.md`, `docs/SERVER.md`, `docs/WORKSHOP.md` |
