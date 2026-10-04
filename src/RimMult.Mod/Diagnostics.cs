@@ -37,7 +37,7 @@ internal static class Diagnostics
     private static string Build()
     {
         var text = new StringBuilder();
-        text.AppendLine($"RimMult {RimMultMod.Instance.Content.ModMetaData.ModVersion}, protocol v{ProtocolInfo.Version}");
+        text.AppendLine($"RimMult {RimMultMod.Build}, protocol v{ProtocolInfo.Version}");
         text.AppendLine($"RimWorld {RimWorld.VersionControl.CurrentVersionStringWithRev}, {SystemInfo.operatingSystem}, {SystemInfo.processorType}, {SystemInfo.systemMemorySize} MB");
         text.AppendLine($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}, program state: {Current.ProgramState}");
 

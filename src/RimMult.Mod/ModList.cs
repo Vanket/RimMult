@@ -59,7 +59,9 @@ public static class ModList
     private static string Fingerprint(ModContentPack mod)
     {
         var assemblies = mod.assemblies.loadedAssemblies.Select(a => a.ManifestModule.ModuleVersionId.ToString());
-        return (mod.ModMetaData?.ModVersion ?? "") + "|" + string.Join(",", assemblies);
+        // RimMult itself carries its build, so a player told "different version" also sees which one the host has.
+        var version = mod.PackageId.ToLowerInvariant() == "vanket.rimmult" ? RimMultMod.Build : mod.ModMetaData?.ModVersion ?? "";
+        return version + "|" + string.Join(",", assemblies);
     }
 
     private static ulong WorkshopId(ModContentPack mod)

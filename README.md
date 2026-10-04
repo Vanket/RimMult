@@ -72,9 +72,12 @@ $mods = "D:\SteamLibrary\steamapps\common\RimWorld\Mods"; $zip = "$env:TEMP\RimM
 
 ## Моды
 
-- Моды у всех одинаковые и в одном порядке. При входе RimMult покажет, какого мода не хватает, какой лишний или
-  другой версии, и **одной кнопкой сделает ваши моды как у хоста**: включит и выключит нужные, расставит по порядку
-  хоста, перезапустит игру и снова подключится. Вторая кнопка подпишет в Мастерской на моды, которых у вас нет.
+- Моды у всех одинаковые и в одном порядке. Кнопка **«Моды»** рядом с другом в окне мультиплеера сравнит ваши моды с
+  его **до входа**; то же покажет и неудачный вход. Кнопка **«Сделать всё как у хоста»** подпишет на недостающие моды,
+  заставит Steam скачать свежие версии отличающихся (включая сам RimMult), включит и выключит нужные, расставит в
+  порядке хоста, перезапустит игру и сама подключится — один перезапуск.
+- **Какая у меня версия?** В заголовке окна мультиплеера: «RimMult 0.5.0 (ca6e6a1)» — версия и сборка. На экране
+  различий видно и сборку хоста. «v15/v16» — это версия протокола, она одна на много сборок.
 - Чисто визуальные моды и моды интерфейса (превью карты, камера, HUD, переводы) можно отметить **«клиентскими»** в
   настройках RimMult — тогда они могут отличаться. Map Preview, Camera+, RimHUD и Dubs Mint Menus/Minimap отмечены сразу.
 - Не работает вместе с модом **Multiplayer** (Zetrith). Моды, меняющие скорость игры (Smart Speed), спорят с общим
@@ -144,8 +147,8 @@ Shift queue, targeted attacks and abilities, priorities, research, quests), bill
 caravans on the globe, friends' cursors and selection in their color, mods' data for guests.
 
 **Install:** subscribe on the [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3813029532)
-(needs Harmony). Everyone needs the same RimMult version and the same mods in the same order — RimMult shows exactly
-what differs and makes yours like the host's in one click; visual/UI mods can be marked "client-side" in its settings. Not compatible with Multiplayer (Zetrith).
+(needs Harmony). Everyone needs the same RimMult version and the same mods in the same order — "Mods" next to a friend
+compares before joining, and one click makes yours like the host's (Workshop downloads included); visual/UI mods can be marked "client-side" in its settings. Not compatible with Multiplayer (Zetrith).
 
 **Play:** main menu → **Multiplayer** → host and pick a mode; friends join from that window or the Steam friends list.
 Chat: **`\`**. Dedicated server for separate colonies (Linux, Windows, Docker): [`docs/SERVER.md`](docs/SERVER.md).

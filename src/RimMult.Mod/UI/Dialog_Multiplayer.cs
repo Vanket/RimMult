@@ -39,7 +39,7 @@ internal sealed class Dialog_Multiplayer : Window
         closeOnClickedOutside = false;
         closeOnAccept = false;
         onlyOneOfTypeAllowed = true;
-        optionalTitle = "RimMult.Multiplayer".Translate();
+        optionalTitle = "RimMult.Multiplayer".Translate() + " · RimMult " + RimMultMod.Build;
     }
 
     public override Vector2 InitialSize => new(860f, 700f);
@@ -73,7 +73,7 @@ internal sealed class Dialog_Multiplayer : Window
         if (session != null)
         {
             // The last connection ended: say why, on top of the join/host controls.
-            var endedHeight = session.ModDiff != null ? 270f : session.KickReason == KickReason.WrongPassword ? 92f : 60f;
+            var endedHeight = session.ModDiff is { IsEmpty: false } ? 270f : session.KickReason == KickReason.WrongPassword ? 92f : 60f;
             DrawEnded(new Rect(inRect.x, inRect.y, inRect.width, endedHeight), session);
             setupRect.yMin += endedHeight + Gap;
         }
@@ -129,8 +129,12 @@ internal sealed class Dialog_Multiplayer : Window
             for (var i = 0; i < friends.Count; i++)
             {
                 var row = new Rect(0f, i * RowHeight, view.width, RowHeight - 2f);
-                Widgets.Label(row.LeftPart(0.65f), friends[i].Name);
-                if (Widgets.ButtonText(row.RightPart(0.33f), "RimMult.JoinButton".Translate()))
+                Widgets.Label(row.LeftPart(0.46f), friends[i].Name);
+                var check = new Rect(row.x + row.width * 0.48f, row.y, row.width * 0.24f, row.height);
+                if (Widgets.ButtonText(check, "RimMult.ModCheckButton".Translate()))
+                    Multiplayer.CheckModsSteam(friends[i].SteamId);
+                TooltipHandler.TipRegion(check, "RimMult.ModCheckTip".Translate());
+                if (Widgets.ButtonText(row.RightPart(0.26f), "RimMult.JoinButton".Translate()))
                     Multiplayer.JoinSteam(friends[i].SteamId, _password);
             }
             Widgets.EndScrollView();
@@ -141,6 +145,10 @@ internal sealed class Dialog_Multiplayer : Window
         if (list.ButtonText("RimMult.JoinByAddress".Translate()))
         {
             _error = Multiplayer.JoinAddress(Settings.LastServerAddress, _password, out var error) ? null : error;
+        }
+        if (list.ButtonText("RimMult.ModCheckByAddress".Translate()))
+        {
+            _error = Multiplayer.CheckModsAddress(Settings.LastServerAddress, out var error) ? null : error;
         }
 
         list.Gap();
@@ -429,15 +437,17 @@ internal sealed class Dialog_Multiplayer : Window
 
         var canRetry = Multiplayer.CanRetry;
         var headline = new Rect(inner.x, inner.y, inner.width - (canRetry ? 320f : 110f), RowHeight);
-        GUI.color = ColorLibrary.RedReadable;
-        Widgets.Label(headline, "RimMult.ConnectionEnded".Translate(EndReason(session)));
+        var (text, good) = Headline(session);
+        GUI.color = good ? Color.green : ColorLibrary.RedReadable;
+        Widgets.Label(headline, text);
         GUI.color = Color.white;
         if (Widgets.ButtonText(new Rect(inner.xMax - 100f, inner.y, 100f, RowHeight - 4f), "RimMult.Dismiss".Translate()))
         {
             Multiplayer.Stop();
             return;
         }
-        if (canRetry && Widgets.ButtonText(new Rect(inner.xMax - 310f, inner.y, 200f, RowHeight - 4f), "RimMult.Retry".Translate()))
+        if (canRetry && Widgets.ButtonText(new Rect(inner.xMax - 310f, inner.y, 200f, RowHeight - 4f),
+                (session.IsModCheck ? "RimMult.JoinButton" : "RimMult.Retry").Translate()))
         {
             Multiplayer.Retry(_password);
             return;
@@ -453,12 +463,28 @@ internal sealed class Dialog_Multiplayer : Window
             return;
         }
 
-        if (session.ModDiff is { } diff)
+        if (session.ModDiff is { IsEmpty: false } diff)
         {
             if (session.ServerMods is { } serverMods)
-                DrawModFixes(new Rect(inner.x, inner.y + RowHeight + 4f, inner.width, RowHeight), serverMods);
+                DrawModFixes(new Rect(inner.x, inner.y + RowHeight + 4f, inner.width, RowHeight), serverMods, diff);
             DrawModDiff(new Rect(inner.x, inner.y + 2 * RowHeight + 8f, inner.width, inner.height - 2 * RowHeight - 8f), diff);
         }
+    }
+
+    /// <summary>What the ended session says: why the connection closed, or what a mod check found.</summary>
+    private static (string Text, bool Good) Headline(ClientSession session)
+    {
+        if (!session.IsModCheck)
+            return ("RimMult.ConnectionEnded".Translate(EndReason(session)), false);
+        if (session.ServerProtocol == 0)
+            return ("RimMult.ModCheckFailed".Translate(EndReason(session)), false);
+        if (session.ServerMods == null)
+            return ("RimMult.ModCheckNoList".Translate(), false);
+        if (session.ServerProtocol != Shared.ProtocolInfo.Version)
+            return ("RimMult.ModCheckProtocol".Translate(Shared.ProtocolInfo.Version, session.ServerProtocol), false);
+        return session.ModDiff is { IsEmpty: false }
+            ? ("RimMult.ModCheckDiffers".Translate(), false)
+            : ("RimMult.ModCheckSame".Translate(), true);
     }
 
     /// <summary>The server's kick reasons come in English; show known ones in the player's language.</summary>
@@ -471,38 +497,20 @@ internal sealed class Dialog_Multiplayer : Window
         return key.CanTranslate() ? key.Translate(detail).ToString() : detail;
     }
 
-    /// <summary>"Make my mods like the host's" and "subscribe to the missing ones".</summary>
-    private static void DrawModFixes(Rect rect, IReadOnlyList<ModEntry> serverMods)
+    /// <summary>"Make everything like the host's", and which RimMult builds meet here.</summary>
+    private static void DrawModFixes(Rect rect, IReadOnlyList<ModEntry> serverMods, ModListDiff diff)
     {
-        var like = new Rect(rect.x, rect.y, 260f, rect.height);
-        if (Widgets.ButtonText(like, "RimMult.ModsMakeLikeHost".Translate()))
-        {
-            var plan = ModListSync.Plan(serverMods);
-            if (!plan.HasChanges)
-            {
-                Messages.Message("RimMult.ModsNothingToChange".Translate(), MessageTypeDefOf.RejectInput, historical: false);
-            }
-            else
-            {
-                var order = (plan.OrderChanged ? "RimMult.ModsOrderChanged" : "RimMult.ModsOrderSame").Translate();
-                var missing = plan.Missing.Count == 0 ? "0" : $"{plan.Missing.Count} ({string.Join(", ", plan.Missing.Take(8).Select(m => m.Name))}{(plan.Missing.Count > 8 ? ", …" : "")})";
-                Find.WindowStack.Add(Dialog_MessageBox.CreateConfirmation(
-                    "RimMult.ModsMakeLikeHostConfirm".Translate(plan.Enabled.Count, plan.Disabled.Count, order, missing),
-                    () => ModListSync.Apply(plan)));
-            }
-        }
-        TooltipHandler.TipRegion(like, "RimMult.ModsMakeLikeHostTip".Translate());
+        var button = new Rect(rect.x, rect.y, 300f, rect.height);
+        if (Widgets.ButtonText(button, "RimMult.ModsFixAll".Translate()))
+            ModListSync.ConfirmFixAll(serverMods, diff);
+        TooltipHandler.TipRegion(button, "RimMult.ModsFixAllTip".Translate());
 
-        var subscribable = ModListSync.Subscribable(serverMods);
-        if (subscribable.Count == 0)
-            return;
-        var subscribe = new Rect(like.xMax + 10f, rect.y, 300f, rect.height);
-        if (Widgets.ButtonText(subscribe, "RimMult.ModsSubscribeMissing".Translate(subscribable.Count)))
+        if (ModListSync.HostBuild(serverMods) is { } hostBuild && hostBuild != RimMultMod.Build)
         {
-            var count = ModListSync.Subscribe(subscribable);
-            Messages.Message("RimMult.ModsSubscribed".Translate(count), MessageTypeDefOf.TaskCompletion, historical: false);
+            GUI.color = ColorLibrary.RedReadable;
+            Widgets.Label(new Rect(button.xMax + 12f, rect.y + 4f, rect.width - button.width - 12f, rect.height), "RimMult.ModsBuilds".Translate(RimMultMod.Build, hostBuild));
+            GUI.color = Color.white;
         }
-        TooltipHandler.TipRegion(subscribe, "RimMult.ModsSubscribeMissingTip".Translate());
     }
 
     private void DrawModDiff(Rect rect, ModListDiff diff)
