@@ -154,6 +154,15 @@ internal static class Multiplayer
         return true;
     }
 
+    /// <summary>Notes the last server in the settings, to join it again after the game restarts (mod list changed).</summary>
+    public static void RememberForRejoin()
+    {
+        var settings = RimMultMod.Instance.Settings;
+        settings.RejoinSteamHost = _lastSteamHost ?? 0;
+        settings.RejoinAddress = _lastAddress ?? "";
+        RimMultMod.Instance.WriteSettings();
+    }
+
     /// <summary>Joins the last server again (after a wrong password or a lost connection).</summary>
     public static void Retry(string? password)
     {
@@ -196,6 +205,7 @@ internal static class Multiplayer
     /// <summary>Called every frame.</summary>
     public static void Update()
     {
+        ModListSync.Update();
         if (_hostAfterLoad != null && !LongEventHandler.AnyEventNowOrWaiting)
         {
             if (Current.ProgramState == ProgramState.Playing)

@@ -136,6 +136,9 @@ public sealed class ClientSession
     /// <summary>What to change to match the server, if we were rejected for our mod list and the server told us its list.</summary>
     public ModListDiff? ModDiff { get; private set; }
 
+    /// <summary>The server's mod list in load order, when it rejected ours (to make ours the same).</summary>
+    public IReadOnlyList<ModEntry>? ServerMods { get; private set; }
+
     public void Start() => _transport.Start();
 
     public void Poll()
@@ -329,7 +332,10 @@ public sealed class ClientSession
                 KickReason = kick.Reason;
                 DisconnectReason = kick.Message;
                 if (kick.ServerMods != null)
+                {
+                    ServerMods = kick.ServerMods;
                     ModDiff = ModListDiff.Compute(kick.ServerMods, _hello.Mods);
+                }
                 break;
         }
     }

@@ -128,6 +128,10 @@ public sealed class RimMultSettings : ModSettings
     /// <summary>Co-op: share this player's cursor and show the others' (with what they have selected).</summary>
     public bool ShowCursors = true;
 
+    /// <summary>Join this host (or address) again when the game starts: set before restarting for a mod list change.</summary>
+    public ulong RejoinSteamHost;
+    public string RejoinAddress = "";
+
     /// <summary>Lower-case package ids of mods left out of the mod comparison (visual / interface only).</summary>
     public List<string> ClientOnlyMods = ModList.DefaultClientOnly.ToList();
 
@@ -144,6 +148,9 @@ public sealed class RimMultSettings : ModSettings
         Scribe_Values.Look(ref HostAllowPvp, "hostAllowPvp", true);
         Scribe_Values.Look(ref SyncModComponents, "syncModComponents", true);
         Scribe_Values.Look(ref ShowCursors, "showCursors", true);
+        Scribe_Values.Look(ref RejoinSteamHost, "rejoinSteamHost");
+        Scribe_Values.Look(ref RejoinAddress, "rejoinAddress", "");
+        RejoinAddress ??= "";
     }
 }
 

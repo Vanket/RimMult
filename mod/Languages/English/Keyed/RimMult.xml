@@ -313,4 +313,21 @@
   <RimMult.Chronicle.HelpEnded>{0}'s people came back from {1}; {4} died.</RimMult.Chronicle.HelpEnded>
   <RimMult.Chronicle.ParcelSent>{0} sent {1}: {5}.</RimMult.Chronicle.ParcelSent>
   <RimMult.Chronicle.SettlementDestroyed>{0} razed an NPC settlement.</RimMult.Chronicle.SettlementDestroyed>
+  <!-- Mods like the host's -->
+  <RimMult.ModsMakeLikeHost>Make my mods like the host's</RimMult.ModsMakeLikeHost>
+  <RimMult.ModsMakeLikeHostTip>Enable the host's mods, disable the others and put everything in the host's order. Your client-side mods (translations, interface) stay next to the mods they followed. The game saves the list, restarts and joins the host again.</RimMult.ModsMakeLikeHostTip>
+  <RimMult.ModsMakeLikeHostConfirm>Make your mod list like the host's?
+
+Enable: {0}
+Disable: {1}
+Order: {2}
+You don't have: {3}
+
+The game saves the mod list, restarts and joins the host again.</RimMult.ModsMakeLikeHostConfirm>
+  <RimMult.ModsOrderChanged>like the host's</RimMult.ModsOrderChanged>
+  <RimMult.ModsOrderSame>unchanged</RimMult.ModsOrderSame>
+  <RimMult.ModsNothingToChange>Your mods and their order already match the host's — only versions differ. Restart the Steam client so it updates the mods.</RimMult.ModsNothingToChange>
+  <RimMult.ModsSubscribeMissing>Subscribe to the missing ones ({0})</RimMult.ModsSubscribeMissing>
+  <RimMult.ModsSubscribeMissingTip>Subscribe on the Steam Workshop to the host's mods you don't have. Steam downloads them; then press "Make my mods like the host's".</RimMult.ModsSubscribeMissingTip>
+  <RimMult.ModsSubscribed>Subscribed to {0} mod(s). Steam downloads them — now "Make my mods like the host's".</RimMult.ModsSubscribed>
 </LanguageData>

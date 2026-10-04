@@ -73,7 +73,7 @@ internal sealed class Dialog_Multiplayer : Window
         if (session != null)
         {
             // The last connection ended: say why, on top of the join/host controls.
-            var endedHeight = session.ModDiff != null ? 230f : session.KickReason == KickReason.WrongPassword ? 92f : 60f;
+            var endedHeight = session.ModDiff != null ? 270f : session.KickReason == KickReason.WrongPassword ? 92f : 60f;
             DrawEnded(new Rect(inRect.x, inRect.y, inRect.width, endedHeight), session);
             setupRect.yMin += endedHeight + Gap;
         }
@@ -454,7 +454,11 @@ internal sealed class Dialog_Multiplayer : Window
         }
 
         if (session.ModDiff is { } diff)
-            DrawModDiff(new Rect(inner.x, inner.y + RowHeight, inner.width, inner.height - RowHeight), diff);
+        {
+            if (session.ServerMods is { } serverMods)
+                DrawModFixes(new Rect(inner.x, inner.y + RowHeight + 4f, inner.width, RowHeight), serverMods);
+            DrawModDiff(new Rect(inner.x, inner.y + 2 * RowHeight + 8f, inner.width, inner.height - 2 * RowHeight - 8f), diff);
+        }
     }
 
     /// <summary>The server's kick reasons come in English; show known ones in the player's language.</summary>
@@ -465,6 +469,40 @@ internal sealed class Dialog_Multiplayer : Window
             return detail;
         var key = "RimMult.Kick" + reason;
         return key.CanTranslate() ? key.Translate(detail).ToString() : detail;
+    }
+
+    /// <summary>"Make my mods like the host's" and "subscribe to the missing ones".</summary>
+    private static void DrawModFixes(Rect rect, IReadOnlyList<ModEntry> serverMods)
+    {
+        var like = new Rect(rect.x, rect.y, 260f, rect.height);
+        if (Widgets.ButtonText(like, "RimMult.ModsMakeLikeHost".Translate()))
+        {
+            var plan = ModListSync.Plan(serverMods);
+            if (!plan.HasChanges)
+            {
+                Messages.Message("RimMult.ModsNothingToChange".Translate(), MessageTypeDefOf.RejectInput, historical: false);
+            }
+            else
+            {
+                var order = (plan.OrderChanged ? "RimMult.ModsOrderChanged" : "RimMult.ModsOrderSame").Translate();
+                var missing = plan.Missing.Count == 0 ? "0" : $"{plan.Missing.Count} ({string.Join(", ", plan.Missing.Take(8).Select(m => m.Name))}{(plan.Missing.Count > 8 ? ", …" : "")})";
+                Find.WindowStack.Add(Dialog_MessageBox.CreateConfirmation(
+                    "RimMult.ModsMakeLikeHostConfirm".Translate(plan.Enabled.Count, plan.Disabled.Count, order, missing),
+                    () => ModListSync.Apply(plan)));
+            }
+        }
+        TooltipHandler.TipRegion(like, "RimMult.ModsMakeLikeHostTip".Translate());
+
+        var subscribable = ModListSync.Subscribable(serverMods);
+        if (subscribable.Count == 0)
+            return;
+        var subscribe = new Rect(like.xMax + 10f, rect.y, 300f, rect.height);
+        if (Widgets.ButtonText(subscribe, "RimMult.ModsSubscribeMissing".Translate(subscribable.Count)))
+        {
+            var count = ModListSync.Subscribe(subscribable);
+            Messages.Message("RimMult.ModsSubscribed".Translate(count), MessageTypeDefOf.TaskCompletion, historical: false);
+        }
+        TooltipHandler.TipRegion(subscribe, "RimMult.ModsSubscribeMissingTip".Translate());
     }
 
     private void DrawModDiff(Rect rect, ModListDiff diff)

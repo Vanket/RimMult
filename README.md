@@ -73,7 +73,8 @@ $mods = "D:\SteamLibrary\steamapps\common\RimWorld\Mods"; $zip = "$env:TEMP\RimM
 ## Моды
 
 - Моды у всех одинаковые и в одном порядке. При входе RimMult покажет, какого мода не хватает, какой лишний или
-  другой версии.
+  другой версии, и **одной кнопкой сделает ваши моды как у хоста**: включит и выключит нужные, расставит по порядку
+  хоста, перезапустит игру и снова подключится. Вторая кнопка подпишет в Мастерской на моды, которых у вас нет.
 - Чисто визуальные моды и моды интерфейса (превью карты, камера, HUD, переводы) можно отметить **«клиентскими»** в
   настройках RimMult — тогда они могут отличаться. Map Preview, Camera+, RimHUD и Dubs Mint Menus/Minimap отмечены сразу.
 - Не работает вместе с модом **Multiplayer** (Zetrith). Моды, меняющие скорость игры (Smart Speed), спорят с общим
@@ -144,7 +145,7 @@ caravans on the globe, friends' cursors and selection in their color, mods' data
 
 **Install:** subscribe on the [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3813029532)
 (needs Harmony). Everyone needs the same RimMult version and the same mods in the same order — RimMult shows exactly
-what differs; visual/UI mods can be marked "client-side" in its settings. Not compatible with Multiplayer (Zetrith).
+what differs and makes yours like the host's in one click; visual/UI mods can be marked "client-side" in its settings. Not compatible with Multiplayer (Zetrith).
 
 **Play:** main menu → **Multiplayer** → host and pick a mode; friends join from that window or the Steam friends list.
 Chat: **`\`**. Dedicated server for separate colonies (Linux, Windows, Docker): [`docs/SERVER.md`](docs/SERVER.md).
