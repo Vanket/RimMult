@@ -13,6 +13,7 @@ namespace RimMult.Sync;
 /// Diplomacy with other players: the "Diplomacy" button on their colonies, how relations are shown, and what this
 /// player is told when something happens (a war declared on them, a peace offer to answer, …).
 /// </summary>
+[StaticConstructorOnStartup]
 internal static class DiplomacyUi
 {
     private static Texture2D? _icon;

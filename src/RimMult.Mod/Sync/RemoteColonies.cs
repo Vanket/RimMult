@@ -12,6 +12,7 @@ using Verse;
 namespace RimMult.Sync;
 
 /// <summary>Another player's colony, drawn on this player's globe. Not saved: rebuilt from the server's list.</summary>
+[StaticConstructorOnStartup]
 public sealed class RemoteColony : WorldObject
 {
     public ulong OwnerSteamId;
