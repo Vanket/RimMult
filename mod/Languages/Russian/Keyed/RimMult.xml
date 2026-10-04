@@ -449,4 +449,56 @@
   <RimMult.TradeRansomTitle>Переговоры о выкупе с {0}</RimMult.TradeRansomTitle>
   <RimMult.TradeHintRansom>Война: в обмене только серебро и пленные. Пленные приходят свободными и вступают в другую колонию.</RimMult.TradeHintRansom>
   <RimMult.TradePrisoner>{0} (пленник)</RimMult.TradePrisoner>
+  <RimMult.TradeGiveWishes>Дать, что просит {0} ({1})</RimMult.TradeGiveWishes>
+  <RimMult.TradeWished>(просит: {0})</RimMult.TradeWished>
+  <RimMult.TradeShowcase>Склад {0}: попросите что нужно</RimMult.TradeShowcase>
+  <RimMult.TradeShowcaseHint>Всё, что партнёр мог бы отдать. «+» и «−» — сколько вы хотите (Shift ×10, Ctrl ×100), «∞» — всё. Партнёр увидит просьбу и решит сам.</RimMult.TradeShowcaseHint>
+  <RimMult.TradeShowcaseEmpty>Партнёр ещё не показал свой склад.</RimMult.TradeShowcaseEmpty>
+  <RimMult.MarketButton>Рынок</RimMult.MarketButton>
+  <RimMult.MarketTitle>Рынок мира</RimMult.MarketTitle>
+  <RimMult.MarketTabLots>Лоты ({0})</RimMult.MarketTabLots>
+  <RimMult.MarketTabOrders>Заказы ({0})</RimMult.MarketTabOrders>
+  <RimMult.MarketPostLot>Выставить лот…</RimMult.MarketPostLot>
+  <RimMult.MarketPostOrder>Разместить заказ…</RimMult.MarketPostOrder>
+  <RimMult.MarketSilver>Серебра в колониях: {0}</RimMult.MarketSilver>
+  <RimMult.MarketNoLots>Лотов пока нет. Выставьте свои товары — их купят, даже когда вас нет в игре.</RimMult.MarketNoLots>
+  <RimMult.MarketNoOrders>Заказов пока нет. Закажите, что нужно, — награда ждёт того, кто привезёт.</RimMult.MarketNoOrders>
+  <RimMult.MarketPrice>{0} серебра (стоит {1})</RimMult.MarketPrice>
+  <RimMult.MarketTakeBack>Снять</RimMult.MarketTakeBack>
+  <RimMult.MarketBuy>Купить</RimMult.MarketBuy>
+  <RimMult.MarketBuyConfirm>Купить «{0}» у {2} за {1} серебра? Серебро уйдёт сейчас, товары придут капсулой.</RimMult.MarketBuyConfirm>
+  <RimMult.MarketAtWar>Вы воюете с {0}.</RimMult.MarketAtWar>
+  <RimMult.MarketReward>награда {0} серебра · ещё {1} дн.</RimMult.MarketReward>
+  <RimMult.MarketCancelOrder>Отменить</RimMult.MarketCancelOrder>
+  <RimMult.MarketFulfill>Выполнить</RimMult.MarketFulfill>
+  <RimMult.MarketFulfillConfirm>Отдать {0} x{1} игроку {2} за {3} серебра?</RimMult.MarketFulfillConfirm>
+  <RimMult.MarketNotEnough>Не хватает: {0} нужно {1}, на складах {2}.</RimMult.MarketNotEnough>
+  <RimMult.MarketLotValue>Выбрано на {0}</RimMult.MarketLotValue>
+  <RimMult.MarketPriceLabel>Цена (серебро):</RimMult.MarketPriceLabel>
+  <RimMult.MarketPostLotButton>Выставить</RimMult.MarketPostLotButton>
+  <RimMult.MarketOrderWhat>{0} (по рыночной цене ~{1})</RimMult.MarketOrderWhat>
+  <RimMult.MarketOrderPick>Выберите предмет в списке.</RimMult.MarketOrderPick>
+  <RimMult.MarketCountLabel>Сколько:</RimMult.MarketCountLabel>
+  <RimMult.MarketRewardLabel>Награда:</RimMult.MarketRewardLabel>
+  <RimMult.MarketPostOrderButton>Разместить</RimMult.MarketPostOrderButton>
+  <RimMult.MarketLotPosted>Лот выставлен: {0} за {1} серебра.</RimMult.MarketLotPosted>
+  <RimMult.MarketBuying>Покупка: {0}…</RimMult.MarketBuying>
+  <RimMult.MarketOrderPosted>Заказ размещён: {0} x{1}, награда {2} серебра.</RimMult.MarketOrderPosted>
+  <RimMult.MarketDelivering>Отправлено {1}: {0}.</RimMult.MarketDelivering>
+  <RimMult.Market.BoughtLabel>Покупка с рынка</RimMult.Market.BoughtLabel>
+  <RimMult.Market.BoughtText>Вы купили у {0}: {1}.</RimMult.Market.BoughtText>
+  <RimMult.Market.SoldLabel>Лот продан</RimMult.Market.SoldLabel>
+  <RimMult.Market.SoldText>{0} купил ваш лот. Выручка: {1}.</RimMult.Market.SoldText>
+  <RimMult.Market.LotReturnedLabel>Товары вернулись с рынка</RimMult.Market.LotReturnedLabel>
+  <RimMult.Market.LotReturnedText>Вернулось с рынка: {1}.</RimMult.Market.LotReturnedText>
+  <RimMult.Market.RefundLabel>Серебро вернулось</RimMult.Market.RefundLabel>
+  <RimMult.Market.RefundText>Сделка не состоялась, серебро вернулось: {1}.</RimMult.Market.RefundText>
+  <RimMult.Market.OrderDeliveredLabel>Заказ привезли</RimMult.Market.OrderDeliveredLabel>
+  <RimMult.Market.OrderDeliveredText>{0} выполнил ваш заказ: {1}.</RimMult.Market.OrderDeliveredText>
+  <RimMult.Market.RewardLabel>Награда за заказ</RimMult.Market.RewardLabel>
+  <RimMult.Market.RewardText>{0} заплатил за выполненный заказ: {1}.</RimMult.Market.RewardText>
+  <RimMult.Market.OrderExpiredLabel>Заказ просрочен</RimMult.Market.OrderExpiredLabel>
+  <RimMult.Market.OrderExpiredText>Никто не выполнил ваш заказ вовремя, награда вернулась: {1}.</RimMult.Market.OrderExpiredText>
+  <RimMult.Chronicle.MarketSale>{0} купил на рынке у {1}: {5} за {2} серебра.</RimMult.Chronicle.MarketSale>
+  <RimMult.Chronicle.OrderDelivered>{0} выполнил заказ {1}: {5}, награда {2} серебра.</RimMult.Chronicle.OrderDelivered>
 </LanguageData>

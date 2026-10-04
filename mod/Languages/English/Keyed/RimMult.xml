@@ -449,4 +449,56 @@ If these are Workshop mods, the host probably has a newer version than the Works
   <RimMult.TradeRansomTitle>Ransom talks with {0}</RimMult.TradeRansomTitle>
   <RimMult.TradeHintRansom>At war: only silver and prisoners change hands. Prisoners arrive free and join the other colony.</RimMult.TradeHintRansom>
   <RimMult.TradePrisoner>{0} (prisoner)</RimMult.TradePrisoner>
+  <RimMult.TradeGiveWishes>Give what {0} asks for ({1})</RimMult.TradeGiveWishes>
+  <RimMult.TradeWished>(asked: {0})</RimMult.TradeWished>
+  <RimMult.TradeShowcase>{0}'s stock: ask for what you need</RimMult.TradeShowcase>
+  <RimMult.TradeShowcaseHint>Everything your partner could give. + and − set how many you want (Shift ×10, Ctrl ×100), ∞ asks for all. Your partner sees the wish and decides.</RimMult.TradeShowcaseHint>
+  <RimMult.TradeShowcaseEmpty>Your partner hasn't shown their stock yet.</RimMult.TradeShowcaseEmpty>
+  <RimMult.MarketButton>Market</RimMult.MarketButton>
+  <RimMult.MarketTitle>World market</RimMult.MarketTitle>
+  <RimMult.MarketTabLots>Lots ({0})</RimMult.MarketTabLots>
+  <RimMult.MarketTabOrders>Orders ({0})</RimMult.MarketTabOrders>
+  <RimMult.MarketPostLot>Put up a lot…</RimMult.MarketPostLot>
+  <RimMult.MarketPostOrder>Post an order…</RimMult.MarketPostOrder>
+  <RimMult.MarketSilver>Silver in your colonies: {0}</RimMult.MarketSilver>
+  <RimMult.MarketNoLots>No lots yet. Put your goods up: they sell even while you're away.</RimMult.MarketNoLots>
+  <RimMult.MarketNoOrders>No orders yet. Order what you need: the reward waits for whoever delivers.</RimMult.MarketNoOrders>
+  <RimMult.MarketPrice>{0} silver (worth {1})</RimMult.MarketPrice>
+  <RimMult.MarketTakeBack>Take back</RimMult.MarketTakeBack>
+  <RimMult.MarketBuy>Buy</RimMult.MarketBuy>
+  <RimMult.MarketBuyConfirm>Buy "{0}" from {2} for {1} silver? The silver leaves now, the goods arrive by drop pod.</RimMult.MarketBuyConfirm>
+  <RimMult.MarketAtWar>You are at war with {0}.</RimMult.MarketAtWar>
+  <RimMult.MarketReward>reward {0} silver · {1} more days</RimMult.MarketReward>
+  <RimMult.MarketCancelOrder>Call off</RimMult.MarketCancelOrder>
+  <RimMult.MarketFulfill>Deliver</RimMult.MarketFulfill>
+  <RimMult.MarketFulfillConfirm>Give {0} x{1} to {2} for {3} silver?</RimMult.MarketFulfillConfirm>
+  <RimMult.MarketNotEnough>Not enough {0}: {1} needed, {2} in the stockpiles.</RimMult.MarketNotEnough>
+  <RimMult.MarketLotValue>Chosen: worth {0}</RimMult.MarketLotValue>
+  <RimMult.MarketPriceLabel>Price (silver):</RimMult.MarketPriceLabel>
+  <RimMult.MarketPostLotButton>Put up</RimMult.MarketPostLotButton>
+  <RimMult.MarketOrderWhat>{0} (worth about {1})</RimMult.MarketOrderWhat>
+  <RimMult.MarketOrderPick>Pick an item in the list.</RimMult.MarketOrderPick>
+  <RimMult.MarketCountLabel>How many:</RimMult.MarketCountLabel>
+  <RimMult.MarketRewardLabel>Reward:</RimMult.MarketRewardLabel>
+  <RimMult.MarketPostOrderButton>Post</RimMult.MarketPostOrderButton>
+  <RimMult.MarketLotPosted>Lot put up: {0} for {1} silver.</RimMult.MarketLotPosted>
+  <RimMult.MarketBuying>Buying: {0}…</RimMult.MarketBuying>
+  <RimMult.MarketOrderPosted>Order posted: {0} x{1}, reward {2} silver.</RimMult.MarketOrderPosted>
+  <RimMult.MarketDelivering>Sent to {1}: {0}.</RimMult.MarketDelivering>
+  <RimMult.Market.BoughtLabel>Bought on the market</RimMult.Market.BoughtLabel>
+  <RimMult.Market.BoughtText>You bought from {0}: {1}.</RimMult.Market.BoughtText>
+  <RimMult.Market.SoldLabel>Lot sold</RimMult.Market.SoldLabel>
+  <RimMult.Market.SoldText>{0} bought your lot. You got: {1}.</RimMult.Market.SoldText>
+  <RimMult.Market.LotReturnedLabel>Goods back from the market</RimMult.Market.LotReturnedLabel>
+  <RimMult.Market.LotReturnedText>Back from the market: {1}.</RimMult.Market.LotReturnedText>
+  <RimMult.Market.RefundLabel>Silver back</RimMult.Market.RefundLabel>
+  <RimMult.Market.RefundText>The deal didn't go through; your silver is back: {1}.</RimMult.Market.RefundText>
+  <RimMult.Market.OrderDeliveredLabel>Order delivered</RimMult.Market.OrderDeliveredLabel>
+  <RimMult.Market.OrderDeliveredText>{0} delivered your order: {1}.</RimMult.Market.OrderDeliveredText>
+  <RimMult.Market.RewardLabel>Order reward</RimMult.Market.RewardLabel>
+  <RimMult.Market.RewardText>{0} paid for the order you delivered: {1}.</RimMult.Market.RewardText>
+  <RimMult.Market.OrderExpiredLabel>Order expired</RimMult.Market.OrderExpiredLabel>
+  <RimMult.Market.OrderExpiredText>Nobody delivered your order in time; the reward is back: {1}.</RimMult.Market.OrderExpiredText>
+  <RimMult.Chronicle.MarketSale>{0} bought from {1} on the market: {5} for {2} silver.</RimMult.Chronicle.MarketSale>
+  <RimMult.Chronicle.OrderDelivered>{0} delivered {1}'s order: {5}, reward {2} silver.</RimMult.Chronicle.OrderDelivered>
 </LanguageData>

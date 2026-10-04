@@ -172,8 +172,8 @@ internal static class Parcels
             return ResearchShare.Deliver(parcel, project, points);
 
         ParcelAddress.Parse(parcel.ToTile, out var caravanId, out var tileText);
-        if (ParcelAddress.IsTribute(parcel.ToTile))
-            tileText = ""; // tribute lands at any home colony
+        if (ParcelAddress.IsTribute(parcel.ToTile) || ParcelAddress.IsMarket(parcel.ToTile))
+            tileText = ""; // tribute and market deals land at any home colony
         var caravan = caravanId is { } id
             ? Find.WorldObjects.Caravans.FirstOrDefault(c => c.ID == id && !c.Destroyed && c.Faction == Faction.OfPlayer)
             : null;
@@ -214,6 +214,12 @@ internal static class Parcels
         {
             label = "RimMult.ParcelReturnedLabel".Translate();
             text = "RimMult.ParcelReturnedText".Translate(parcel.Summary);
+        }
+        else if (ParcelAddress.TryParseMarket(parcel.ToTile, out var market))
+        {
+            label = ("RimMult.Market." + market + "Label").Translate(parcel.FromName);
+            // What arrived, in this game's words (the server's own summaries are plain English).
+            text = ("RimMult.Market." + market + "Text").Translate(parcel.FromName, ThingPackage.Summarize(things));
         }
         else if (ParcelAddress.IsTribute(parcel.ToTile))
         {

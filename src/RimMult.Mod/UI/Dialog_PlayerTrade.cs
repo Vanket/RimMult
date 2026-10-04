@@ -16,7 +16,8 @@ namespace RimMult.UI;
 /// Trading with another player: pick what you give, see what they give, both accept. From home you give from your
 /// stockpiles; from a caravan standing at their colony you give its cargo and animals, and what you buy is loaded
 /// into the caravan. Goods for a colony arrive by drop pod. Prisoners can be traded too (they arrive free); at war
-/// only silver and prisoners: a ransom.
+/// only silver and prisoners: a ransom. Each side shows the other its showcase (what it could give), and either can
+/// ask for lines of it; the owner sees the wishes and decides.
 /// </summary>
 internal sealed class Dialog_PlayerTrade : Window
 {
@@ -31,6 +32,8 @@ internal sealed class Dialog_PlayerTrade : Window
     private string _lastSignature = "";
     private Vector2 _mineScroll;
     private Vector2 _theirsScroll;
+    private Vector2 _showcaseScroll;
+    private bool _catalogSent;
 
     public Dialog_PlayerTrade(PlayerTrade trade)
     {
@@ -83,11 +86,23 @@ internal sealed class Dialog_PlayerTrade : Window
         var right = body.RightHalf().ContractedBy(4f);
 
         DrawMine(left);
-        DrawTheirs(right);
+        DrawTheirs(right.TopHalf().ContractedBy(0f, 2f));
+        DrawShowcase(right.BottomHalf().ContractedBy(0f, 2f));
         DrawButtons(bottom);
 
         if (_trade.State == TradeState.Open && !_trade.Locked)
             PushOfferIfChanged();
+        if (_trade.State == TradeState.Open && !_catalogSent)
+        {
+            _catalogSent = true;
+            _trade.SetCatalog(_mine.Select((t, i) => new TradeLine
+            {
+                Key = i.ToString(),
+                Label = LabelOf(t),
+                Count = t.MaxCount,
+                Value = t.AnyThing.MarketValue,
+            }).ToList());
+        }
     }
 
     private string StatusText() => _trade.State switch
@@ -125,6 +140,21 @@ internal sealed class Dialog_PlayerTrade : Window
         }
 
         var editable = _trade.State == TradeState.Open && !_trade.Locked;
+        var wishes = _trade.TheirRequests;
+        if (wishes.Count > 0 && editable)
+        {
+            // "Give what they ask for": a click fills in every wish (as far as there is).
+            var give = new Rect(listRect.x, listRect.y, listRect.width, RowHeight - 2f);
+            if (Widgets.ButtonText(give, "RimMult.TradeGiveWishes".Translate(_trade.PartnerName, wishes.Count)))
+            {
+                foreach (var wish in wishes)
+                {
+                    if (int.TryParse(wish.Key, out var index) && index >= 0 && index < _mine.Count)
+                        _mine[index].AdjustTo(Mathf.Min(wish.Value, _mine[index].MaxCount));
+                }
+            }
+            listRect = new Rect(listRect.x, listRect.y + RowHeight, listRect.width, listRect.height - RowHeight);
+        }
         var view = new Rect(0f, 0f, listRect.width - 16f, _mine.Count * RowHeight);
         Widgets.BeginScrollView(listRect, ref _mineScroll, view);
         for (var i = 0; i < _mine.Count; i++)
@@ -135,11 +165,67 @@ internal sealed class Dialog_PlayerTrade : Window
                 Widgets.DrawLightHighlight(row);
             Widgets.ThingIcon(new Rect(row.x, row.y + 3f, 24f, 24f), transferable.AnyThing);
             var adjust = new Rect(row.xMax - 240f, row.y, 240f, row.height);
-            Widgets.Label(new Rect(row.x + 30f, row.y + 4f, adjust.x - row.x - 34f, row.height), LabelOf(transferable) + $" ({transferable.MaxCount})");
+            var label = LabelOf(transferable) + $" ({transferable.MaxCount})";
+            if (wishes.TryGetValue(i.ToString(), out var wished))
+            {
+                Widgets.DrawBoxSolid(row, new Color(0.9f, 0.75f, 0.2f, 0.12f));
+                label += " " + "RimMult.TradeWished".Translate(wished);
+            }
+            Widgets.Label(new Rect(row.x + 30f, row.y + 4f, adjust.x - row.x - 34f, row.height), label);
             if (editable)
                 TransferableUIUtility.DoCountAdjustInterface(adjust, transferable, i, 0, transferable.MaxCount);
             else
                 Widgets.Label(adjust, transferable.CountToTransfer.ToString());
+        }
+        Widgets.EndScrollView();
+    }
+
+    /// <summary>The partner's showcase: what they could give, with buttons to ask for it.</summary>
+    private void DrawShowcase(Rect rect)
+    {
+        Widgets.DrawMenuSection(rect);
+        var inner = rect.ContractedBy(6f);
+        var header = new Rect(inner.x, inner.y, inner.width, RowHeight);
+        Widgets.Label(header, "RimMult.TradeShowcase".Translate(_trade.PartnerName));
+        TooltipHandler.TipRegion(header, "RimMult.TradeShowcaseHint".Translate());
+
+        var lines = _trade.TheirCatalog;
+        var listRect = new Rect(inner.x, header.yMax, inner.width, inner.height - RowHeight);
+        if (lines.Count == 0)
+        {
+            GUI.color = Color.gray;
+            Widgets.Label(listRect, "RimMult.TradeShowcaseEmpty".Translate());
+            GUI.color = Color.white;
+            return;
+        }
+        var editable = _trade.State == TradeState.Open && !_trade.Locked;
+        var view = new Rect(0f, 0f, listRect.width - 16f, lines.Count * RowHeight);
+        Widgets.BeginScrollView(listRect, ref _showcaseScroll, view);
+        for (var i = 0; i < lines.Count; i++)
+        {
+            var line = lines[i];
+            var row = new Rect(0f, i * RowHeight, view.width, RowHeight);
+            if (row.yMax < _showcaseScroll.y || row.y > _showcaseScroll.y + listRect.height)
+                continue;
+            if (i % 2 == 1)
+                Widgets.DrawLightHighlight(row);
+            _trade.MyRequests.TryGetValue(line.Key, out var asked);
+            var controls = new Rect(row.xMax - 150f, row.y + 2f, 150f, RowHeight - 4f);
+            Widgets.Label(new Rect(row.x + 4f, row.y + 4f, controls.x - row.x - 8f, RowHeight),
+                $"{line.Label} ({line.Count}) · {line.Value.ToStringMoney()}");
+            if (!editable)
+                continue;
+            // − asked + : shift/ctrl change by 10/100, like the game's own counters.
+            var step = GenUI.CurrentAdjustmentMultiplier();
+            if (Widgets.ButtonText(new Rect(controls.x, controls.y, 36f, controls.height), "−") && asked > 0)
+                _trade.Request(line.Key, asked - step);
+            Text.Anchor = TextAnchor.MiddleCenter;
+            Widgets.Label(new Rect(controls.x + 36f, controls.y, 50f, controls.height), asked > 0 ? asked.ToString() : "");
+            Text.Anchor = TextAnchor.UpperLeft;
+            if (Widgets.ButtonText(new Rect(controls.x + 86f, controls.y, 36f, controls.height), "+"))
+                _trade.Request(line.Key, asked + step);
+            if (Widgets.ButtonText(new Rect(controls.x + 122f, controls.y, 28f, controls.height), "∞"))
+                _trade.Request(line.Key, line.Count);
         }
         Widgets.EndScrollView();
     }

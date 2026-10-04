@@ -170,9 +170,9 @@ public sealed class WorldState
     /// <summary>
     /// 1: world, clock, colonies, mods. 2: + parcels in transit. 3: + player colors, destroyed NPC settlements.
     /// 4: + relations between players. 5: + the chronicle and players' stats. 6: + the NPC settlements and the creator.
-    /// 7: + treaties, players' reputation.
+    /// 7: + treaties, players' reputation. 8: + the market (lots and orders).
     /// </summary>
-    private const byte FormatVersion = 7;
+    private const byte FormatVersion = 8;
 
     /// <summary>Null until the first player creates the world (picks the planet when starting their colony).</summary>
     public WorldDefinition? Definition { get; set; }
@@ -220,6 +220,14 @@ public sealed class WorldState
 
     public long NextTreatyId { get; set; } = 1;
 
+    /// <summary>Goods for sale on the world's market.</summary>
+    public List<MarketLot> MarketLots { get; set; } = new();
+
+    /// <summary>Open orders on the world's market.</summary>
+    public List<MarketOrder> MarketOrders { get; set; } = new();
+
+    public long NextMarketId { get; set; } = 1;
+
     public void Write(ByteWriter writer)
     {
         writer.WriteBool(Definition != null);
@@ -246,6 +254,9 @@ public sealed class WorldState
         writer.WriteUInt64(CreatorOwner);
         Treaty.WriteList(writer, Treaties);
         writer.WriteVarInt(NextTreatyId);
+        MarketLot.WriteList(writer, MarketLots, withPayload: true);
+        MarketOrder.WriteList(writer, MarketOrders, withPayload: true);
+        writer.WriteVarInt(NextMarketId);
     }
 
     public static void WriteStrings(ByteWriter writer, IReadOnlyList<string> values)
@@ -311,6 +322,12 @@ public sealed class WorldState
         {
             state.Treaties = Treaty.ReadList(reader);
             state.NextTreatyId = reader.ReadVarInt();
+        }
+        if (version >= 8)
+        {
+            state.MarketLots = MarketLot.ReadList(reader, withPayload: true);
+            state.MarketOrders = MarketOrder.ReadList(reader, withPayload: true);
+            state.NextMarketId = reader.ReadVarInt();
         }
         return state;
     }

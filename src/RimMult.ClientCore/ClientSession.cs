@@ -132,6 +132,14 @@ public sealed class ClientSession
     /// <summary>Every player's standing in the world.</summary>
     public IReadOnlyList<PlayerStats> Stats { get; private set; } = Array.Empty<PlayerStats>();
 
+    /// <summary>Goods for sale on the world's market (without the goods themselves).</summary>
+    public IReadOnlyList<MarketLot> MarketLots { get; private set; } = Array.Empty<MarketLot>();
+
+    /// <summary>Open orders on the world's market.</summary>
+    public IReadOnlyList<MarketOrder> MarketOrders { get; private set; } = Array.Empty<MarketOrder>();
+
+    public event Action? MarketChanged;
+
     /// <summary>The chronicle or the stats changed (anything: a full update too).</summary>
     public event Action? ChronicleChanged;
 
@@ -249,6 +257,12 @@ public sealed class ClientSession
     {
         if (State == ClientState.Connected)
             Send(new ColonyStatsReport { Wealth = wealth, Colonists = colonists });
+    }
+
+    public void SendMarket(MarketAction action)
+    {
+        if (State == ClientState.Connected)
+            Send(action);
     }
 
     public void SendDiplomacy(ulong target, DiplomacyAction action, TreatyTerms? terms = null)
@@ -378,6 +392,11 @@ public sealed class ClientSession
                     ModDiff = ModListDiff.Compute(modList.Mods, _hello.Mods);
                 }
                 DisconnectReason ??= "Mod list received";
+                break;
+            case MarketState market:
+                MarketLots = market.Lots;
+                MarketOrders = market.Orders;
+                MarketChanged?.Invoke();
                 break;
             case ChronicleUpdate chronicle:
                 if (chronicle.Full)

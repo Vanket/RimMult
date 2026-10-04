@@ -25,12 +25,7 @@ internal static class Tribute
     public static void Reset() => Pending.Clear();
 
     /// <summary>Silver lying on this player's home maps (what a tribute can be paid from).</summary>
-    public static int SilverAvailable() => Current.ProgramState == ProgramState.Playing ? SilverStacks().Sum(t => t.stackCount) : 0;
-
-    private static IEnumerable<Thing> SilverStacks() =>
-        Find.Maps.Where(m => m.IsPlayerHome)
-            .SelectMany(m => m.listerThings.ThingsOfDef(ThingDefOf.Silver))
-            .Where(t => t.Spawned && !t.IsForbidden(Faction.OfPlayer));
+    public static int SilverAvailable() => Goods.SilverAvailable();
 
     /// <summary>The server says a payment is due: ask now.</summary>
     public static void Due(DiplomacyNotice notice)
@@ -92,25 +87,14 @@ internal static class Tribute
     /// <summary>Takes <paramref name="amount"/> silver off the home maps and sends it; puts it back if that fails.</summary>
     public static bool SendSilver(ulong owner, string name, string address, int amount)
     {
-        var taken = new List<Thing>();
-        var left = amount;
-        foreach (var stack in SilverStacks().ToList())
+        if (Goods.TakeSilver(amount) is not { } taken)
+            return false;
+        if (!Parcels.Send(owner, name, address, taken, ThingPackage.Summarize(taken), quiet: true))
         {
-            if (left <= 0)
-                break;
-            var count = Math.Min(left, stack.stackCount);
-            taken.Add(stack.SplitOff(count));
-            left -= count;
-        }
-        if (left > 0 || !Parcels.Send(owner, name, address, taken, ThingPackage.Summarize(taken), quiet: true))
-        {
-            var map = Find.AnyPlayerHomeMap;
-            foreach (var thing in taken.Where(t => !t.Destroyed && !t.Spawned))
-                GenPlace.TryPlaceThing(thing, DropCellFinder.TradeDropSpot(map), map, ThingPlaceMode.Near);
+            Goods.PutBack(taken);
             return false;
         }
-        foreach (var thing in taken.Where(t => !t.Destroyed))
-            thing.Destroy(DestroyMode.Vanish);
+        Goods.Gone(taken);
         return true;
     }
 }
