@@ -150,11 +150,34 @@ public sealed class WorldClock : IPacket
 {
     public long Tick { get; set; }
 
+    /// <summary>The server knows the world's NPC settlements (they follow as <see cref="NpcLayout"/>); if not, it asks for them.</summary>
+    public bool HasNpcLayout { get; set; }
+
     public PacketType Type => PacketType.WorldClock;
 
-    public void Write(ByteWriter writer) => writer.WriteVarInt(Tick);
+    public void Write(ByteWriter writer)
+    {
+        writer.WriteVarInt(Tick);
+        writer.WriteBool(HasNpcLayout);
+    }
 
-    public static WorldClock Read(ByteReader reader) => new() { Tick = reader.ReadVarInt() };
+    public static WorldClock Read(ByteReader reader) => new() { Tick = reader.ReadVarInt(), HasNpcLayout = reader.ReadBool() };
+}
+
+/// <summary>
+/// The world's NPC settlements, as its creator's game has them. Client → server: from the world's creator (or the
+/// in-game host), taken only while the server has none yet. Server → client: on entering the world, so every game puts
+/// its NPC settlements in the same places.
+/// </summary>
+public sealed class NpcLayout : IPacket
+{
+    public List<NpcSettlement> Settlements { get; set; } = new();
+
+    public PacketType Type => PacketType.NpcLayout;
+
+    public void Write(ByteWriter writer) => NpcSettlement.WriteList(writer, Settlements);
+
+    public static NpcLayout Read(ByteReader reader) => new() { Settlements = NpcSettlement.ReadList(reader) };
 }
 
 /// <summary>Client → server: the full list of this player's colonies (replaces what the server had for them).</summary>

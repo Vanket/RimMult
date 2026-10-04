@@ -278,9 +278,9 @@ public class DiplomacyTests
         var body = new ByteWriter();
         World().Write(body);
         var bodyBytes = body.ToArray();
-        // Drop what the current format writes after format 3's data: the (empty) relation list, chronicle and stats,
-        // one varint zero each at the end.
-        foreach (var b in bodyBytes.Take(bodyBytes.Length - 3))
+        // Drop what the current format writes after format 3's data: the (empty) relation list, chronicle, stats and
+        // NPC settlements (one varint zero each) and the creator (8 bytes).
+        foreach (var b in bodyBytes.Take(bodyBytes.Length - 4 - 8))
             writer.WriteByte(b);
         var old = WorldState.Deserialize(writer.ToArray());
         Assert.Empty(old.Relations);

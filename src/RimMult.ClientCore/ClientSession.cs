@@ -68,6 +68,12 @@ public sealed class ClientSession
     /// <summary>The server's answer to <see cref="EnterWorld"/>: the world tick to align the local calendar to.</summary>
     public event Action<long>? ClockReceived;
 
+    /// <summary>Entering the world: the server has no NPC settlements yet (the world's creator should send its own).</summary>
+    public event Action? NpcLayoutWanted;
+
+    /// <summary>The world's NPC settlements (on entering the world, or when its creator first sends them).</summary>
+    public event Action<List<NpcSettlement>>? NpcLayoutReceived;
+
     /// <summary>A parcel for this player; acknowledge with <see cref="AckParcel"/> once it is safely in the game.</summary>
     public event Action<MailItem>? ParcelReceived;
 
@@ -245,6 +251,13 @@ public sealed class ClientSession
             Send(new ParcelAck { Id = id });
     }
 
+    /// <summary>This game's NPC settlements, as the world's layout (the server keeps the first one it may take).</summary>
+    public void SendNpcLayout(List<NpcSettlement> settlements)
+    {
+        if (State == ClientState.Connected)
+            Send(new NpcLayout { Settlements = settlements });
+    }
+
     public void SendColonies(List<ColonyInfo> colonies)
     {
         if (State == ClientState.Connected)
@@ -315,6 +328,11 @@ public sealed class ClientSession
                 break;
             case WorldClock clock:
                 ClockReceived?.Invoke(clock.Tick);
+                if (!clock.HasNpcLayout)
+                    NpcLayoutWanted?.Invoke();
+                break;
+            case NpcLayout layout:
+                NpcLayoutReceived?.Invoke(layout.Settlements);
                 break;
             case ParcelDeliver parcel:
                 ParcelReceived?.Invoke(parcel.Item);

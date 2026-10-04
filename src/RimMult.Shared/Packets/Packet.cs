@@ -19,6 +19,7 @@ public enum PacketType : ushort
     LeaveWorld = 33,
     WorldClock = 34,
     MyColonies = 35,
+    NpcLayout = 36,
     ParcelSend = 40,
     ParcelDeliver = 41,
     ParcelAck = 42,

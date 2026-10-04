@@ -347,4 +347,5 @@ If these are Workshop mods, the host probably has a newer version than the Works
   <RimMult.ModSyncDownloading>downloading {0}%</RimMult.ModSyncDownloading>
   <RimMult.ModSyncQueued>queued</RimMult.ModSyncQueued>
   <RimMult.ModSyncDone>done</RimMult.ModSyncDone>
+  <RimMult.NpcLayoutApplied>NPC settlements now match the shared world: {0} placed, {1} removed.</RimMult.NpcLayoutApplied>
 </LanguageData>
