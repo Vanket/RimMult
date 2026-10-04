@@ -194,6 +194,9 @@ internal static class CoopCommands
                 case CoopCommandKind.Edit:
                     CoopEdits.Apply(command, map);
                     break;
+                case CoopCommandKind.Mod:
+                    ModSync.RunCommand(command.Name, Convert.FromBase64String(command.Extra));
+                    break;
                 case CoopCommandKind.QuestAccept:
                     CoopWorldSync.AcceptQuest(command);
                     break;

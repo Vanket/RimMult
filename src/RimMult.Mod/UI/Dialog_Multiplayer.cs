@@ -256,9 +256,14 @@ internal sealed class Dialog_Multiplayer : Window
                 ? "RimMult.HostingInfoPort".Translate(port)
                 : "RimMult.HostingInfo".Translate();
             GUI.color = Color.gray;
-            Widgets.Label(bottom.LeftPart(0.7f), info);
+            Widgets.Label(bottom.LeftPart(0.45f), info);
             GUI.color = Color.white;
         }
+
+        var reportRect = new Rect(bottom.xMax - 410f, bottom.y, 200f, bottom.height);
+        if (Widgets.ButtonText(reportRect, "RimMult.Report".Translate()))
+            Diagnostics.WriteReport();
+        TooltipHandler.TipRegion(reportRect, "RimMult.ReportHint".Translate());
 
         var leaveLabel = Multiplayer.IsHosting ? "RimMult.StopHosting".Translate() : "RimMult.Disconnect".Translate();
         if (Widgets.ButtonText(bottom.RightPartPixels(200f), leaveLabel))
@@ -366,6 +371,9 @@ internal sealed class Dialog_Multiplayer : Window
                 break;
             case CoopGuest.Phase.Active:
                 status += "\n" + "RimMult.CoopPlaying".Translate();
+                if (Widgets.ButtonText(button, "RimMult.CoopReload".Translate()))
+                    CoopGuest.Reload();
+                TooltipHandler.TipRegion(button, "RimMult.CoopReloadHint".Translate());
                 break;
         }
         Widgets.Label(textRect, status);

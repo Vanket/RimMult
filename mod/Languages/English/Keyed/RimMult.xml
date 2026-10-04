@@ -246,6 +246,13 @@
   <RimMult.HelpGoHomeConfirm>Go home together with your people?</RimMult.HelpGoHomeConfirm>
   <RimMult.HelpControlledBy>{0} commands this person.</RimMult.HelpControlledBy>
   <RimMult.VisitNotYours>Not one of yours: you can only command your own people.</RimMult.VisitNotYours>
+  <RimMult.SyncModComponents>Co-op: stream mods' data to guests</RimMult.SyncModComponents>
+  <RimMult.SyncModComponentsHint>Every 2 seconds the host sends guests mods' data that changed (their game, world and map components), so pipe networks, toggles and the like don't lag behind for guests. Turn off if a mod causes errors for guests.</RimMult.SyncModComponentsHint>
+  <RimMult.CoopReload>Load again</RimMult.CoopReload>
+  <RimMult.CoopReloadHint>If something looks different from the host's game: the host's game loads again (everyone is paused meanwhile).</RimMult.CoopReloadHint>
+  <RimMult.Report>Bug report</RimMult.Report>
+  <RimMult.ReportHint>Saves versions, the mod list and the log's errors to a file: send it to the developer with a description.</RimMult.ReportHint>
+  <RimMult.ReportSaved>Report saved (path copied): {0}</RimMult.ReportSaved>
   <RimMult.OtherMultiplayerMod>The "Multiplayer" mod (rwmt.Multiplayer) is active. It changes the same parts of the game as RimMult (ticks, orders, saving) and the two don't work together. Disable one of them.</RimMult.OtherMultiplayerMod>
   <RimMult.RaidBouncedText>The attack could not take place (peace was made, or the enemy left the game). Your people are back home: {0}.</RimMult.RaidBouncedText>
   <RimMult.RaidAttackLive>Attack {0} in person</RimMult.RaidAttackLive>

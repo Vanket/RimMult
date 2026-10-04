@@ -246,6 +246,13 @@
   <RimMult.HelpGoHomeConfirm>Вернуться домой вместе со своими людьми?</RimMult.HelpGoHomeConfirm>
   <RimMult.HelpControlledBy>Этим человеком командует {0}.</RimMult.HelpControlledBy>
   <RimMult.VisitNotYours>Это не ваш человек — командовать можно только своими.</RimMult.VisitNotYours>
+  <RimMult.SyncModComponents>Кооп: передавать гостям данные модов</RimMult.SyncModComponents>
+  <RimMult.SyncModComponentsHint>Хост раз в 2 секунды отправляет гостям изменившиеся данные модов (их компоненты игры, мира и карт), чтобы у гостей не отставали сети труб, переключатели и т. п. Выключите, если с каким-то модом у гостя появляются ошибки.</RimMult.SyncModComponentsHint>
+  <RimMult.CoopReload>Загрузить заново</RimMult.CoopReload>
+  <RimMult.CoopReloadHint>Если у вас что-то выглядит не так, как у хоста: игра хоста загрузится заново (у всех пауза на время загрузки).</RimMult.CoopReloadHint>
+  <RimMult.Report>Отчёт об ошибке</RimMult.Report>
+  <RimMult.ReportHint>Сохраняет в файл версии, список модов и ошибки из лога — пришлите его разработчику вместе с описанием.</RimMult.ReportHint>
+  <RimMult.ReportSaved>Отчёт сохранён (путь скопирован): {0}</RimMult.ReportSaved>
   <RimMult.OtherMultiplayerMod>Включён мод «Multiplayer» (rwmt.Multiplayer). Он меняет те же части игры, что и RimMult (тики, приказы, сохранения), и вместе они не работают. Отключите один из двух модов.</RimMult.OtherMultiplayerMod>
   <RimMult.RaidBouncedText>Атака не состоялась (заключён мир или противник вышел из игры). Ваши люди вернулись домой: {0}.</RimMult.RaidBouncedText>
   <RimMult.RaidAttackLive>Напасть лично на {0}</RimMult.RaidAttackLive>

@@ -39,6 +39,13 @@ internal static class CoopHost
     private const int MaxFragmentsPerBatch = 12;
     private const string TransferSaveName = "RimMult_CoopTransfer";
 
+    /// <summary>A check of one stretch of things per map goes out this often, this many things at a time.</summary>
+    private const float CheckInterval = 1f;
+    private const int CheckSize = 300;
+
+    private static readonly Dictionary<int, int> CheckCursor = new();
+    private static float _lastCheck;
+
     /// <summary>Guests that asked for the game (playing or loading it): nothing is streamed while there are none.</summary>
     private static readonly HashSet<int> Guests = new();
     private static readonly HashSet<Thing> Spawned = new();
@@ -240,6 +247,14 @@ internal static class CoopHost
         Shots.Clear();
         if (batch.Maps.Count > 0 || !batch.World.IsEmpty)
             Broadcast(session, CoopChannel.State, Compress(batch.Encode()));
+
+        // After the batch, so a guest compares against the state this batch brings.
+        if (now - _lastCheck >= CheckInterval)
+        {
+            _lastCheck = now;
+            foreach (var map in Find.Maps)
+                Broadcast(session, CoopChannel.Check, BuildCheck(map).Encode());
+        }
     }
 
     private static bool IsEmpty(MapDelta delta) =>
@@ -559,6 +574,46 @@ internal static class CoopHost
     }
 
     private static int Hash(string text) => text.GetHashCode() ^ text.Length;
+
+    /// <summary>Whether a thing takes part in checks: things with an id that guests have as things (not shots, not motes).</summary>
+    public static bool Checked(Thing thing) => thing.thingIDNumber >= 0 && thing is not Projectile && thing is not Mote;
+
+    /// <summary>What a check compares: kind, place, count and hit points (pawns only by kind: they move all the time).</summary>
+    public static int CheckHash(Thing thing)
+    {
+        unchecked
+        {
+            int hash = thing.def.shortHash;
+            if (thing is Pawn)
+                return hash;
+            hash = hash * 31 + thing.Position.x;
+            hash = hash * 31 + thing.Position.z;
+            hash = hash * 31 + thing.stackCount;
+            hash = hash * 31 + thing.HitPoints;
+            return hash;
+        }
+    }
+
+    /// <summary>The next stretch of the map's things (by id), wrapping around at the end.</summary>
+    private static CoopCheck BuildCheck(Map map)
+    {
+        var cursor = CheckCursor.TryGetValue(map.uniqueID, out var c) ? c : -1;
+        var things = map.listerThings.AllThings.Where(t => Checked(t) && t.thingIDNumber > cursor)
+            .OrderBy(t => t.thingIDNumber).Take(CheckSize).ToList();
+        var check = new CoopCheck { MapId = map.uniqueID, FromId = cursor + 1 };
+        check.Things.AddRange(things.Select(t => (t.thingIDNumber, CheckHash(t))));
+        if (things.Count < CheckSize)
+        {
+            check.ToId = int.MaxValue;
+            CheckCursor[map.uniqueID] = -1;
+        }
+        else
+        {
+            check.ToId = things[things.Count - 1].thingIDNumber;
+            CheckCursor[map.uniqueID] = check.ToId;
+        }
+        return check;
+    }
 
     private static void OnCoop(int guestId, CoopChannel channel, byte[] data)
     {
