@@ -11,5 +11,8 @@
          client and server must use the same version. -->
     <PackageVersion Include="LiteNetLib" Version="1.3.5" />
     <PackageVersion Include="xunit.v3" Version="4.0.1" />
+    <!-- tools/WorkshopUpload only. Must match the steam_api64.dll RimWorld ships (Steamworks SDK 1.53a,
+         STEAMUGC_INTERFACE_VERSION016): newer wrappers call entry points that DLL doesn't have. -->
+    <PackageVersion Include="Steamworks.NET" Version="20.1.0" />
   </ItemGroup>
 </Project>

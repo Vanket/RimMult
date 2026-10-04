@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Uploads the packaged mod to its Steam Workshop item through the running, logged-in Steam client (no password),
+    the same way RimWorld's own "Upload to Steam Workshop" button does. Windows only; not part of RimMult.sln.
+    Use tools/workshop/publish.ps1 rather than running it by hand.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>WorkshopUpload</AssemblyName>
+    <!-- The game's own steam_api64.dll is copied next to the tool at build time (never committed). -->
+    <RimWorldDir Condition="'$(RimWorldDir)' == ''">D:\SteamLibrary\steamapps\common\RimWorld</RimWorldDir>
+    <SteamApiDll>$(RimWorldDir)\RimWorldWin64_Data\Plugins\x86_64\steam_api64.dll</SteamApiDll>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Steamworks.NET" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(SteamApiDll)" Condition="Exists('$(SteamApiDll)')" Link="steam_api64.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <None Include="steam_appid.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
