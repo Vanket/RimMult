@@ -44,6 +44,8 @@ public static class PacketCodec
             PacketType.DiplomacyNotice => DiplomacyNotice.Read(reader),
             PacketType.ChronicleUpdate => ChronicleUpdate.Read(reader),
             PacketType.ColonyStatsReport => ColonyStatsReport.Read(reader),
+            PacketType.ModListQuery => ModListQuery.Read(reader),
+            PacketType.ServerModList => ServerModList.Read(reader),
             _ => throw new ProtocolException($"Unknown packet type {(ushort)type}"),
         };
         reader.EnsureFullyRead();

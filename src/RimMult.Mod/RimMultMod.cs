@@ -32,7 +32,7 @@ public sealed class RimMultMod : Mod
             SteamIntegration.Init();
         });
 
-        Log.Message($"[RimMult] {content.ModMetaData.ModVersion} loaded, protocol v{ProtocolInfo.Version}");
+        Log.Message($"[RimMult] {Build} loaded, protocol v{ProtocolInfo.Version}");
 
         // The other multiplayer mod rewrites the same parts of the game (ticks, orders, saving): never both.
         if (ModLister.GetActiveModWithIdentifier("rwmt.Multiplayer", ignorePostfix: true) != null)
@@ -43,6 +43,16 @@ public sealed class RimMultMod : Mod
     }
 
     public static Harmony Harmony { get; private set; } = null!;
+
+    /// <summary>This build, as players compare it: "0.5.0 (ca6e6a1)" — the version and the commit it was built from.</summary>
+    public static string Build { get; } = BuildOf(typeof(RimMultMod).Assembly);
+
+    private static string BuildOf(System.Reflection.Assembly assembly)
+    {
+        var version = System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(assembly)?.InformationalVersion ?? "?";
+        var plus = version.IndexOf('+');
+        return plus < 0 ? version : $"{version.Substring(0, plus)} ({version.Substring(plus + 1, System.Math.Min(7, version.Length - plus - 1))})";
+    }
 
     /// <summary>
     /// Applies the patch classes one by one: one that can't be applied (another mod, a game update) doesn't take the

@@ -136,6 +136,36 @@ internal static class Multiplayer
         OpenDialog();
     }
 
+    /// <summary>Asks a friend's game which mods it plays with, without joining (to make ours the same first).</summary>
+    public static void CheckModsSteam(ulong hostSteamId)
+    {
+        if (!CanJoin() || hostSteamId == SteamIntegration.MySteamId)
+            return;
+        Stop();
+        _lastSteamHost = hostSteamId;
+        _lastAddress = null;
+        StartSession(new SteamClientTransport(hostSteamId), null, checkModsOnly: true);
+        OpenDialog();
+    }
+
+    /// <summary>The same as <see cref="CheckModsSteam"/> for a server by address.</summary>
+    public static bool CheckModsAddress(string address, out string error)
+    {
+        error = "";
+        if (!CanJoin())
+            return false;
+        if (!ServerAddress.TryParse(address, out var host, out var port))
+        {
+            error = "RimMult.BadAddress".Translate();
+            return false;
+        }
+        Stop();
+        _lastAddress = address;
+        _lastSteamHost = null;
+        StartSession(new LiteNetClientTransport(host, port), null, checkModsOnly: true);
+        return true;
+    }
+
     public static bool JoinAddress(string address, string? password, out string error)
     {
         error = "";
@@ -281,7 +311,7 @@ internal static class Multiplayer
         };
     }
 
-    private static void StartSession(IClientTransport transport, string? password)
+    private static void StartSession(IClientTransport transport, string? password, bool checkModsOnly = false)
     {
         var hello = new ClientHello
         {
@@ -292,7 +322,7 @@ internal static class Multiplayer
             Password = password.NullOrEmpty() ? null : password,
         };
 
-        var session = new ClientSession(transport, hello);
+        var session = new ClientSession(transport, hello, checkModsOnly);
         session.ChatReceived += OnChat;
         WorldSync.Attach(session);
         Parcels.Attach(session);

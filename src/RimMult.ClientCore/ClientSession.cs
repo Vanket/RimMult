@@ -49,10 +49,12 @@ public sealed class ClientSession
     private readonly List<ChronicleEntry> _chronicle = new();
     private List<PlayerInfo> _players = new();
 
-    public ClientSession(IClientTransport transport, ClientHello hello)
+    /// <param name="checkModsOnly">Only ask the server for its mod list (see <see cref="ModListQuery"/>), don't join.</param>
+    public ClientSession(IClientTransport transport, ClientHello hello, bool checkModsOnly = false)
     {
         _transport = transport;
         _hello = hello;
+        IsModCheck = checkModsOnly;
         _transport.Connected += OnConnected;
         _transport.Received += OnReceived;
         _transport.Disconnected += OnDisconnected;
@@ -135,6 +137,12 @@ public sealed class ClientSession
 
     /// <summary>What to change to match the server, if we were rejected for our mod list and the server told us its list.</summary>
     public ModListDiff? ModDiff { get; private set; }
+
+    /// <summary>This session only asked for the server's mod list (it ends once the answer is in).</summary>
+    public bool IsModCheck { get; }
+
+    /// <summary>The server's protocol version, as its <see cref="ServerModList"/> said (0 before that).</summary>
+    public int ServerProtocol { get; private set; }
 
     /// <summary>The server's mod list in load order, when it rejected ours (to make ours the same).</summary>
     public IReadOnlyList<ModEntry>? ServerMods { get; private set; }
@@ -256,7 +264,10 @@ public sealed class ClientSession
     private void OnConnected()
     {
         SetState(ClientState.Handshaking);
-        Send(_hello);
+        if (IsModCheck)
+            Send(new ModListQuery());
+        else
+            Send(_hello);
     }
 
     private void OnReceived(byte[] data)
@@ -316,6 +327,15 @@ public sealed class ClientSession
                 break;
             case CoopMessage coop:
                 CoopReceived?.Invoke(coop.PlayerId, coop.Channel, coop.Data);
+                break;
+            case ServerModList modList:
+                ServerProtocol = modList.ProtocolVersion;
+                if (modList.Mods != null)
+                {
+                    ServerMods = modList.Mods;
+                    ModDiff = ModListDiff.Compute(modList.Mods, _hello.Mods);
+                }
+                DisconnectReason ??= "Mod list received";
                 break;
             case ChronicleUpdate chronicle:
                 if (chronicle.Full)

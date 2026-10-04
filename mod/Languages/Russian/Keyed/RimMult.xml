@@ -314,20 +314,37 @@
   <RimMult.Chronicle.ParcelSent>{0} отправил игроку {1}: {5}.</RimMult.Chronicle.ParcelSent>
   <RimMult.Chronicle.SettlementDestroyed>{0} разгромил поселение NPC.</RimMult.Chronicle.SettlementDestroyed>
   <!-- Моды как у хоста -->
-  <RimMult.ModsMakeLikeHost>Сделать моды как у хоста</RimMult.ModsMakeLikeHost>
-  <RimMult.ModsMakeLikeHostTip>Включить моды хоста, выключить лишние и расставить всё в порядке хоста. Ваши клиентские моды (переводы, интерфейс) останутся рядом с теми модами, за которыми стояли. Игра сохранит список, перезапустится и снова подключится к хосту.</RimMult.ModsMakeLikeHostTip>
-  <RimMult.ModsMakeLikeHostConfirm>Сделать список модов как у хоста?
-
-Включить: {0}
-Выключить: {1}
-Порядок: {2}
-Нет у вас: {3}
-
-Игра сохранит список модов, перезапустится и снова подключится к хосту.</RimMult.ModsMakeLikeHostConfirm>
   <RimMult.ModsOrderChanged>как у хоста</RimMult.ModsOrderChanged>
   <RimMult.ModsOrderSame>без изменений</RimMult.ModsOrderSame>
-  <RimMult.ModsNothingToChange>Набор и порядок модов уже как у хоста — отличаются только версии. Перезапустите клиент Steam, чтобы он обновил моды.</RimMult.ModsNothingToChange>
-  <RimMult.ModsSubscribeMissing>Подписаться на недостающие ({0})</RimMult.ModsSubscribeMissing>
-  <RimMult.ModsSubscribeMissingTip>Подписаться в Мастерской Steam на моды хоста, которых у вас нет. Steam их скачает; потом нажмите «Сделать моды как у хоста».</RimMult.ModsSubscribeMissingTip>
-  <RimMult.ModsSubscribed>Подписка на модов: {0}. Steam их скачает — теперь «Сделать моды как у хоста».</RimMult.ModsSubscribed>
+  <RimMult.ModsFixAll>Сделать всё как у хоста</RimMult.ModsFixAll>
+  <RimMult.ModsFixAllTip>Подписаться в Мастерской на недостающие моды, скачать свежие версии отличающихся (в том числе RimMult), включить и выключить нужные, расставить в порядке хоста. Ваши клиентские моды (переводы, интерфейс) останутся. Один перезапуск игры — и она сама подключится к хосту.</RimMult.ModsFixAllTip>
+  <RimMult.ModsFixAllConfirm>Сделать всё как у хоста?
+
+Скачать из Мастерской: {0}
+Обновить до свежей версии: {1}
+Включить: {2}
+Выключить: {3}
+Порядок: {4}
+Не исправить отсюда (нет в Мастерской или локальная копия): {5}
+
+Игра дождётся загрузки модов, сохранит список, перезапустится и снова подключится к хосту.</RimMult.ModsFixAllConfirm>
+  <RimMult.ModsCannotFix>Набор и порядок модов уже как у хоста, а отличия отсюда не исправить: {0}.
+
+Если это моды из Мастерской — у хоста, видимо, версия новее, чем в Мастерской (или наоборот): пусть тот, у кого старее, перезапустит клиент Steam. Локальные моды нужно скопировать вручную.</RimMult.ModsCannotFix>
+  <RimMult.ModsBuilds>RimMult: у вас {0}, у хоста {1}</RimMult.ModsBuilds>
+  <RimMult.ModCheckButton>Моды</RimMult.ModCheckButton>
+  <RimMult.ModCheckTip>Сравнить ваши моды с модами этого хоста, не заходя в игру, — и сразу сделать как у него.</RimMult.ModCheckTip>
+  <RimMult.ModCheckByAddress>Проверить моды по адресу</RimMult.ModCheckByAddress>
+  <RimMult.ModCheckSame>Моды совпадают с хостом — можно входить.</RimMult.ModCheckSame>
+  <RimMult.ModCheckDiffers>Моды отличаются от хоста:</RimMult.ModCheckDiffers>
+  <RimMult.ModCheckNoList>Хост ещё не знает список модов (в его игре пока никого нет) — просто входите.</RimMult.ModCheckNoList>
+  <RimMult.ModCheckProtocol>Разные версии RimMult (протокол: у вас {0}, у хоста {1}) — сделайте как у хоста:</RimMult.ModCheckProtocol>
+  <RimMult.ModCheckFailed>Не удалось узнать моды хоста: {0} (у хоста может быть старая версия RimMult).</RimMult.ModCheckFailed>
+  <RimMult.ModSyncTitle>Скачиваем моды из Мастерской</RimMult.ModSyncTitle>
+  <RimMult.ModSyncHint>Steam скачивает моды хоста. Как только всё будет готово, игра сохранит список модов, перезапустится и подключится к хосту.</RimMult.ModSyncHint>
+  <RimMult.ModSyncCancel>Отмена</RimMult.ModSyncCancel>
+  <RimMult.ModSyncGoOn>Перезапустить сейчас ({0}/{1})</RimMult.ModSyncGoOn>
+  <RimMult.ModSyncDownloading>скачивается {0}%</RimMult.ModSyncDownloading>
+  <RimMult.ModSyncQueued>в очереди</RimMult.ModSyncQueued>
+  <RimMult.ModSyncDone>готово</RimMult.ModSyncDone>
 </LanguageData>

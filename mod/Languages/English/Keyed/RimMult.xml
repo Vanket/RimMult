@@ -314,20 +314,37 @@
   <RimMult.Chronicle.ParcelSent>{0} sent {1}: {5}.</RimMult.Chronicle.ParcelSent>
   <RimMult.Chronicle.SettlementDestroyed>{0} razed an NPC settlement.</RimMult.Chronicle.SettlementDestroyed>
   <!-- Mods like the host's -->
-  <RimMult.ModsMakeLikeHost>Make my mods like the host's</RimMult.ModsMakeLikeHost>
-  <RimMult.ModsMakeLikeHostTip>Enable the host's mods, disable the others and put everything in the host's order. Your client-side mods (translations, interface) stay next to the mods they followed. The game saves the list, restarts and joins the host again.</RimMult.ModsMakeLikeHostTip>
-  <RimMult.ModsMakeLikeHostConfirm>Make your mod list like the host's?
-
-Enable: {0}
-Disable: {1}
-Order: {2}
-You don't have: {3}
-
-The game saves the mod list, restarts and joins the host again.</RimMult.ModsMakeLikeHostConfirm>
   <RimMult.ModsOrderChanged>like the host's</RimMult.ModsOrderChanged>
   <RimMult.ModsOrderSame>unchanged</RimMult.ModsOrderSame>
-  <RimMult.ModsNothingToChange>Your mods and their order already match the host's — only versions differ. Restart the Steam client so it updates the mods.</RimMult.ModsNothingToChange>
-  <RimMult.ModsSubscribeMissing>Subscribe to the missing ones ({0})</RimMult.ModsSubscribeMissing>
-  <RimMult.ModsSubscribeMissingTip>Subscribe on the Steam Workshop to the host's mods you don't have. Steam downloads them; then press "Make my mods like the host's".</RimMult.ModsSubscribeMissingTip>
-  <RimMult.ModsSubscribed>Subscribed to {0} mod(s). Steam downloads them — now "Make my mods like the host's".</RimMult.ModsSubscribed>
+  <RimMult.ModsFixAll>Make everything like the host's</RimMult.ModsFixAll>
+  <RimMult.ModsFixAllTip>Subscribe to the missing mods on the Workshop, download the latest versions of the ones that differ (RimMult included), enable and disable as needed and put them in the host's order. Your client-side mods (translations, interface) stay. One game restart, and it joins the host by itself.</RimMult.ModsFixAllTip>
+  <RimMult.ModsFixAllConfirm>Make everything like the host's?
+
+Download from the Workshop: {0}
+Update to the latest version: {1}
+Enable: {2}
+Disable: {3}
+Order: {4}
+Can't be fixed from here (not on the Workshop, or a local copy): {5}
+
+The game waits for the downloads, saves the mod list, restarts and joins the host again.</RimMult.ModsFixAllConfirm>
+  <RimMult.ModsCannotFix>Your mods and their order already match the host's; what still differs can't be fixed from here: {0}.
+
+If these are Workshop mods, the host probably has a newer version than the Workshop (or the other way round): whoever is behind should restart the Steam client. Local mods have to be copied by hand.</RimMult.ModsCannotFix>
+  <RimMult.ModsBuilds>RimMult: you have {0}, the host {1}</RimMult.ModsBuilds>
+  <RimMult.ModCheckButton>Mods</RimMult.ModCheckButton>
+  <RimMult.ModCheckTip>Compare your mods with this host's without joining — and make yours the same right away.</RimMult.ModCheckTip>
+  <RimMult.ModCheckByAddress>Check mods at this address</RimMult.ModCheckByAddress>
+  <RimMult.ModCheckSame>Your mods match the host's — you can join.</RimMult.ModCheckSame>
+  <RimMult.ModCheckDiffers>Your mods differ from the host's:</RimMult.ModCheckDiffers>
+  <RimMult.ModCheckNoList>The host doesn't know its mod list yet (nobody is in its game) — just join.</RimMult.ModCheckNoList>
+  <RimMult.ModCheckProtocol>Different RimMult versions (protocol: yours {0}, the host's {1}) — make yours like the host's:</RimMult.ModCheckProtocol>
+  <RimMult.ModCheckFailed>Couldn't get the host's mods: {0} (the host may have an old RimMult).</RimMult.ModCheckFailed>
+  <RimMult.ModSyncTitle>Downloading mods from the Workshop</RimMult.ModSyncTitle>
+  <RimMult.ModSyncHint>Steam is downloading the host's mods. As soon as everything is ready, the game saves the mod list, restarts and joins the host.</RimMult.ModSyncHint>
+  <RimMult.ModSyncCancel>Cancel</RimMult.ModSyncCancel>
+  <RimMult.ModSyncGoOn>Restart now ({0}/{1})</RimMult.ModSyncGoOn>
+  <RimMult.ModSyncDownloading>downloading {0}%</RimMult.ModSyncDownloading>
+  <RimMult.ModSyncQueued>queued</RimMult.ModSyncQueued>
+  <RimMult.ModSyncDone>done</RimMult.ModSyncDone>
 </LanguageData>

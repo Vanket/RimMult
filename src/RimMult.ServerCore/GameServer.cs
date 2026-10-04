@@ -93,6 +93,16 @@ public sealed partial class GameServer
 
         if (session.Player == null)
         {
+            if (packet is ModListQuery)
+            {
+                // Someone checking their mods before joining: tell them what joining takes, then hang up.
+                _transport.Disconnect(connectionId, PacketCodec.Encode(new ServerModList
+                {
+                    GameVersion = Settings.GameVersion,
+                    Mods = _requiredMods,
+                }));
+                return;
+            }
             if (packet is ClientHello hello)
                 HandleHello(session, hello);
             else
@@ -185,8 +195,9 @@ public sealed partial class GameServer
     {
         if (hello.ProtocolVersion != ProtocolInfo.Version)
         {
+            // With the server's mod list, the player can update RimMult (and the rest) from the mismatch screen.
             Kick(session, KickReason.ProtocolMismatch,
-                $"Server uses protocol {ProtocolInfo.Version}, client uses {hello.ProtocolVersion}. Update RimMult.");
+                $"Server uses protocol {ProtocolInfo.Version}, client uses {hello.ProtocolVersion}. Update RimMult.", _requiredMods);
             return;
         }
 
