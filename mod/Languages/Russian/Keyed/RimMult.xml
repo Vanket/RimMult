@@ -313,4 +313,21 @@
   <RimMult.Chronicle.HelpEnded>Люди {0} вернулись от {1}, погибли {4}.</RimMult.Chronicle.HelpEnded>
   <RimMult.Chronicle.ParcelSent>{0} отправил игроку {1}: {5}.</RimMult.Chronicle.ParcelSent>
   <RimMult.Chronicle.SettlementDestroyed>{0} разгромил поселение NPC.</RimMult.Chronicle.SettlementDestroyed>
+  <!-- Моды как у хоста -->
+  <RimMult.ModsMakeLikeHost>Сделать моды как у хоста</RimMult.ModsMakeLikeHost>
+  <RimMult.ModsMakeLikeHostTip>Включить моды хоста, выключить лишние и расставить всё в порядке хоста. Ваши клиентские моды (переводы, интерфейс) останутся рядом с теми модами, за которыми стояли. Игра сохранит список, перезапустится и снова подключится к хосту.</RimMult.ModsMakeLikeHostTip>
+  <RimMult.ModsMakeLikeHostConfirm>Сделать список модов как у хоста?
+
+Включить: {0}
+Выключить: {1}
+Порядок: {2}
+Нет у вас: {3}
+
+Игра сохранит список модов, перезапустится и снова подключится к хосту.</RimMult.ModsMakeLikeHostConfirm>
+  <RimMult.ModsOrderChanged>как у хоста</RimMult.ModsOrderChanged>
+  <RimMult.ModsOrderSame>без изменений</RimMult.ModsOrderSame>
+  <RimMult.ModsNothingToChange>Набор и порядок модов уже как у хоста — отличаются только версии. Перезапустите клиент Steam, чтобы он обновил моды.</RimMult.ModsNothingToChange>
+  <RimMult.ModsSubscribeMissing>Подписаться на недостающие ({0})</RimMult.ModsSubscribeMissing>
+  <RimMult.ModsSubscribeMissingTip>Подписаться в Мастерской Steam на моды хоста, которых у вас нет. Steam их скачает; потом нажмите «Сделать моды как у хоста».</RimMult.ModsSubscribeMissingTip>
+  <RimMult.ModsSubscribed>Подписка на модов: {0}. Steam их скачает — теперь «Сделать моды как у хоста».</RimMult.ModsSubscribed>
 </LanguageData>
