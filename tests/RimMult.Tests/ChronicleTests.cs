@@ -254,8 +254,9 @@ public class ChronicleTests
     {
         var current = World();
         var bytes = current.Serialize();
-        // Format 4 is format 5 without the two (here empty) lists at the end.
-        var old = bytes.Take(bytes.Length - 2).ToArray();
+        // Format 4 is the current one without the chronicle, stats and NPC settlements (empty lists: a zero each)
+        // and the creator (8 bytes) at the end.
+        var old = bytes.Take(bytes.Length - 3 - 8).ToArray();
         old[0] = 4;
 
         var state = WorldState.Deserialize(old);

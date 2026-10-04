@@ -34,9 +34,19 @@ internal static class WorldSync
     /// <summary>This client asked the server to make its planet the world and waits for the answer.</summary>
     public static bool WorldCreatePending { get; private set; }
 
+    /// <summary>The world's NPC settlements, received and waiting to be put in place (on the next frame in the world).</summary>
+    private static List<NpcSettlement>? _pendingLayout;
+
     public static void Attach(ClientSession session)
     {
         session.ClockReceived += OnClock;
+        // The server has no layout yet: offer this game's (it takes it only from the world's creator / the host).
+        session.NpcLayoutWanted += () =>
+        {
+            if (Current.ProgramState == ProgramState.Playing && Find.World != null && CurrentGameIsInWorld(session))
+                session.SendNpcLayout(NpcLayoutSync.Capture());
+        };
+        session.NpcLayoutReceived += layout => _pendingLayout = layout;
         // Any world answer settles a pending create: accepted, beaten by someone else, or refused.
         session.WorldChanged += () => WorldCreatePending = false;
     }
@@ -47,6 +57,7 @@ internal static class WorldSync
         InWorld = false;
         _lastColoniesKey = "";
         _lastStatsReport = float.NegativeInfinity;
+        _pendingLayout = null;
         NewColonyFlowActive = false;
         WorldCreatePending = false;
         TimeSync.End();
@@ -92,6 +103,19 @@ internal static class WorldSync
             InWorld = false;
             _lastColoniesKey = "";
             TimeSync.End();
+        }
+
+        if (InWorld && _pendingLayout is { } layout)
+        {
+            _pendingLayout = null;
+            try
+            {
+                NpcLayoutSync.Apply(layout, session.DestroyedSettlements);
+            }
+            catch (Exception e)
+            {
+                Log.Error($"[RimMult] Could not match the NPC settlements to the shared world: {e}");
+            }
         }
 
         if (InWorld)

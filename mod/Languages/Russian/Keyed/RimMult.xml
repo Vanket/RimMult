@@ -347,4 +347,5 @@
   <RimMult.ModSyncDownloading>скачивается {0}%</RimMult.ModSyncDownloading>
   <RimMult.ModSyncQueued>в очереди</RimMult.ModSyncQueued>
   <RimMult.ModSyncDone>готово</RimMult.ModSyncDone>
+  <RimMult.NpcLayoutApplied>Поселения NPC приведены к общему миру: поставлено {0}, убрано {1}.</RimMult.NpcLayoutApplied>
 </LanguageData>

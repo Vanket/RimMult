@@ -143,6 +143,9 @@ public sealed partial class GameServer
             case MyColonies colonies:
                 HandleMyColonies(player, colonies);
                 break;
+            case NpcLayout layout:
+                HandleNpcLayout(player, layout);
+                break;
             case ParcelSend parcel:
                 HandleParcelSend(player, parcel);
                 break;
@@ -297,6 +300,7 @@ public sealed partial class GameServer
 
         World.Definition = create.Definition;
         World.Tick = create.Tick;
+        World.CreatorOwner = OwnerKey(player);
         World.ModListHash = Settings.ModListHash;
         World.GameVersion = Settings.GameVersion;
         _log($"{player.Name} created the world (seed '{create.Definition.SeedString}')");
@@ -317,7 +321,9 @@ public sealed partial class GameServer
         var tick = Time.SlowestTick ?? World.Tick;
         player.InWorld = true;
         Time.ReportAuthority(player.Id, tick, float.MaxValue);
-        Send(session, new WorldClock { Tick = tick });
+        Send(session, new WorldClock { Tick = tick, HasNpcLayout = World.NpcSettlements.Count > 0 });
+        if (World.NpcSettlements.Count > 0)
+            Send(session, new NpcLayout { Settlements = World.NpcSettlements });
         BroadcastPlayerList();
         NoteArrival(player);
 
@@ -412,6 +418,32 @@ public sealed partial class GameServer
         Broadcast(PacketCodec.Encode(WorldUpdatePacket()), DeliveryMode.ReliableOrdered);
         WorldChanged?.Invoke();
         NoteColonyChanges(key, before, World.Colonies.Where(c => c.OwnerSteamId == key).ToList());
+    }
+
+    /// <summary>
+    /// The world's NPC settlements, from the one whose planet it is: the in-game host, or (dedicated server) the player
+    /// who created the world — the first player in the world for worlds that don't remember their creator. Taken once.
+    /// </summary>
+    private void HandleNpcLayout(PlayerInfo player, NpcLayout layout)
+    {
+        if (World.Definition == null || !player.InWorld || World.NpcSettlements.Count > 0 || layout.Settlements.Count == 0)
+            return;
+        var allowed = Settings.HostCreatesWorld
+            ? player.IsHost
+            : World.CreatorOwner == 0 || World.CreatorOwner == OwnerKey(player);
+        if (!allowed)
+            return;
+
+        World.NpcSettlements = layout.Settlements;
+        if (World.CreatorOwner == 0)
+            World.CreatorOwner = OwnerKey(player);
+        WorldChanged?.Invoke();
+        _log($"{player.Name} set the world's NPC settlements ({layout.Settlements.Count})");
+        foreach (var session in _sessions.Values)
+        {
+            if (session.Player is { InWorld: true } other && other != player)
+                Send(session, layout);
+        }
     }
 
     /// <summary>Steam id identifies a player across sessions; without Steam (tests, dev builds) fall back to the session's player id.</summary>

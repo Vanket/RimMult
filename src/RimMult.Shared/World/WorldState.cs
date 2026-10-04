@@ -169,9 +169,9 @@ public sealed class WorldState
 {
     /// <summary>
     /// 1: world, clock, colonies, mods. 2: + parcels in transit. 3: + player colors, destroyed NPC settlements.
-    /// 4: + relations between players. 5: + the chronicle and players' stats.
+    /// 4: + relations between players. 5: + the chronicle and players' stats. 6: + the NPC settlements and the creator.
     /// </summary>
-    private const byte FormatVersion = 5;
+    private const byte FormatVersion = 6;
 
     /// <summary>Null until the first player creates the world (picks the planet when starting their colony).</summary>
     public WorldDefinition? Definition { get; set; }
@@ -208,6 +208,12 @@ public sealed class WorldState
     /// <summary>Each player's standing (owner key → stats), for the chronicle's table.</summary>
     public Dictionary<ulong, PlayerStats> Stats { get; set; } = new();
 
+    /// <summary>Where the world's NPC settlements are (the creator's layout); empty until someone allowed to tells.</summary>
+    public List<NpcSettlement> NpcSettlements { get; set; } = new();
+
+    /// <summary>Owner key of the player who created the world (0: unknown, worlds older than format 6).</summary>
+    public ulong CreatorOwner { get; set; }
+
     public void Write(ByteWriter writer)
     {
         writer.WriteBool(Definition != null);
@@ -230,6 +236,8 @@ public sealed class WorldState
         RelationEntry.WriteList(writer, Relations);
         ChronicleEntry.WriteList(writer, Chronicle);
         PlayerStats.WriteList(writer, new List<PlayerStats>(Stats.Values));
+        NpcSettlement.WriteList(writer, NpcSettlements);
+        writer.WriteUInt64(CreatorOwner);
     }
 
     public static void WriteStrings(ByteWriter writer, IReadOnlyList<string> values)
@@ -285,6 +293,11 @@ public sealed class WorldState
             state.Chronicle = ChronicleEntry.ReadList(reader);
             foreach (var stats in PlayerStats.ReadList(reader))
                 state.Stats[stats.Owner] = stats;
+        }
+        if (version >= 6)
+        {
+            state.NpcSettlements = NpcSettlement.ReadList(reader);
+            state.CreatorOwner = reader.ReadUInt64();
         }
         return state;
     }

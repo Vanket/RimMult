@@ -24,7 +24,8 @@
   своими бойцами (отступить, похитить, украсть, вернуться домой), пока он обороняется. Выжившие возвращаются
   караваном с добычей и пленными.
 - **Помощь союзнику лично** — в его квестах или против рейда.
-- **Общий мир NPC**: разгромленное поселение исчезает у всех.
+- **Общий мир NPC**: поселения NPC стоят в одних и тех же местах у всех (расстановку задаёт создатель мира);
+  разгромленное поселение исчезает у всех. Отношения с фракциями и торговцы у каждой колонии свои.
 - **Летопись мира**: основанные колонии, войны, рейды и их итоги, посылки; таблица игроков — богатство, колонисты,
   дела. Хранится в сейве хоста (игра через Steam) или на выделенном сервере.
 
@@ -140,7 +141,7 @@ Mods don't cause desyncs, and a weak PC isn't slowed down by other players' colo
 **Separate colonies** — everyone founds their own colony on one shared planet, one calendar, speed by vote:
 parcels (even to offline players), moving colonists over, trade, diplomacy (alliance / war), raids led by the AI or
 **in person** (you load the defender's game and command your fighters), helping an ally in person, a shared NPC
-world, and a **world chronicle** with players' stats — kept by the host's save or the dedicated server.
+world (settlements in the same places for everyone), and a **world chronicle** with players' stats — kept by the host's save or the dedicated server.
 
 **Co-op** — everyone plays the host's colony live: any orders (designations, building, drafting, right-click with
 Shift queue, targeted attacks and abilities, priorities, research, quests), bills, storage, schedules, policies,

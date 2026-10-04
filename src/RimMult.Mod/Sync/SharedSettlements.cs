@@ -53,6 +53,20 @@ internal static class SharedSettlements
         _world = null;
         _applied = null;
     }
+
+    /// <summary>Runs a change of NPC settlements made by RimMult itself (not news to report as a destruction).</summary>
+    public static void WhileApplying(Action action)
+    {
+        Applying = true;
+        try
+        {
+            action();
+        }
+        finally
+        {
+            Applying = false;
+        }
+    }
 }
 
 /// <summary>
