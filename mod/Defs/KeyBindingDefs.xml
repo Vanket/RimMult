@@ -4,6 +4,6 @@
     <defName>RimMult_ToggleChat</defName>
     <label>toggle multiplayer chat</label>
     <category>MainTabs</category>
-    <defaultKeyCodeA>Y</defaultKeyCodeA>
+    <defaultKeyCodeA>Backslash</defaultKeyCodeA>
   </KeyBindingDef>
 </Defs>

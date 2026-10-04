@@ -13,6 +13,7 @@ namespace RimMult.Coop;
 /// What a co-op guest sees move, without simulating it: pawns glide along the positions the host draws them at,
 /// and shots fly from the shooter to where the bullet lands, with the weapon's sound.
 /// </summary>
+[StaticConstructorOnStartup]
 internal static class CoopVisuals
 {
     private sealed class Glide
