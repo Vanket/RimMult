@@ -181,14 +181,12 @@
   <RimMult.RelationAllied>союз</RimMult.RelationAllied>
   <RimMult.RelationHostile>война</RimMult.RelationHostile>
   <RimMult.RelationInspect>Отношения: {0}</RimMult.RelationInspect>
-  <RimMult.TradeAtWar>Вы воюете с {0}</RimMult.TradeAtWar>
   <RimMult.Diplomacy>Дипломатия</RimMult.Diplomacy>
-  <RimMult.DiplomacyDesc>Объявить войну {0}, предложить мир или союз.</RimMult.DiplomacyDesc>
+  <RimMult.DiplomacyDesc>Война, мир, союз, пакт и дань с {0}.</RimMult.DiplomacyDesc>
   <RimMult.DiplomacyOffline>{0} не в сети</RimMult.DiplomacyOffline>
   <RimMult.DeclareWar>Объявить войну</RimMult.DeclareWar>
   <RimMult.DeclareWarConfirm>Объявить войну {0}? Вы сможете нападать на колонии друг друга. Для мира нужно согласие обоих.</RimMult.DeclareWarConfirm>
   <RimMult.ProposeAlliance>Предложить союз</RimMult.ProposeAlliance>
-  <RimMult.ProposePeace>Предложить мир</RimMult.ProposePeace>
   <RimMult.BreakAlliance>Разорвать союз</RimMult.BreakAlliance>
   <RimMult.BreakAllianceConfirm>Разорвать союз с {0}?</RimMult.BreakAllianceConfirm>
   <RimMult.ProposalSent>Предложение отправлено.</RimMult.ProposalSent>
@@ -349,4 +347,106 @@
   <RimMult.ModSyncDone>готово</RimMult.ModSyncDone>
   <RimMult.NpcLayoutApplied>Поселения NPC приведены к общему миру: поставлено {0}, убрано {1}.</RimMult.NpcLayoutApplied>
   <RimMult.StatusBoost>×2 (у всех всё спокойно)</RimMult.StatusBoost>
+  <RimMult.You>вы</RimMult.You>
+  <RimMult.ProposePact>Предложить пакт о ненападении</RimMult.ProposePact>
+  <RimMult.PactDays>{0} дн.</RimMult.PactDays>
+  <RimMult.DemandTribute>Потребовать дань (ультиматум)</RimMult.DemandTribute>
+  <RimMult.DemandTributeTitle>Ультиматум {0}</RimMult.DemandTributeTitle>
+  <RimMult.DemandTributeHint>{0} платит вам серебро каждый квартал (15 дней) столько, сколько вы зададите, — или война. Пока действует дань, никто из вас не может объявить войну.</RimMult.DemandTributeHint>
+  <RimMult.BreakTreaty>Разорвать договор</RimMult.BreakTreaty>
+  <RimMult.BreakTreatyConfirm>Разорвать все договоры с {0}? Это увидят все: в летописи и в вашей репутации.</RimMult.BreakTreatyConfirm>
+  <RimMult.WarBlockedByTreaty>действует договор — сначала разорвите его</RimMult.WarBlockedByTreaty>
+  <RimMult.PeacePlain>Предложить мир</RimMult.PeacePlain>
+  <RimMult.PeaceIPay>Предложить мир, заплатив дань</RimMult.PeaceIPay>
+  <RimMult.PeaceIPayTitle>Мир с {0}: платите вы</RimMult.PeaceIPayTitle>
+  <RimMult.PeaceIPayHint>Вы платите {0} серебро каждый квартал (15 дней) столько, сколько зададите, — в обмен на мир.</RimMult.PeaceIPayHint>
+  <RimMult.PeaceTheyPay>Предложить мир, если они платят дань</RimMult.PeaceTheyPay>
+  <RimMult.PeaceTheyPayTitle>Мир с {0}: платят они</RimMult.PeaceTheyPayTitle>
+  <RimMult.PeaceTheyPayHint>{0} платит вам серебро каждый квартал (15 дней) столько, сколько вы зададите, — в обмен на мир.</RimMult.PeaceTheyPayHint>
+  <RimMult.TermsTribute>{0} серебра каждый квартал</RimMult.TermsTribute>
+  <RimMult.TermsDays>Срок:</RimMult.TermsDays>
+  <RimMult.TermsSend>Предложить</RimMult.TermsSend>
+  <RimMult.PactProposedText>{0} предлагает пакт о ненападении на {1} дн. Пока он действует, никто из вас не может объявить войну.</RimMult.PactProposedText>
+  <RimMult.PeaceTributeProposedText>{0} предлагает мир: {2} платит {3} серебра каждый квартал в течение {1} дн.</RimMult.PeaceTributeProposedText>
+  <RimMult.TributeDemandedText>{0} требует дань: {2} серебра каждый квартал в течение {1} дн. Откажетесь — будет война.\n\nСеребра в ваших колониях: {3}.</RimMult.TributeDemandedText>
+  <RimMult.TributeAccept>Платить</RimMult.TributeAccept>
+  <RimMult.TributeRefuse>Отказаться (война)</RimMult.TributeRefuse>
+  <RimMult.TributeDueText>Пора платить дань {0}: {1} серебра.\n\nСеребра в ваших колониях: {2}.</RimMult.TributeDueText>
+  <RimMult.TributePay>Заплатить</RimMult.TributePay>
+  <RimMult.TributeLater>Позже</RimMult.TributeLater>
+  <RimMult.TributeRefuseBreak>Отказаться (договор будет разорван)</RimMult.TributeRefuseBreak>
+  <RimMult.TributeNotEnough>Не хватает серебра: нужно {0}, есть {1}.</RimMult.TributeNotEnough>
+  <RimMult.TributePaidByYou>Дань {0} уплачена: {1} серебра.</RimMult.TributePaidByYou>
+  <RimMult.TributePaidToYou>{0} уплатил дань: {1} серебра.</RimMult.TributePaidToYou>
+  <RimMult.TributeParcelLabel>Дань от {0}</RimMult.TributeParcelLabel>
+  <RimMult.TributeParcelText>{0} прислал дань: {1}.</RimMult.TributeParcelText>
+  <RimMult.TreatyBrokenByYou>Вы разорвали договор с {0}.</RimMult.TreatyBrokenByYou>
+  <RimMult.PeaceTributeNote>Условие: {0} платит {1} серебра каждый квартал в течение {2} дн. Войны в это время не будет.</RimMult.PeaceTributeNote>
+  <RimMult.PeaceTruceNote>Начинается перемирие на {0} дн.: до его конца войну объявить нельзя.</RimMult.PeaceTruceNote>
+  <RimMult.DiplomacyPactMadeLabel>Пакт с {0}</RimMult.DiplomacyPactMadeLabel>
+  <RimMult.DiplomacyPactMadeText>Вы заключили пакт о ненападении с {0} на {1} дн. До его конца никто из вас не может объявить войну.</RimMult.DiplomacyPactMadeText>
+  <RimMult.DiplomacyTreatyBrokenLabel>{0} разорвал договор</RimMult.DiplomacyTreatyBrokenLabel>
+  <RimMult.DiplomacyTreatyBrokenText>{0} разорвал договор с вами и теперь может объявить войну. Летопись это запомнила.</RimMult.DiplomacyTreatyBrokenText>
+  <RimMult.DiplomacyTreatyExpiredLabel>Договор с {0} истёк</RimMult.DiplomacyTreatyExpiredLabel>
+  <RimMult.DiplomacyTreatyExpiredText>Срок договора с {0} вышел. Обе стороны его соблюли — это засчитано в репутацию.</RimMult.DiplomacyTreatyExpiredText>
+  <RimMult.DiplomacyTributeAgreedAnsweredLabel>Дань {0}</RimMult.DiplomacyTributeAgreedAnsweredLabel>
+  <RimMult.DiplomacyTributeAgreedAnsweredText>Вы согласились платить {0} {2} серебра каждый квартал в течение {1} дн. Первый платёж — сейчас.</RimMult.DiplomacyTributeAgreedAnsweredText>
+  <RimMult.DiplomacyTributeAgreedDemandedLabel>{0} платит дань</RimMult.DiplomacyTributeAgreedDemandedLabel>
+  <RimMult.DiplomacyTributeAgreedDemandedText>{0} принял ваш ультиматум: {2} серебра каждый квартал в течение {1} дн.</RimMult.DiplomacyTributeAgreedDemandedText>
+  <RimMult.DiplomacyUltimatumRejectedAnsweredLabel>Война с {0}</RimMult.DiplomacyUltimatumRejectedAnsweredLabel>
+  <RimMult.DiplomacyUltimatumRejectedAnsweredText>Вы отвергли ультиматум {0}. Теперь вы воюете.</RimMult.DiplomacyUltimatumRejectedAnsweredText>
+  <RimMult.DiplomacyUltimatumRejectedDemandedLabel>{0} отказался</RimMult.DiplomacyUltimatumRejectedDemandedLabel>
+  <RimMult.DiplomacyUltimatumRejectedDemandedText>{0} отказался платить дань. Теперь вы воюете.</RimMult.DiplomacyUltimatumRejectedDemandedText>
+  <RimMult.DiplomacyNewsPactMade>{0} и {1} заключили пакт о ненападении.</RimMult.DiplomacyNewsPactMade>
+  <RimMult.DiplomacyNewsTreatyBroken>{0} разорвал договор с {1}.</RimMult.DiplomacyNewsTreatyBroken>
+  <RimMult.DiplomacyNewsTributeAgreed>{0} согласился платить дань {1}.</RimMult.DiplomacyNewsTributeAgreed>
+  <RimMult.DiplomacyNewsUltimatumRejected>{0} отверг ультиматум {1} — война.</RimMult.DiplomacyNewsUltimatumRejected>
+  <RimMult.DiplomacyNewsTreatyExpired>Договор между {0} и {1} истёк.</RimMult.DiplomacyNewsTreatyExpired>
+  <RimMult.TreatyPact>Пакт о ненападении: ещё {0} дн.</RimMult.TreatyPact>
+  <RimMult.TreatyTruce>Перемирие: ещё {0} дн.</RimMult.TreatyTruce>
+  <RimMult.TreatyTributeYouPay>Вы платите {2} {0} серебра за квартал: ещё {1} дн.</RimMult.TreatyTributeYouPay>
+  <RimMult.TreatyTributeTheyPay>{2} платит вам {0} серебра за квартал: ещё {1} дн.</RimMult.TreatyTributeTheyPay>
+  <RimMult.TreatyKind.Pact>пакт о ненападении</RimMult.TreatyKind.Pact>
+  <RimMult.TreatyKind.Truce>перемирие</RimMult.TreatyKind.Truce>
+  <RimMult.TreatyKind.Tribute>договор о дани</RimMult.TreatyKind.Tribute>
+  <RimMult.ReputationInspect>Репутация: {0} (войн объявлено {1}, договоров нарушено {2}, соблюдено {3})</RimMult.ReputationInspect>
+  <RimMult.ReputationReliable>надёжный</RimMult.ReputationReliable>
+  <RimMult.ReputationUnreliable>ненадёжный</RimMult.ReputationUnreliable>
+  <RimMult.ReputationAggressor>агрессор</RimMult.ReputationAggressor>
+  <RimMult.ReputationUnknown>пока ничем не отметился</RimMult.ReputationUnknown>
+  <RimMult.ChronicleColWars>Объявил войн</RimMult.ChronicleColWars>
+  <RimMult.ChronicleColBroken>Нарушил договоров</RimMult.ChronicleColBroken>
+  <RimMult.ChronicleColKept>Соблюл договоров</RimMult.ChronicleColKept>
+  <RimMult.ChronicleColTribute>Уплатил дани</RimMult.ChronicleColTribute>
+  <RimMult.Chronicle.PactMade>{0} и {1} заключили пакт о ненападении на {2} дн.</RimMult.Chronicle.PactMade>
+  <RimMult.Chronicle.TreatyBroken>{0} разорвал договор с {1}.</RimMult.Chronicle.TreatyBroken>
+  <RimMult.Chronicle.TributeAgreed>{0} обязался платить {1} дань: {2} серебра за квартал, {3} дн.</RimMult.Chronicle.TributeAgreed>
+  <RimMult.Chronicle.TributePaid>{0} уплатил {1} дань: {2} серебра.</RimMult.Chronicle.TributePaid>
+  <RimMult.Chronicle.UltimatumRejected>{0} отверг ультиматум {1} — началась война.</RimMult.Chronicle.UltimatumRejected>
+  <RimMult.Chronicle.TreatyExpired>Срок договора ({5}) между {0} и {1} вышел — оба сдержали слово.</RimMult.Chronicle.TreatyExpired>
+  <RimMult.Chronicle.ResearchShared>{0} поделился с {1} исследованием «{5}» (+{2} очков).</RimMult.Chronicle.ResearchShared>
+  <RimMult.ShareResearch>Поделиться исследованием</RimMult.ShareResearch>
+  <RimMult.ShareResearchTitle>Исследования для {0}</RimMult.ShareResearchTitle>
+  <RimMult.ShareResearchHint>Союзник получит половину стоимости изученного проекта как готовый прогресс. Каждым проектом с каждым союзником можно поделиться один раз.</RimMult.ShareResearchHint>
+  <RimMult.ShareResearchNone>Нечем делиться: нет изученных проектов (или всеми уже поделились).</RimMult.ShareResearchNone>
+  <RimMult.ShareResearchButton>Отдать</RimMult.ShareResearchButton>
+  <RimMult.ShareResearchShared>уже отдано</RimMult.ShareResearchShared>
+  <RimMult.ShareResearchSent>Записи по проекту «{0}» отправлены {1}.</RimMult.ShareResearchSent>
+  <RimMult.ResearchGiftLabel>Исследование от {0}</RimMult.ResearchGiftLabel>
+  <RimMult.ResearchGiftText>{0} поделился записями по проекту «{1}»: +{2} очков исследования. Теперь изучено {3}.</RimMult.ResearchGiftText>
+  <RimMult.ResearchGiftDone>{0} поделился записями по проекту «{1}» — проект завершён!</RimMult.ResearchGiftDone>
+  <RimMult.ResearchGiftKnown>{0} прислал записи по проекту «{1}», но вы его уже изучили.</RimMult.ResearchGiftKnown>
+  <RimMult.ChatScopeAll>Все</RimMult.ChatScopeAll>
+  <RimMult.ChatScopeAllies>Союз</RimMult.ChatScopeAllies>
+  <RimMult.ChatHelp>Enter — отправить. Кнопка слева переключает: всем или только союзникам.\n/a текст — союзникам\n/w Имя текст — шёпотом\n/r текст — ответить на последний шёпот\n/all текст — всем</RimMult.ChatHelp>
+  <RimMult.ChatNoSuchPlayer>Игрока «{0}» здесь нет.</RimMult.ChatNoSuchPlayer>
+  <RimMult.ChatNoReply>Вам ещё никто не шептал.</RimMult.ChatNoReply>
+  <RimMult.ChatTagAllies>[союз]</RimMult.ChatTagAllies>
+  <RimMult.ChatTagWhisperTo>[шёпот → {0}]</RimMult.ChatTagWhisperTo>
+  <RimMult.ChatTagWhisperFrom>[шёпот]</RimMult.ChatTagWhisperFrom>
+  <RimMult.TradeRansom>Выкуп пленных</RimMult.TradeRansom>
+  <RimMult.TradeRansomDesc>Вы воюете с {0}, но можно обменять пленных на серебро (или на других пленных).</RimMult.TradeRansomDesc>
+  <RimMult.TradeRansomTitle>Переговоры о выкупе с {0}</RimMult.TradeRansomTitle>
+  <RimMult.TradeHintRansom>Война: в обмене только серебро и пленные. Пленные приходят свободными и вступают в другую колонию.</RimMult.TradeHintRansom>
+  <RimMult.TradePrisoner>{0} (пленник)</RimMult.TradePrisoner>
 </LanguageData>

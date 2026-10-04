@@ -181,14 +181,12 @@
   <RimMult.RelationAllied>ally</RimMult.RelationAllied>
   <RimMult.RelationHostile>war</RimMult.RelationHostile>
   <RimMult.RelationInspect>Relations: {0}</RimMult.RelationInspect>
-  <RimMult.TradeAtWar>You are at war with {0}</RimMult.TradeAtWar>
   <RimMult.Diplomacy>Diplomacy</RimMult.Diplomacy>
-  <RimMult.DiplomacyDesc>Declare war on {0}, offer peace or an alliance.</RimMult.DiplomacyDesc>
+  <RimMult.DiplomacyDesc>War, peace, alliances, pacts and tribute with {0}.</RimMult.DiplomacyDesc>
   <RimMult.DiplomacyOffline>{0} is not online</RimMult.DiplomacyOffline>
   <RimMult.DeclareWar>Declare war</RimMult.DeclareWar>
   <RimMult.DeclareWarConfirm>Declare war on {0}? You will be able to raid each other's colonies. Peace needs both of you to agree.</RimMult.DeclareWarConfirm>
   <RimMult.ProposeAlliance>Offer an alliance</RimMult.ProposeAlliance>
-  <RimMult.ProposePeace>Offer peace</RimMult.ProposePeace>
   <RimMult.BreakAlliance>Break the alliance</RimMult.BreakAlliance>
   <RimMult.BreakAllianceConfirm>Break the alliance with {0}?</RimMult.BreakAllianceConfirm>
   <RimMult.ProposalSent>Proposal sent.</RimMult.ProposalSent>
@@ -349,4 +347,106 @@ If these are Workshop mods, the host probably has a newer version than the Works
   <RimMult.ModSyncDone>done</RimMult.ModSyncDone>
   <RimMult.NpcLayoutApplied>NPC settlements now match the shared world: {0} placed, {1} removed.</RimMult.NpcLayoutApplied>
   <RimMult.StatusBoost>×2 (all quiet everywhere)</RimMult.StatusBoost>
+  <RimMult.You>you</RimMult.You>
+  <RimMult.ProposePact>Propose a non-aggression pact</RimMult.ProposePact>
+  <RimMult.PactDays>{0} days</RimMult.PactDays>
+  <RimMult.DemandTribute>Demand tribute (ultimatum)</RimMult.DemandTribute>
+  <RimMult.DemandTributeTitle>Ultimatum to {0}</RimMult.DemandTributeTitle>
+  <RimMult.DemandTributeHint>{0} pays you silver every quadrum (15 days) for as long as you set, or it's war. While the tribute runs, neither of you can declare war.</RimMult.DemandTributeHint>
+  <RimMult.BreakTreaty>Tear up the treaty</RimMult.BreakTreaty>
+  <RimMult.BreakTreatyConfirm>Tear up every treaty with {0}? Everyone will see it: in the chronicle and in your reputation.</RimMult.BreakTreatyConfirm>
+  <RimMult.WarBlockedByTreaty>a treaty is in force: tear it up first</RimMult.WarBlockedByTreaty>
+  <RimMult.PeacePlain>Propose peace</RimMult.PeacePlain>
+  <RimMult.PeaceIPay>Propose peace, paying tribute</RimMult.PeaceIPay>
+  <RimMult.PeaceIPayTitle>Peace with {0}: you pay</RimMult.PeaceIPayTitle>
+  <RimMult.PeaceIPayHint>You pay {0} silver every quadrum (15 days) for as long as you set, in exchange for peace.</RimMult.PeaceIPayHint>
+  <RimMult.PeaceTheyPay>Propose peace, if they pay tribute</RimMult.PeaceTheyPay>
+  <RimMult.PeaceTheyPayTitle>Peace with {0}: they pay</RimMult.PeaceTheyPayTitle>
+  <RimMult.PeaceTheyPayHint>{0} pays you silver every quadrum (15 days) for as long as you set, in exchange for peace.</RimMult.PeaceTheyPayHint>
+  <RimMult.TermsTribute>{0} silver every quadrum</RimMult.TermsTribute>
+  <RimMult.TermsDays>For:</RimMult.TermsDays>
+  <RimMult.TermsSend>Propose</RimMult.TermsSend>
+  <RimMult.PactProposedText>{0} proposes a non-aggression pact for {1} days. While it runs, neither of you can declare war.</RimMult.PactProposedText>
+  <RimMult.PeaceTributeProposedText>{0} proposes peace: {2} pays {3} silver every quadrum for {1} days.</RimMult.PeaceTributeProposedText>
+  <RimMult.TributeDemandedText>{0} demands tribute: {2} silver every quadrum for {1} days. Refuse, and it's war.\n\nSilver in your colonies: {3}.</RimMult.TributeDemandedText>
+  <RimMult.TributeAccept>Pay</RimMult.TributeAccept>
+  <RimMult.TributeRefuse>Refuse (war)</RimMult.TributeRefuse>
+  <RimMult.TributeDueText>Tribute to {0} is due: {1} silver.\n\nSilver in your colonies: {2}.</RimMult.TributeDueText>
+  <RimMult.TributePay>Pay</RimMult.TributePay>
+  <RimMult.TributeLater>Later</RimMult.TributeLater>
+  <RimMult.TributeRefuseBreak>Refuse (tears up the treaty)</RimMult.TributeRefuseBreak>
+  <RimMult.TributeNotEnough>Not enough silver: {0} needed, {1} at hand.</RimMult.TributeNotEnough>
+  <RimMult.TributePaidByYou>Tribute paid to {0}: {1} silver.</RimMult.TributePaidByYou>
+  <RimMult.TributePaidToYou>{0} paid their tribute: {1} silver.</RimMult.TributePaidToYou>
+  <RimMult.TributeParcelLabel>Tribute from {0}</RimMult.TributeParcelLabel>
+  <RimMult.TributeParcelText>{0} paid their tribute: {1}.</RimMult.TributeParcelText>
+  <RimMult.TreatyBrokenByYou>You tore up your treaty with {0}.</RimMult.TreatyBrokenByYou>
+  <RimMult.PeaceTributeNote>Terms: {0} pays {1} silver every quadrum for {2} days. No war meanwhile.</RimMult.PeaceTributeNote>
+  <RimMult.PeaceTruceNote>A truce of {0} days follows: no new war until it ends.</RimMult.PeaceTruceNote>
+  <RimMult.DiplomacyPactMadeLabel>Pact with {0}</RimMult.DiplomacyPactMadeLabel>
+  <RimMult.DiplomacyPactMadeText>You signed a non-aggression pact with {0} for {1} days. Neither of you can declare war until it ends.</RimMult.DiplomacyPactMadeText>
+  <RimMult.DiplomacyTreatyBrokenLabel>{0} tore up the treaty</RimMult.DiplomacyTreatyBrokenLabel>
+  <RimMult.DiplomacyTreatyBrokenText>{0} tore up their treaty with you and can declare war now. The chronicle remembers it.</RimMult.DiplomacyTreatyBrokenText>
+  <RimMult.DiplomacyTreatyExpiredLabel>Treaty with {0} ended</RimMult.DiplomacyTreatyExpiredLabel>
+  <RimMult.DiplomacyTreatyExpiredText>Your treaty with {0} ran its course. Both sides kept it: that counts for your reputation.</RimMult.DiplomacyTreatyExpiredText>
+  <RimMult.DiplomacyTributeAgreedAnsweredLabel>Tribute to {0}</RimMult.DiplomacyTributeAgreedAnsweredLabel>
+  <RimMult.DiplomacyTributeAgreedAnsweredText>You agreed to pay {0} {2} silver every quadrum for {1} days. The first payment is due now.</RimMult.DiplomacyTributeAgreedAnsweredText>
+  <RimMult.DiplomacyTributeAgreedDemandedLabel>{0} pays tribute</RimMult.DiplomacyTributeAgreedDemandedLabel>
+  <RimMult.DiplomacyTributeAgreedDemandedText>{0} accepted your ultimatum: {2} silver every quadrum for {1} days.</RimMult.DiplomacyTributeAgreedDemandedText>
+  <RimMult.DiplomacyUltimatumRejectedAnsweredLabel>War with {0}</RimMult.DiplomacyUltimatumRejectedAnsweredLabel>
+  <RimMult.DiplomacyUltimatumRejectedAnsweredText>You turned down {0}'s ultimatum. You are at war now.</RimMult.DiplomacyUltimatumRejectedAnsweredText>
+  <RimMult.DiplomacyUltimatumRejectedDemandedLabel>{0} refused</RimMult.DiplomacyUltimatumRejectedDemandedLabel>
+  <RimMult.DiplomacyUltimatumRejectedDemandedText>{0} refused to pay tribute. You are at war now.</RimMult.DiplomacyUltimatumRejectedDemandedText>
+  <RimMult.DiplomacyNewsPactMade>{0} and {1} signed a non-aggression pact.</RimMult.DiplomacyNewsPactMade>
+  <RimMult.DiplomacyNewsTreatyBroken>{0} tore up their treaty with {1}.</RimMult.DiplomacyNewsTreatyBroken>
+  <RimMult.DiplomacyNewsTributeAgreed>{0} agreed to pay tribute to {1}.</RimMult.DiplomacyNewsTributeAgreed>
+  <RimMult.DiplomacyNewsUltimatumRejected>{0} turned down {1}'s ultimatum: war.</RimMult.DiplomacyNewsUltimatumRejected>
+  <RimMult.DiplomacyNewsTreatyExpired>The treaty between {0} and {1} ran its course.</RimMult.DiplomacyNewsTreatyExpired>
+  <RimMult.TreatyPact>Non-aggression pact: {0} more days</RimMult.TreatyPact>
+  <RimMult.TreatyTruce>Truce: {0} more days</RimMult.TreatyTruce>
+  <RimMult.TreatyTributeYouPay>You pay {2} {0} silver a quadrum: {1} more days</RimMult.TreatyTributeYouPay>
+  <RimMult.TreatyTributeTheyPay>{2} pays you {0} silver a quadrum: {1} more days</RimMult.TreatyTributeTheyPay>
+  <RimMult.TreatyKind.Pact>non-aggression pact</RimMult.TreatyKind.Pact>
+  <RimMult.TreatyKind.Truce>truce</RimMult.TreatyKind.Truce>
+  <RimMult.TreatyKind.Tribute>tribute</RimMult.TreatyKind.Tribute>
+  <RimMult.ReputationInspect>Reputation: {0} (wars declared {1}, treaties broken {2}, kept {3})</RimMult.ReputationInspect>
+  <RimMult.ReputationReliable>reliable</RimMult.ReputationReliable>
+  <RimMult.ReputationUnreliable>unreliable</RimMult.ReputationUnreliable>
+  <RimMult.ReputationAggressor>aggressor</RimMult.ReputationAggressor>
+  <RimMult.ReputationUnknown>nothing notable yet</RimMult.ReputationUnknown>
+  <RimMult.ChronicleColWars>Wars declared</RimMult.ChronicleColWars>
+  <RimMult.ChronicleColBroken>Treaties broken</RimMult.ChronicleColBroken>
+  <RimMult.ChronicleColKept>Treaties kept</RimMult.ChronicleColKept>
+  <RimMult.ChronicleColTribute>Tribute paid</RimMult.ChronicleColTribute>
+  <RimMult.Chronicle.PactMade>{0} and {1} signed a non-aggression pact for {2} days.</RimMult.Chronicle.PactMade>
+  <RimMult.Chronicle.TreatyBroken>{0} tore up their treaty with {1}.</RimMult.Chronicle.TreatyBroken>
+  <RimMult.Chronicle.TributeAgreed>{0} agreed to pay {1} tribute: {2} silver a quadrum for {3} days.</RimMult.Chronicle.TributeAgreed>
+  <RimMult.Chronicle.TributePaid>{0} paid {1} tribute: {2} silver.</RimMult.Chronicle.TributePaid>
+  <RimMult.Chronicle.UltimatumRejected>{0} turned down {1}'s ultimatum: war.</RimMult.Chronicle.UltimatumRejected>
+  <RimMult.Chronicle.TreatyExpired>The {5} between {0} and {1} ran its course; both kept their word.</RimMult.Chronicle.TreatyExpired>
+  <RimMult.Chronicle.ResearchShared>{0} shared research with {1}: "{5}" (+{2} points).</RimMult.Chronicle.ResearchShared>
+  <RimMult.ShareResearch>Share research</RimMult.ShareResearch>
+  <RimMult.ShareResearchTitle>Research for {0}</RimMult.ShareResearchTitle>
+  <RimMult.ShareResearchHint>Your ally gets half of a finished project's cost as progress. Each project can go to each ally once.</RimMult.ShareResearchHint>
+  <RimMult.ShareResearchNone>Nothing to share: no finished projects (or all of them already shared).</RimMult.ShareResearchNone>
+  <RimMult.ShareResearchButton>Share</RimMult.ShareResearchButton>
+  <RimMult.ShareResearchShared>shared</RimMult.ShareResearchShared>
+  <RimMult.ShareResearchSent>Notes on "{0}" sent to {1}.</RimMult.ShareResearchSent>
+  <RimMult.ResearchGiftLabel>Research from {0}</RimMult.ResearchGiftLabel>
+  <RimMult.ResearchGiftText>{0} shared their notes on "{1}": +{2} research points. It is now {3} done.</RimMult.ResearchGiftText>
+  <RimMult.ResearchGiftDone>{0} shared their notes on "{1}": the project is finished!</RimMult.ResearchGiftDone>
+  <RimMult.ResearchGiftKnown>{0} sent notes on "{1}", but you already know it.</RimMult.ResearchGiftKnown>
+  <RimMult.ChatScopeAll>All</RimMult.ChatScopeAll>
+  <RimMult.ChatScopeAllies>Allies</RimMult.ChatScopeAllies>
+  <RimMult.ChatHelp>Enter sends. The button switches between everyone and allies only.\n/a text: to allies\n/w Name text: whisper\n/r text: answer the last whisper\n/all text: to everyone</RimMult.ChatHelp>
+  <RimMult.ChatNoSuchPlayer>No player "{0}" here.</RimMult.ChatNoSuchPlayer>
+  <RimMult.ChatNoReply>Nobody has whispered to you yet.</RimMult.ChatNoReply>
+  <RimMult.ChatTagAllies>[allies]</RimMult.ChatTagAllies>
+  <RimMult.ChatTagWhisperTo>[whisper to {0}]</RimMult.ChatTagWhisperTo>
+  <RimMult.ChatTagWhisperFrom>[whisper]</RimMult.ChatTagWhisperFrom>
+  <RimMult.TradeRansom>Ransom</RimMult.TradeRansom>
+  <RimMult.TradeRansomDesc>You are at war with {0}: you can still trade prisoners for silver (or for other prisoners).</RimMult.TradeRansomDesc>
+  <RimMult.TradeRansomTitle>Ransom talks with {0}</RimMult.TradeRansomTitle>
+  <RimMult.TradeHintRansom>At war: only silver and prisoners change hands. Prisoners arrive free and join the other colony.</RimMult.TradeHintRansom>
+  <RimMult.TradePrisoner>{0} (prisoner)</RimMult.TradePrisoner>
 </LanguageData>

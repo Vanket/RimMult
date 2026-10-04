@@ -18,7 +18,11 @@ internal static class PawnTransfer
         AccessTools.FieldRefAccess<Pawn_PlayerSettings, Dictionary<Map, Area>>("allowedAreas");
 
     /// <summary>Whether this pawn can move to another player's colony, and if not, why.</summary>
-    public static bool CanSend(Pawn pawn, out string reason)
+    /// <param name="prisoners">
+    /// Prisoners may go too (traded: a ransom, a sale); they arrive free, as the new colony's people. Raids, help and
+    /// gifts take only the colony's own.
+    /// </param>
+    public static bool CanSend(Pawn pawn, out string reason, bool prisoners = false)
     {
         reason = "";
         if (pawn.Dead)
@@ -26,6 +30,8 @@ internal static class PawnTransfer
             reason = "RimMult.PawnDead".Translate();
             return false;
         }
+        if (prisoners && pawn.IsPrisonerOfColony && pawn.RaceProps.Humanlike)
+            return true;
         if (pawn.Faction != Faction.OfPlayer || pawn.IsPrisoner || pawn.IsSlave)
         {
             reason = "RimMult.PawnNotColonist".Translate(pawn.LabelShortCap);
@@ -57,6 +63,8 @@ internal static class PawnTransfer
         pawn.mindState?.Reset(clearInspiration: false, clearMentalState: true);
         if (pawn.drafter != null)
             pawn.drafter.Drafted = false;
+        if (pawn.IsPrisoner)
+            pawn.guest?.SetGuestStatus(null);
         pawn.ownership?.UnclaimAll();
         CutReferences(pawn);
     }

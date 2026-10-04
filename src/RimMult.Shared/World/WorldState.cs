@@ -170,8 +170,9 @@ public sealed class WorldState
     /// <summary>
     /// 1: world, clock, colonies, mods. 2: + parcels in transit. 3: + player colors, destroyed NPC settlements.
     /// 4: + relations between players. 5: + the chronicle and players' stats. 6: + the NPC settlements and the creator.
+    /// 7: + treaties, players' reputation.
     /// </summary>
-    private const byte FormatVersion = 6;
+    private const byte FormatVersion = 7;
 
     /// <summary>Null until the first player creates the world (picks the planet when starting their colony).</summary>
     public WorldDefinition? Definition { get; set; }
@@ -214,6 +215,11 @@ public sealed class WorldState
     /// <summary>Owner key of the player who created the world (0: unknown, worlds older than format 6).</summary>
     public ulong CreatorOwner { get; set; }
 
+    /// <summary>Pacts, truces and tributes between players.</summary>
+    public List<Treaty> Treaties { get; set; } = new();
+
+    public long NextTreatyId { get; set; } = 1;
+
     public void Write(ByteWriter writer)
     {
         writer.WriteBool(Definition != null);
@@ -238,6 +244,8 @@ public sealed class WorldState
         PlayerStats.WriteList(writer, new List<PlayerStats>(Stats.Values));
         NpcSettlement.WriteList(writer, NpcSettlements);
         writer.WriteUInt64(CreatorOwner);
+        Treaty.WriteList(writer, Treaties);
+        writer.WriteVarInt(NextTreatyId);
     }
 
     public static void WriteStrings(ByteWriter writer, IReadOnlyList<string> values)
@@ -291,13 +299,18 @@ public sealed class WorldState
         if (version >= 5)
         {
             state.Chronicle = ChronicleEntry.ReadList(reader);
-            foreach (var stats in PlayerStats.ReadList(reader))
+            foreach (var stats in PlayerStats.ReadList(reader, withReputation: version >= 7))
                 state.Stats[stats.Owner] = stats;
         }
         if (version >= 6)
         {
             state.NpcSettlements = NpcSettlement.ReadList(reader);
             state.CreatorOwner = reader.ReadUInt64();
+        }
+        if (version >= 7)
+        {
+            state.Treaties = Treaty.ReadList(reader);
+            state.NextTreatyId = reader.ReadVarInt();
         }
         return state;
     }

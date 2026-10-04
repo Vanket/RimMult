@@ -15,7 +15,8 @@ namespace RimMult.UI;
 /// <summary>
 /// Trading with another player: pick what you give, see what they give, both accept. From home you give from your
 /// stockpiles; from a caravan standing at their colony you give its cargo and animals, and what you buy is loaded
-/// into the caravan. Goods for a colony arrive by drop pod.
+/// into the caravan. Goods for a colony arrive by drop pod. Prisoners can be traded too (they arrive free); at war
+/// only silver and prisoners: a ransom.
 /// </summary>
 internal sealed class Dialog_PlayerTrade : Window
 {
@@ -23,6 +24,9 @@ internal sealed class Dialog_PlayerTrade : Window
 
     private readonly PlayerTrade _trade;
     private readonly Caravan? _caravan;
+
+    /// <summary>At war with the partner: only silver and prisoners change hands.</summary>
+    private readonly bool _ransom;
     private readonly List<TransferableOneWay> _mine = new();
     private string _lastSignature = "";
     private Vector2 _mineScroll;
@@ -40,11 +44,22 @@ internal sealed class Dialog_PlayerTrade : Window
         optionalTitle = "RimMult.TradeTitle".Translate(trade.PartnerName);
         if (trade.MyCaravanId != 0)
             _caravan = Find.WorldObjects.Caravans.FirstOrDefault(c => c.ID == trade.MyCaravanId && !c.Destroyed);
+        _ransom = IsRansom(trade.PartnerId);
+        if (_ransom)
+            optionalTitle = "RimMult.TradeRansomTitle".Translate(trade.PartnerName);
         _trade.Completed += HandOver;
         CollectMyGoods();
     }
 
     public override Vector2 InitialSize => new(1000f, 700f);
+
+    /// <summary>Trading with an enemy is a ransom (silver and prisoners only).</summary>
+    public static bool IsRansom(int partnerId)
+    {
+        var session = Multiplayer.Session;
+        var partner = session?.Players.FirstOrDefault(p => p.Id == partnerId);
+        return partner != null && session!.RelationWith(Multiplayer.OwnerKey(partner)) == PlayerRelation.Hostile;
+    }
 
     /// <summary>After committing, the partner may already be sending their goods: we must stay to send ours.</summary>
     public override bool OnCloseRequest() => !(_trade.State == TradeState.Open && _trade.Locked) && base.OnCloseRequest();
@@ -83,6 +98,7 @@ internal sealed class Dialog_PlayerTrade : Window
         TradeState.Cancelled => "RimMult.TradeCancelled".Translate(),
         _ when _trade.Locked => "RimMult.TradeLocked".Translate(_trade.PartnerName),
         _ when _trade.TheyAccepted => "RimMult.TradeTheyAccepted".Translate(_trade.PartnerName),
+        _ when _ransom => "RimMult.TradeHintRansom".Translate(),
         _ when _caravan != null => "RimMult.TradeHintCaravan".Translate(_caravan.LabelCap),
         _ when _trade.PartnerCaravanId != 0 => "RimMult.TradeHintPartnerCaravan".Translate(_trade.PartnerName),
         _ => "RimMult.TradeHint".Translate(),
@@ -119,7 +135,7 @@ internal sealed class Dialog_PlayerTrade : Window
                 Widgets.DrawLightHighlight(row);
             Widgets.ThingIcon(new Rect(row.x, row.y + 3f, 24f, 24f), transferable.AnyThing);
             var adjust = new Rect(row.xMax - 240f, row.y, 240f, row.height);
-            Widgets.Label(new Rect(row.x + 30f, row.y + 4f, adjust.x - row.x - 34f, row.height), transferable.LabelCap + $" ({transferable.MaxCount})");
+            Widgets.Label(new Rect(row.x + 30f, row.y + 4f, adjust.x - row.x - 34f, row.height), LabelOf(transferable) + $" ({transferable.MaxCount})");
             if (editable)
                 TransferableUIUtility.DoCountAdjustInterface(adjust, transferable, i, 0, transferable.MaxCount);
             else
@@ -182,10 +198,15 @@ internal sealed class Dialog_PlayerTrade : Window
     /// </summary>
     private void CollectMyGoods()
     {
+        bool Allowed(Thing thing) => !_ransom || thing.def == ThingDefOf.Silver;
+        bool TradablePrisoner(Pawn pawn) => pawn.IsPrisonerOfColony && PawnTransfer.CanSend(pawn, out _, prisoners: true);
+
         if (_caravan != null)
         {
-            var animals = _caravan.PawnsListForReading.Where(p => !p.RaceProps.Humanlike && PawnTransfer.CanSend(p, out _));
-            foreach (var thing in CaravanInventoryUtility.AllInventoryItems(_caravan).Where(ThingPackage.CanSend).Concat(animals))
+            var animals = _caravan.PawnsListForReading.Where(p => !_ransom && !p.RaceProps.Humanlike && PawnTransfer.CanSend(p, out _));
+            var prisoners = _caravan.PawnsListForReading.Where(TradablePrisoner);
+            foreach (var thing in CaravanInventoryUtility.AllInventoryItems(_caravan).Where(t => Allowed(t) && ThingPackage.CanSend(t))
+                         .Concat(animals).Concat(prisoners))
                 AddGood(thing);
             _mine.SortBy(t => t.LabelCap.ToString());
             return;
@@ -196,16 +217,24 @@ internal sealed class Dialog_PlayerTrade : Window
             foreach (var thing in map.listerThings.ThingsInGroup(ThingRequestGroup.HaulableEver))
             {
                 if (thing.def.category != ThingCategory.Item || !thing.Spawned || !thing.IsInAnyStorage()
-                    || thing.IsForbidden(Faction.OfPlayer) || !ThingPackage.CanSend(thing))
+                    || thing.IsForbidden(Faction.OfPlayer) || !Allowed(thing) || !ThingPackage.CanSend(thing))
                 {
                     continue;
                 }
 
                 AddGood(thing);
             }
+            foreach (var prisoner in map.mapPawns.PrisonersOfColonySpawned.Where(TradablePrisoner))
+                AddGood(prisoner);
         }
         _mine.SortBy(t => t.LabelCap.ToString());
     }
+
+    /// <summary>A row's label; prisoners say so.</summary>
+    private static string LabelOf(Transferable transferable) =>
+        transferable.AnyThing is Pawn { IsPrisonerOfColony: true }
+            ? "RimMult.TradePrisoner".Translate(transferable.LabelCap).ToString()
+            : transferable.LabelCap.ToString();
 
     private void AddGood(Thing thing)
     {
@@ -232,7 +261,7 @@ internal sealed class Dialog_PlayerTrade : Window
     {
         var lines = _mine
             .Where(t => t.CountToTransfer > 0)
-            .Select(t => new TradeLine { Label = t.LabelCap, Count = t.CountToTransfer, Value = t.AnyThing.MarketValue * t.CountToTransfer })
+            .Select(t => new TradeLine { Label = LabelOf(t), Count = t.CountToTransfer, Value = t.AnyThing.MarketValue * t.CountToTransfer })
             .ToList();
         var signature = string.Join("|", lines.Select(l => l.Label + "#" + l.Count));
         if (signature == _lastSignature)

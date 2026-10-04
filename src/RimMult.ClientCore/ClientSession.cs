@@ -20,16 +20,26 @@ public enum ClientState
 
 public sealed class ChatLine
 {
-    public ChatLine(int senderId, string senderName, string text)
+    public ChatLine(int senderId, string senderName, string text, ChatScope scope = ChatScope.All, int targetId = -1, string targetName = "")
     {
         SenderId = senderId;
         SenderName = senderName;
         Text = text;
+        Scope = scope;
+        TargetId = targetId;
+        TargetName = targetName;
     }
 
     public int SenderId { get; }
     public string SenderName { get; }
     public string Text { get; }
+
+    /// <summary>Everyone, allies only, or a whisper.</summary>
+    public ChatScope Scope { get; }
+
+    /// <summary>Whisper: who it was for.</summary>
+    public int TargetId { get; }
+    public string TargetName { get; }
 }
 
 /// <summary>
@@ -48,6 +58,7 @@ public sealed class ClientSession
     private readonly List<ChatLine> _chat = new();
     private readonly List<ChronicleEntry> _chronicle = new();
     private List<PlayerInfo> _players = new();
+    private long _clockTick;
 
     /// <param name="checkModsOnly">Only ask the server for its mod list (see <see cref="ModListQuery"/>), don't join.</param>
     public ClientSession(IClientTransport transport, ClientHello hello, bool checkModsOnly = false)
@@ -96,6 +107,15 @@ public sealed class ClientSession
 
     /// <summary>Wars and alliances between players (pairs not listed are neutral).</summary>
     public IReadOnlyList<RelationEntry> Relations { get; private set; } = Array.Empty<RelationEntry>();
+
+    /// <summary>Pacts, truces and tributes between players.</summary>
+    public IReadOnlyList<Treaty> Treaties { get; private set; } = Array.Empty<Treaty>();
+
+    /// <summary>The world's time as last heard (the clock or a grant's horizon is close enough for "how long until").</summary>
+    public long WorldTick => Math.Max(_clockTick, LastGrant?.HorizonTick ?? 0);
+
+    /// <summary>This player's treaties with another player that still run.</summary>
+    public IEnumerable<Treaty> TreatiesWith(ulong owner) => Treaty.Between(Treaties, MyOwnerKey, owner, WorldTick);
 
     /// <summary>Someone proposed, declared or made something diplomatic (to this player, or announced to all).</summary>
     public event Action<DiplomacyNotice>? DiplomacyReceived;
@@ -161,14 +181,15 @@ public sealed class ClientSession
             _transport.Poll();
     }
 
-    public void SendChat(string text)
+    /// <param name="scope">Everyone, allies only, or a whisper to <paramref name="targetId"/>.</param>
+    public void SendChat(string text, ChatScope scope = ChatScope.All, int targetId = -1)
     {
         text = text.Trim();
         if (State != ClientState.Connected || text.Length == 0)
             return;
         if (text.Length > ChatMessage.MaxLength)
             text = text.Substring(0, ChatMessage.MaxLength);
-        Send(new ChatMessage { Text = text });
+        Send(new ChatMessage { Text = text, Scope = scope, TargetId = targetId });
     }
 
     public void VoteSpeed(GameSpeed? speed)
@@ -230,10 +251,10 @@ public sealed class ClientSession
             Send(new ColonyStatsReport { Wealth = wealth, Colonists = colonists });
     }
 
-    public void SendDiplomacy(ulong target, DiplomacyAction action)
+    public void SendDiplomacy(ulong target, DiplomacyAction action, TreatyTerms? terms = null)
     {
         if (State == ClientState.Connected)
-            Send(new DiplomacyRequest { Target = target, Action = action });
+            Send(new DiplomacyRequest { Target = target, Action = action, Terms = terms ?? TreatyTerms.None });
     }
 
     public void ReportSettlementDestroyed(string tile)
@@ -314,7 +335,8 @@ public sealed class ClientSession
                 break;
             case ChatMessage chat:
                 // Id -1 is the server itself (announcements, answers to "/commands").
-                AddChat(new ChatLine(chat.SenderId, chat.SenderId < 0 ? ServerSenderName : NameOf(chat.SenderId), chat.Text));
+                AddChat(new ChatLine(chat.SenderId, chat.SenderId < 0 ? ServerSenderName : NameOf(chat.SenderId), chat.Text,
+                    chat.Scope, chat.TargetId, chat.Scope == ChatScope.Whisper ? NameOf(chat.TargetId) : ""));
                 break;
             case TickGrant grant:
                 LastGrant = grant;
@@ -324,9 +346,11 @@ public sealed class ClientSession
                 Colonies = world.Colonies;
                 DestroyedSettlements = world.DestroyedSettlements;
                 Relations = world.Relations;
+                Treaties = world.Treaties;
                 WorldChanged?.Invoke();
                 break;
             case WorldClock clock:
+                _clockTick = clock.Tick;
                 ClockReceived?.Invoke(clock.Tick);
                 if (!clock.HasNpcLayout)
                     NpcLayoutWanted?.Invoke();

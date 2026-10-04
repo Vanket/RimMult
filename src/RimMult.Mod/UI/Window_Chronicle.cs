@@ -22,9 +22,13 @@ internal static class ChronicleUi
         var key = "RimMult.Chronicle." + entry.Kind + (entry.Kind == ChronicleKind.RaidLaunched && entry.A == 1 ? "Live" : "");
         if (!key.CanTranslate())
             return $"{entry.Kind}: {entry.ActorName} {entry.TargetName} {entry.Text}";
+        // An ended treaty names its kind ("Pact", "Tribute"): in this player's language.
+        var text = entry.Kind == ChronicleKind.TreatyExpired && ("RimMult.TreatyKind." + entry.Text).CanTranslate()
+            ? ("RimMult.TreatyKind." + entry.Text).Translate().ToString()
+            : entry.Text.Replace("<", "‹");
         return key.Translate(
             Name(entry.Actor, entry.ActorName), Name(entry.Target, entry.TargetName),
-            entry.A, entry.B, entry.C, entry.Text.Replace("<", "‹"));
+            entry.A, entry.B, entry.C, text);
     }
 
     /// <summary>The game date of an entry (world time).</summary>
@@ -41,7 +45,9 @@ internal static class ChronicleUi
         {
             // News about others only: what concerns this player already comes as letters, and so does diplomacy.
             if (entry.Actor == me || entry.Target == me || entry.Kind is ChronicleKind.WarDeclared or ChronicleKind.PeaceMade
-                    or ChronicleKind.AllianceMade or ChronicleKind.AllianceBroken or ChronicleKind.ParcelSent)
+                    or ChronicleKind.AllianceMade or ChronicleKind.AllianceBroken or ChronicleKind.ParcelSent or ChronicleKind.PactMade
+                    or ChronicleKind.TreatyBroken or ChronicleKind.TributeAgreed or ChronicleKind.UltimatumRejected
+                    or ChronicleKind.TreatyExpired or ChronicleKind.TributePaid)
                 continue;
             Messages.Message("RimMult.ChronicleNews".Translate(Describe(entry, session)), MessageTypeDefOf.SilentInput, historical: false);
         }
@@ -71,7 +77,7 @@ internal sealed class Window_Chronicle : Window
         optionalTitle = "RimMult.ChronicleTitle".Translate();
     }
 
-    public override Vector2 InitialSize => new(900f, 640f);
+    public override Vector2 InitialSize => new(1100f, 640f);
 
     public static void Open()
     {
@@ -161,7 +167,8 @@ internal sealed class Window_Chronicle : Window
     {
         "RimMult.ChronicleColPlayer", "RimMult.ChronicleColColonies", "RimMult.ChronicleColColonists", "RimMult.ChronicleColWealth",
         "RimMult.ChronicleColRaidsLed", "RimMult.ChronicleColRaidsSuffered", "RimMult.ChronicleColHelps", "RimMult.ChronicleColParcels",
-        "RimMult.ChronicleColSettlements",
+        "RimMult.ChronicleColSettlements", "RimMult.ChronicleColWars", "RimMult.ChronicleColBroken", "RimMult.ChronicleColKept",
+        "RimMult.ChronicleColTribute",
     };
 
     private void DrawPlayers(Rect rect, ClientSession session)
@@ -176,7 +183,7 @@ internal sealed class Window_Chronicle : Window
         }
 
         const float rowHeight = 28f;
-        var nameWidth = rect.width * 0.24f;
+        var nameWidth = rect.width * 0.2f;
         var cellWidth = (rect.width - 16f - nameWidth) / (Columns.Length - 1);
         float X(int column) => column == 0 ? 0f : nameWidth + (column - 1) * cellWidth;
         float W(int column) => column == 0 ? nameWidth : cellWidth;
@@ -202,12 +209,15 @@ internal sealed class Window_Chronicle : Window
             var me = s.Owner == session.MyOwnerKey;
             var name = PlayerPalette.Colorize("■ " + s.Name, s.ColorIndex);
             Text.Anchor = TextAnchor.MiddleLeft;
-            Widgets.Label(new Rect(X(0) + 4f, row.y, W(0) - 4f, rowHeight), me ? $"<b>{name}</b>" : name);
+            var nameRect = new Rect(X(0) + 4f, row.y, W(0) - 4f, rowHeight);
+            Widgets.Label(nameRect, me ? $"<b>{name}</b>" : name);
+            TooltipHandler.TipRegion(nameRect, Reputation.Inspect(s));
             Text.Anchor = TextAnchor.MiddleCenter;
             var values = new[]
             {
                 s.Colonies.ToString(), s.Colonists.ToString(), s.Wealth.ToStringMoney(), s.RaidsLed.ToString(), s.RaidsSuffered.ToString(),
-                s.HelpsSent.ToString(), s.ParcelsSent.ToString(), s.SettlementsDestroyed.ToString(),
+                s.HelpsSent.ToString(), s.ParcelsSent.ToString(), s.SettlementsDestroyed.ToString(), s.WarsDeclared.ToString(),
+                s.TreatiesBroken.ToString(), s.TreatiesKept.ToString(), ((float)s.TributePaid).ToStringMoney(),
             };
             for (var c = 1; c < Columns.Length; c++)
                 Widgets.Label(new Rect(X(c), row.y, W(c), rowHeight), values[c - 1]);

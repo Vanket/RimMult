@@ -134,6 +134,14 @@ public sealed partial class GameServer
         {
             Record(ChronicleKind.HelpEnded, item.ToOwner, item.FromOwner, c: DeadIn(item.Summary));
         }
+        else if (ParcelAddress.TryParseResearch(address, out _, out var points))
+        {
+            Record(ChronicleKind.ResearchShared, item.FromOwner, item.ToOwner, a: points, text: item.Summary);
+        }
+        else if (ParcelAddress.IsTribute(address))
+        {
+            // Recorded as a payment (see NoteTribute).
+        }
         else if (!item.Returned)
         {
             StatsOf(item.FromOwner).ParcelsSent++;
@@ -144,12 +152,43 @@ public sealed partial class GameServer
     private static int DeadIn(string summary) =>
         summary.Split('\n').Count(line => line.StartsWith("D:", StringComparison.Ordinal));
 
-    private static ChronicleKind? KindOf(DiplomacyEvent happened) => happened switch
+    /// <summary>A relation changed or a treaty was made or broken: the chronicle and the players' reputation.</summary>
+    private void NoteDiplomacy(DiplomacyEvent kind, ulong from, ulong to, TreatyTerms terms, Treaty? treaty)
     {
-        DiplomacyEvent.WarDeclared => ChronicleKind.WarDeclared,
-        DiplomacyEvent.PeaceMade => ChronicleKind.PeaceMade,
-        DiplomacyEvent.AllianceMade => ChronicleKind.AllianceMade,
-        DiplomacyEvent.AllianceBroken => ChronicleKind.AllianceBroken,
-        _ => null,
-    };
+        switch (kind)
+        {
+            case DiplomacyEvent.WarDeclared:
+                StatsOf(from).WarsDeclared++;
+                Record(ChronicleKind.WarDeclared, from, to);
+                break;
+            case DiplomacyEvent.PeaceMade:
+                Record(ChronicleKind.PeaceMade, from, to);
+                if (treaty is { Kind: TreatyKind.Tribute })
+                    Record(ChronicleKind.TributeAgreed, treaty.Payer, treaty.Receiver, a: treaty.Amount, b: terms.Days);
+                break;
+            case DiplomacyEvent.AllianceMade:
+                Record(ChronicleKind.AllianceMade, from, to);
+                break;
+            case DiplomacyEvent.AllianceBroken:
+                StatsOf(from).TreatiesBroken++;
+                Record(ChronicleKind.AllianceBroken, from, to);
+                break;
+            case DiplomacyEvent.PactMade:
+                Record(ChronicleKind.PactMade, from, to, a: terms.Days);
+                break;
+            case DiplomacyEvent.TreatyBroken:
+                StatsOf(from).TreatiesBroken++;
+                Record(ChronicleKind.TreatyBroken, from, to);
+                break;
+            case DiplomacyEvent.TributeAgreed when treaty != null:
+                Record(ChronicleKind.TributeAgreed, treaty.Payer, treaty.Receiver, a: treaty.Amount, b: terms.Days);
+                break;
+            case DiplomacyEvent.UltimatumRejected:
+                // The one who threatened starts the war.
+                StatsOf(to).WarsDeclared++;
+                Record(ChronicleKind.UltimatumRejected, from, to);
+                break;
+        }
+    }
+
 }

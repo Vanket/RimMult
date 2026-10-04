@@ -42,6 +42,27 @@ public enum ChronicleKind : byte
 
     /// <summary>Actor wiped an NPC settlement off the map. <see cref="ChronicleEntry.Text"/>: its tile.</summary>
     SettlementDestroyed = 14,
+
+    /// <summary>Actor and target signed a non-aggression pact. <see cref="ChronicleEntry.A"/>: days.</summary>
+    PactMade = 15,
+
+    /// <summary>Actor tore up its treaties with target.</summary>
+    TreatyBroken = 16,
+
+    /// <summary>Actor agreed to pay target <see cref="ChronicleEntry.A"/> silver a quadrum for <see cref="ChronicleEntry.B"/> days.</summary>
+    TributeAgreed = 17,
+
+    /// <summary>Actor paid target <see cref="ChronicleEntry.A"/> silver of tribute.</summary>
+    TributePaid = 18,
+
+    /// <summary>Actor turned down target's ultimatum: war.</summary>
+    UltimatumRejected = 19,
+
+    /// <summary>The treaty between actor and target ran its course, kept by both.</summary>
+    TreatyExpired = 20,
+
+    /// <summary>Actor shared research with target. <see cref="ChronicleEntry.Text"/>: the project; <see cref="ChronicleEntry.A"/>: points.</summary>
+    ResearchShared = 21,
 }
 
 /// <summary>One line of the world's chronicle. Names are kept as they were, so the line reads the same later.</summary>
@@ -138,6 +159,18 @@ public sealed class PlayerStats
     public int ParcelsSent { get; set; }
     public int SettlementsDestroyed { get; set; }
 
+    /// <summary>Reputation: wars this player declared.</summary>
+    public int WarsDeclared { get; set; }
+
+    /// <summary>Reputation: alliances broken and treaties torn up by this player.</summary>
+    public int TreatiesBroken { get; set; }
+
+    /// <summary>Reputation: pacts and tributes this player saw through to the end.</summary>
+    public int TreatiesKept { get; set; }
+
+    /// <summary>Silver paid as tribute, in total.</summary>
+    public int TributePaid { get; set; }
+
     public PlayerStats Copy() => (PlayerStats)MemberwiseClone();
 
     public void Write(ByteWriter writer)
@@ -153,9 +186,27 @@ public sealed class PlayerStats
         writer.WriteVarInt(HelpsSent);
         writer.WriteVarInt(ParcelsSent);
         writer.WriteVarInt(SettlementsDestroyed);
+        writer.WriteVarInt(WarsDeclared);
+        writer.WriteVarInt(TreatiesBroken);
+        writer.WriteVarInt(TreatiesKept);
+        writer.WriteVarInt(TributePaid);
     }
 
-    public static PlayerStats Read(ByteReader reader) => new()
+    /// <param name="withReputation">False for world files older than format 7, which had no reputation.</param>
+    public static PlayerStats Read(ByteReader reader, bool withReputation = true)
+    {
+        var stats = ReadBase(reader);
+        if (withReputation)
+        {
+            stats.WarsDeclared = (int)reader.ReadVarInt();
+            stats.TreatiesBroken = (int)reader.ReadVarInt();
+            stats.TreatiesKept = (int)reader.ReadVarInt();
+            stats.TributePaid = (int)reader.ReadVarInt();
+        }
+        return stats;
+    }
+
+    private static PlayerStats ReadBase(ByteReader reader) => new()
     {
         Owner = reader.ReadUInt64(),
         Name = reader.ReadRequiredString(),
@@ -177,14 +228,14 @@ public sealed class PlayerStats
             entry.Write(writer);
     }
 
-    public static List<PlayerStats> ReadList(ByteReader reader)
+    public static List<PlayerStats> ReadList(ByteReader reader, bool withReputation = true)
     {
         var count = reader.ReadVarUInt();
         if (count > 100_000)
             throw new ProtocolException($"Too many players: {count}");
         var stats = new List<PlayerStats>((int)count);
         for (var i = 0UL; i < count; i++)
-            stats.Add(Read(reader));
+            stats.Add(Read(reader, withReputation));
         return stats;
     }
 }

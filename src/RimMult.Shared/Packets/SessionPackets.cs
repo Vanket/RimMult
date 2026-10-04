@@ -188,6 +188,18 @@ public sealed class PlayerList : IPacket
     }
 }
 
+/// <summary>Who hears a chat line. Wire values: never renumber.</summary>
+public enum ChatScope : byte
+{
+    All = 0,
+
+    /// <summary>The sender and the players allied with them.</summary>
+    Allies = 1,
+
+    /// <summary>The sender and <see cref="ChatMessage.TargetId"/> only.</summary>
+    Whisper = 2,
+}
+
 public sealed class ChatMessage : IPacket
 {
     public const int MaxLength = 500;
@@ -196,17 +208,32 @@ public sealed class ChatMessage : IPacket
     public int SenderId { get; set; }
     public string Text { get; set; } = "";
 
+    public ChatScope Scope { get; set; }
+
+    /// <summary>The player a whisper is for (player id).</summary>
+    public int TargetId { get; set; } = -1;
+
     public PacketType Type => PacketType.Chat;
 
     public void Write(ByteWriter writer)
     {
         writer.WriteVarInt(SenderId);
         writer.WriteString(Text);
+        writer.WriteByte((byte)Scope);
+        writer.WriteVarInt(TargetId);
     }
 
-    public static ChatMessage Read(ByteReader reader) => new()
+    public static ChatMessage Read(ByteReader reader)
     {
-        SenderId = (int)reader.ReadVarInt(),
-        Text = reader.ReadRequiredString(),
-    };
+        var message = new ChatMessage
+        {
+            SenderId = (int)reader.ReadVarInt(),
+            Text = reader.ReadRequiredString(),
+            Scope = (ChatScope)reader.ReadByte(),
+            TargetId = (int)reader.ReadVarInt(),
+        };
+        if (message.Scope > ChatScope.Whisper)
+            throw new ProtocolException($"Unknown chat scope {(byte)message.Scope}");
+        return message;
+    }
 }

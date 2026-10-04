@@ -42,6 +42,9 @@ public sealed class WorldUpdate : IPacket
     /// <summary>Wars and alliances between players.</summary>
     public List<RelationEntry> Relations { get; set; } = new();
 
+    /// <summary>Pacts, truces and tributes between players.</summary>
+    public List<Treaty> Treaties { get; set; } = new();
+
     public PacketType Type => PacketType.WorldUpdate;
 
     public void Write(ByteWriter writer)
@@ -51,6 +54,7 @@ public sealed class WorldUpdate : IPacket
         ColonyInfo.WriteList(writer, Colonies);
         WorldState.WriteStrings(writer, DestroyedSettlements);
         RelationEntry.WriteList(writer, Relations);
+        Treaty.WriteList(writer, Treaties);
     }
 
     public static WorldUpdate Read(ByteReader reader) => new()
@@ -59,6 +63,7 @@ public sealed class WorldUpdate : IPacket
         Colonies = ColonyInfo.ReadList(reader),
         DestroyedSettlements = WorldState.ReadStrings(reader),
         Relations = RelationEntry.ReadList(reader),
+        Treaties = Treaty.ReadList(reader),
     };
 }
 
@@ -235,18 +240,27 @@ public sealed class DiplomacyRequest : IPacket
     public ulong Target { get; set; }
     public DiplomacyAction Action { get; set; }
 
+    /// <summary>For pacts, peace with a tribute and ultimatums.</summary>
+    public TreatyTerms Terms { get; set; } = TreatyTerms.None;
+
     public PacketType Type => PacketType.DiplomacyRequest;
 
     public void Write(ByteWriter writer)
     {
         writer.WriteUInt64(Target);
         writer.WriteByte((byte)Action);
+        Terms.Write(writer);
     }
 
     public static DiplomacyRequest Read(ByteReader reader)
     {
-        var request = new DiplomacyRequest { Target = reader.ReadUInt64(), Action = (DiplomacyAction)reader.ReadByte() };
-        if (request.Action < DiplomacyAction.DeclareWar || request.Action > DiplomacyAction.Decline)
+        var request = new DiplomacyRequest
+        {
+            Target = reader.ReadUInt64(),
+            Action = (DiplomacyAction)reader.ReadByte(),
+            Terms = TreatyTerms.Read(reader),
+        };
+        if (request.Action < DiplomacyAction.DeclareWar || request.Action > DiplomacyAction.DemandTribute)
             throw new ProtocolException($"Unknown diplomacy action {(byte)request.Action}");
         return request;
     }
@@ -261,6 +275,12 @@ public sealed class DiplomacyNotice : IPacket
     public string ToName { get; set; } = "";
     public DiplomacyEvent Event { get; set; }
 
+    /// <summary>What was proposed or agreed (days, tribute).</summary>
+    public TreatyTerms Terms { get; set; } = TreatyTerms.None;
+
+    /// <summary>The treaty concerned (a tribute due, a treaty made), or 0.</summary>
+    public long TreatyId { get; set; }
+
     public PacketType Type => PacketType.DiplomacyNotice;
 
     public void Write(ByteWriter writer)
@@ -270,6 +290,8 @@ public sealed class DiplomacyNotice : IPacket
         writer.WriteUInt64(To);
         writer.WriteString(ToName);
         writer.WriteByte((byte)Event);
+        Terms.Write(writer);
+        writer.WriteVarInt(TreatyId);
     }
 
     public static DiplomacyNotice Read(ByteReader reader)
@@ -281,8 +303,10 @@ public sealed class DiplomacyNotice : IPacket
             To = reader.ReadUInt64(),
             ToName = reader.ReadRequiredString(),
             Event = (DiplomacyEvent)reader.ReadByte(),
+            Terms = TreatyTerms.Read(reader),
+            TreatyId = reader.ReadVarInt(),
         };
-        if (notice.Event < DiplomacyEvent.WarDeclared || notice.Event > DiplomacyEvent.ProposalDeclined)
+        if (notice.Event < DiplomacyEvent.WarDeclared || notice.Event > DiplomacyEvent.TributePaid)
             throw new ProtocolException($"Unknown diplomacy event {(byte)notice.Event}");
         return notice;
     }

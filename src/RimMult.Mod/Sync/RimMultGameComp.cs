@@ -31,6 +31,9 @@ public sealed class RimMultGameComp : GameComponent
     /// <summary>Allies' people helping here right now (led by their owner in person).</summary>
     public List<HelpRecord> Helps = new();
 
+    /// <summary>Research already shared, as "owner|project" (each project goes to each ally once).</summary>
+    public List<string> SharedResearch = new();
+
     public RimMultGameComp(Game game)
     {
     }
@@ -52,6 +55,8 @@ public sealed class RimMultGameComp : GameComponent
         Scribe_Collections.Look(ref Raids, "playerRaids", LookMode.Deep);
         Scribe_Collections.Look(ref Helps, "playerHelps", LookMode.Deep);
         Helps ??= new List<HelpRecord>();
+        Scribe_Collections.Look(ref SharedResearch, "sharedResearch", LookMode.Value);
+        SharedResearch ??= new List<string>();
         ReceivedParcels ??= new List<long>();
         Raids ??= new List<RaidRecord>();
         if (Scribe.mode == LoadSaveMode.PostLoadInit)
