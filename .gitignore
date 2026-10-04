@@ -10,3 +10,6 @@ mod/1.6/Assemblies/*
 !mod/1.6/Assemblies/.gitkeep
 # Dedicated server runtime data.
 saves/
+# Local working notes, kept off the repository.
+CLAUDE.md
+AGENTS.md
