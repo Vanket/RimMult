@@ -74,7 +74,7 @@ internal static class CoopEdits
     public static void GuestUpdate(bool force)
     {
         var now = Time.realtimeSinceStartup;
-        if (!force && now - _lastCheck < CheckInterval)
+        if ((!force && now - _lastCheck < CheckInterval) || !ScribeMemory.Idle)
             return;
         _lastCheck = now;
         try
