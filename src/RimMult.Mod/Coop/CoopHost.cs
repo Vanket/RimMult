@@ -632,7 +632,7 @@ internal static class CoopHost
         {
             case CoopChannel.JoinRequest:
                 if (Current.ProgramState != ProgramState.Playing || LongEventHandler.AnyEventNowOrWaiting || !ScribeMemory.Idle
-                    || (visit && !Sync.PlayerVisits.CanHost(session, guestId)))
+                    || (visit && !Sync.PlayerVisits.CanHost(session, guestId, data)))
                 {
                     session.SendCoop(CoopChannel.NotReady, Array.Empty<byte>(), guestId);
                     return;
@@ -642,9 +642,12 @@ internal static class CoopHost
                 // Everything after this save reaches the guest as batches; grids, zones and designations go out in full again.
                 ForgetSentState();
                 if (visit)
-                    Sync.PlayerVisits.Joined(session, guestId);
+                    Sync.PlayerVisits.Joined(session, guestId, data);
                 else
                     Messages.Message("RimMult.CoopGuestJoining".Translate(session.NameOf(guestId)), RimWorld.MessageTypeDefOf.NeutralEvent, historical: false);
+                break;
+            case CoopChannel.Ready when visit && Sync.PlayerVisits.IsWatching(guestId):
+                Messages.Message("RimMult.WatchJoined".Translate(session.NameOf(guestId)), RimWorld.MessageTypeDefOf.NeutralEvent, historical: false);
                 break;
             case CoopChannel.Ready:
                 Messages.Message((visit ? "RimMult.VisitJoined" : "RimMult.CoopGuestJoined").Translate(session.NameOf(guestId)),

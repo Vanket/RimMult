@@ -85,6 +85,9 @@ internal static class CoopGuest
     /// <summary>The visit is to help an ally (the visited colony is a friend), not a raid.</summary>
     public static bool VisitHelp { get; private set; }
 
+    /// <summary>The visit is only to watch an ally's colony: nothing here takes orders from this player.</summary>
+    public static bool VisitWatch { get; private set; }
+
     /// <summary>Checks from the host, compared once the batches before them are applied.</summary>
     private static readonly List<byte[]> Checks = new();
 
@@ -118,6 +121,7 @@ internal static class CoopGuest
         Visiting = false;
         VisitPawns = new HashSet<int>();
         VisitHelp = false;
+        VisitWatch = false;
         _retryAt = 0f;
         Pending.Clear();
         PendingPositions.Clear();
@@ -174,8 +178,11 @@ internal static class CoopGuest
         session.SendCoop(CoopChannel.JoinRequest, Array.Empty<byte>());
     }
 
-    /// <summary>Separate colonies: asks <paramref name="playerId"/> for their game, to lead a live raid in it.</summary>
-    public static void RequestVisit(ClientSession session, int playerId)
+    /// <summary>
+    /// Separate colonies: asks <paramref name="playerId"/> for their game, to lead a live raid (or helpers) in it — or
+    /// only to <paramref name="watch"/> it.
+    /// </summary>
+    public static void RequestVisit(ClientSession session, int playerId, bool watch = false)
     {
         if (State != Phase.None)
             return;
@@ -183,10 +190,14 @@ internal static class CoopGuest
         State = Phase.Requested;
         Target = playerId;
         Visiting = true;
+        VisitWatch = watch;
         _visitTries = 1;
         _retryAt = 0f;
-        SendToHost(CoopChannel.JoinRequest, Array.Empty<byte>());
+        SendToHost(CoopChannel.JoinRequest, JoinRequestData());
     }
+
+    /// <summary>What a visit's join request says: empty for a raid or help, <see cref="Sync.PlayerVisits.WatchVisit"/> to watch.</summary>
+    private static byte[] JoinRequestData() => VisitWatch ? new[] { (byte)Sync.PlayerVisits.WatchVisit } : Array.Empty<byte>();
 
     public static void Update(ClientSession? session)
     {
@@ -204,7 +215,7 @@ internal static class CoopGuest
             case Phase.Requested when Visiting && _retryAt > 0f && Time.realtimeSinceStartup >= _retryAt:
                 _retryAt = 0f;
                 _visitTries++;
-                SendToHost(CoopChannel.JoinRequest, Array.Empty<byte>());
+                SendToHost(CoopChannel.JoinRequest, JoinRequestData());
                 break;
             case Phase.Loading:
                 UpdateLoading(session);
@@ -238,6 +249,10 @@ internal static class CoopGuest
 
         switch (channel)
         {
+            case CoopChannel.NotReady when State == Phase.Requested && Visiting && VisitWatch:
+                // Nothing to wait for: the ally doesn't let anyone watch (or isn't an ally anymore).
+                Leave("RimMult.WatchRefused".Translate(session.NameOf(Target)));
+                break;
             case CoopChannel.NotReady when State == Phase.Requested && Visiting:
                 // The raiders may not have arrived yet: ask again in a moment.
                 if (_visitTries >= VisitTries)
@@ -251,6 +266,7 @@ internal static class CoopGuest
                     // The kind of visit first, then the pawns.
                     var info = CoopIds.Decode(data);
                     VisitHelp = info.Count > 0 && info[0] == Sync.PlayerVisits.HelpVisit;
+                    VisitWatch = info.Count > 0 && info[0] == Sync.PlayerVisits.WatchVisit;
                     VisitPawns = new HashSet<int>(info.Skip(1));
                 }
                 catch (Exception)

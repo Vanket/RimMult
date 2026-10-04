@@ -41,6 +41,14 @@ internal static class StatusOverlay
 
         if (Widgets.ButtonInvisible(rect))
             Multiplayer.OpenDialog();
+
+        // Watching an ally: no pawns of one's own to carry a "go home" button, so it sits under the status.
+        if (CoopGuest.Visiting && CoopGuest.VisitWatch && CoopGuest.Active)
+        {
+            var home = new Rect((Verse.UI.screenWidth - 220f) / 2f, rect.yMax + 4f, 220f, 28f);
+            if (Widgets.ButtonText(home, "RimMult.WatchGoHome".Translate()))
+                PlayerVisit.ReturnHome(null);
+        }
     }
 
     private static string Describe(ClientSession session)

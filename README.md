@@ -32,7 +32,7 @@
 - **Рейды** караваном или капсулами: под управлением ИИ или **лично** — вы загружаете игру защитника и командуете
   своими бойцами (отступить, похитить, украсть, вернуться домой), пока он обороняется. Выжившие возвращаются
   караваном с добычей и пленными.
-- **Помощь союзнику лично** — в его квестах или против рейда.
+- **Помощь союзнику лично** — в его квестах или против рейда; **посмотреть колонию** союзника вживую (без управления).
 - **Общий мир NPC**: поселения NPC стоят в одних и тех же местах у всех (расстановку задаёт создатель мира);
   разгромленное поселение исчезает у всех. Отношения с фракциями и торговцы у каждой колонии свои.
 - **Летопись мира**: основанные колонии, войны, рейды и их итоги, посылки; таблица игроков — богатство, колонисты,
@@ -152,7 +152,8 @@ parcels (even to offline players), moving colonists over, trade, diplomacy (alli
 pacts, truces, peace with tribute, "pay or it's war" ultimatums, public treaty-breaking and reputation), an allies'
 chat channel and whispers, research shared with allies, prisoner ransom in wartime, a showcase of the partner's stock
 in trades, a **world market** (lots that sell while you're away, orders with a reward and a deadline), raids led by the AI or
-**in person** (you load the defender's game and command your fighters), helping an ally in person, a shared NPC
+**in person** (you load the defender's game and command your fighters), helping an ally in person, watching an ally's
+colony live, a shared NPC
 world (settlements in the same places for everyone), and a **world chronicle** with players' stats — kept by the host's save or the dedicated server.
 
 **Co-op** — everyone plays the host's colony live: any orders (designations, building, drafting, right-click with
