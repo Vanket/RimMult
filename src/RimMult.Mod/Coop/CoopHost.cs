@@ -59,6 +59,9 @@ internal static class CoopHost
     private static readonly Dictionary<int, int> ZoneHash = new();
     private static readonly Dictionary<int, int> GridHash = new();
     private static readonly Dictionary<int, int> AreaHash = new();
+
+    /// <summary>The maps guests know of; a change goes out as <see cref="CoopChannel.MapsChanged"/>.</summary>
+    private static HashSet<int>? _sentMaps;
     private static float _lastPositions;
     private static float _lastPositionsSent;
     private static byte[] _lastPositionsData = Array.Empty<byte>();
@@ -123,6 +126,8 @@ internal static class CoopHost
         ZoneHash.Clear();
         GridHash.Clear();
         AreaHash.Clear();
+        // The game a guest just got has exactly these maps.
+        _sentMaps = Current.ProgramState == ProgramState.Playing ? new HashSet<int>(Find.Maps.Select(m => m.uniqueID)) : null;
         _lastPositionsData = Array.Empty<byte>();
     }
 
@@ -187,6 +192,14 @@ internal static class CoopHost
             Shots.Clear();
             Pending.Clear();
             return;
+        }
+
+        var mapIds = Find.Maps.Select(m => m.uniqueID).ToList();
+        if (_sentMaps == null || !_sentMaps.SetEquals(mapIds))
+        {
+            if (_sentMaps != null)
+                Broadcast(session, CoopChannel.MapsChanged, CoopIds.Encode(mapIds));
+            _sentMaps = new HashSet<int>(mapIds);
         }
 
         var now = Time.realtimeSinceStartup;

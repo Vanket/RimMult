@@ -296,4 +296,14 @@ public class DiplomacyTests
         Assert.True(ParcelAddress.TryParseRaid(ParcelAddress.ForRaid("r3", ParcelAddress.RaidArrival.DropPods, "5"), out _, out _, out _, out isLive));
         Assert.False(isLive);
     }
+
+    [Fact]
+    public void HelpAddressesRoundTrip()
+    {
+        Assert.True(ParcelAddress.TryParseHelp(ParcelAddress.ForHelp("h1", ParcelAddress.RaidArrival.DropPods), out var id, out var arrival));
+        Assert.Equal(("h1", ParcelAddress.RaidArrival.DropPods), (id, arrival));
+        Assert.False(ParcelAddress.IsRaid(ParcelAddress.ForHelp("h1", ParcelAddress.RaidArrival.WalkIn)));
+        Assert.True(ParcelAddress.IsHelpReturn(ParcelAddress.ForHelpReturn("h1")));
+        Assert.False(ParcelAddress.IsHelp(ParcelAddress.ForHelpReturn("h1")));
+    }
 }

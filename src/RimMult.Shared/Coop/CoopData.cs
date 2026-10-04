@@ -55,6 +55,12 @@ public enum CoopChannel : byte
 
     /// <summary>Either way: the visit is over (the raid ended, or the visitor went home).</summary>
     VisitEnd = 11,
+
+    /// <summary>
+    /// Host → guests: the host's maps now (<see cref="CoopIds"/>, map ids). A guest missing one (a quest site, an
+    /// ambush, a gravship's new landing) loads the game again; one the host doesn't have any more is removed.
+    /// </summary>
+    MapsChanged = 12,
 }
 
 /// <summary>A pawn aiming at something (the warm-up before a shot): guests draw the aim pie and, when selected, the line.</summary>
@@ -581,6 +587,9 @@ public sealed class CoopWorld
     /// <summary>The colony's apparel, drug and food policies as Scribe XML, when they changed; null otherwise.</summary>
     public string? Policies { get; set; }
 
+    /// <summary>The colony's quests as Scribe XML, when one appeared or changed state; null otherwise.</summary>
+    public string? Quests { get; set; }
+
     /// <summary>The colony's caravans on the globe, when one moved; null otherwise.</summary>
     public List<CaravanPosition>? Caravans { get; set; }
 
@@ -591,7 +600,7 @@ public sealed class CoopWorld
     public List<int> RemovedWorldObjects { get; set; } = new();
 
     public bool IsEmpty => Factions == null && Research == null && CurrentResearch == null && Letters.Count == 0 && Policies == null
-                           && Caravans == null && WorldObjects.Count == 0 && RemovedWorldObjects.Count == 0;
+                           && Quests == null && Caravans == null && WorldObjects.Count == 0 && RemovedWorldObjects.Count == 0;
 
     public void Write(ByteWriter writer)
     {
@@ -621,6 +630,7 @@ public sealed class CoopWorld
         foreach (var letter in Letters)
             letter.Write(writer);
         writer.WriteString(Policies);
+        writer.WriteString(Quests);
         writer.WriteBool(Caravans != null);
         if (Caravans != null)
         {
@@ -658,6 +668,7 @@ public sealed class CoopWorld
         for (var i = 0; i < letters; i++)
             world.Letters.Add(CoopLetter.Read(reader));
         world.Policies = reader.ReadString();
+        world.Quests = reader.ReadString();
         if (reader.ReadBool())
         {
             var count = MapDelta.Count(reader, 10_000);
@@ -746,6 +757,9 @@ public enum CoopCommandKind : byte
 
     /// <summary>A visitor's order to one of its pawns: the job as Scribe XML (go there, attack that, cast, kidnap…).</summary>
     Job = 11,
+
+    /// <summary>A quest accepted from the quests tab (quest id in <see cref="CoopCommand.Number"/>, the accepting pawn if any).</summary>
+    QuestAccept = 12,
 }
 
 /// <summary>An order a co-op guest gave; the host finds the same designator/option/gizmo in its game and runs it.</summary>
@@ -799,7 +813,7 @@ public sealed class CoopCommand
     {
         var reader = new ByteReader(data);
         var command = new CoopCommand { Kind = (CoopCommandKind)reader.ReadByte(), MapId = (int)reader.ReadVarInt() };
-        if (command.Kind < CoopCommandKind.Designate || command.Kind > CoopCommandKind.Job)
+        if (command.Kind < CoopCommandKind.Designate || command.Kind > CoopCommandKind.QuestAccept)
             throw new ProtocolException($"Unknown co-op command {(byte)command.Kind}");
         var things = MapDelta.Count(reader, 100_000);
         for (var i = 0; i < things; i++)

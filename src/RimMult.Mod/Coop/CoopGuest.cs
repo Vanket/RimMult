@@ -79,14 +79,23 @@ internal static class CoopGuest
     /// </summary>
     public static bool Visiting { get; private set; }
 
-    /// <summary>The pawns (thing ids in the visited game) this visitor commands: its raiders.</summary>
+    /// <summary>The pawns (thing ids in the visited game) this visitor commands: its raiders, or its helpers.</summary>
     public static HashSet<int> VisitPawns { get; private set; } = new();
+
+    /// <summary>The visit is to help an ally (the visited colony is a friend), not a raid.</summary>
+    public static bool VisitHelp { get; private set; }
 
     private static int _visitTries;
     private static float _retryAt;
 
     /// <summary>Playing the host's colony right now: orders go to the host, the local copy doesn't tick.</summary>
     public static bool Active => State == Phase.Active && Current.ProgramState == ProgramState.Playing && Current.Game == _game;
+
+    /// <summary>The host's copy is on screen (playing it, or waiting for a fresh one): it must not tick or be saved.</summary>
+    public static bool CopyInPlay => State != Phase.None && _game != null && Current.Game == _game;
+
+    /// <summary>The map the guest was looking at before loading the game again (shown again after).</summary>
+    private static int? _returnToMap;
 
     /// <summary>True while a batch from the host is applied: the guest's own order patches stand aside.</summary>
     public static bool Applying { get; private set; }
@@ -105,6 +114,7 @@ internal static class CoopGuest
         Target = -1;
         Visiting = false;
         VisitPawns = new HashSet<int>();
+        VisitHelp = false;
         _retryAt = 0f;
         Pending.Clear();
         PendingPositions.Clear();
@@ -231,7 +241,10 @@ internal static class CoopGuest
             case CoopChannel.VisitInfo:
                 try
                 {
-                    VisitPawns = new HashSet<int>(CoopIds.Decode(data));
+                    // The kind of visit first, then the pawns.
+                    var info = CoopIds.Decode(data);
+                    VisitHelp = info.Count > 0 && info[0] == Sync.PlayerVisits.HelpVisit;
+                    VisitPawns = new HashSet<int>(info.Skip(1));
                 }
                 catch (Exception)
                 {
@@ -260,6 +273,9 @@ internal static class CoopGuest
                 break;
             case CoopChannel.RunLocally when Active:
                 CoopCommands.RunLocally(data);
+                break;
+            case CoopChannel.MapsChanged when Active:
+                OnMapsChanged(session, data);
                 break;
         }
     }
@@ -301,6 +317,9 @@ internal static class CoopGuest
             DeleteSave();
             ScribeMemory.ResetCache();
             SendToHost(CoopChannel.Ready, Array.Empty<byte>());
+            if (_returnToMap is { } mapId && Find.Maps.FirstOrDefault(m => m.uniqueID == mapId) is { } map)
+                Current.Game.CurrentMap = map;
+            _returnToMap = null;
             if (Visiting)
                 Sync.PlayerVisit.CopyLoaded();
             ApplyPending();
@@ -320,6 +339,50 @@ internal static class CoopGuest
             session.LeaveWorld();
             Messages.Message("RimMult.CoopLoadFailed".Translate(), MessageTypeDefOf.RejectInput, historical: false);
         }
+    }
+
+    /// <summary>
+    /// The host's maps changed: one it closed (a quest site left behind) is closed here too; a new one (a quest site,
+    /// an ambush, a gravship's landing) can only come with the whole game, so the game is loaded again.
+    /// </summary>
+    private static void OnMapsChanged(ClientSession session, byte[] data)
+    {
+        HashSet<int> ids;
+        try
+        {
+            ids = new HashSet<int>(CoopIds.Decode(data));
+        }
+        catch (Exception)
+        {
+            return;
+        }
+        if (ids.Count == 0)
+            return;
+
+        Applying = true;
+        try
+        {
+            foreach (var gone in Find.Maps.Where(m => !ids.Contains(m.uniqueID)).ToList())
+                Current.Game.DeinitAndRemoveMap(gone, notifyPlayer: false);
+        }
+        catch (Exception e)
+        {
+            Log.Warning($"[RimMult] Co-op: could not close a map the host closed: {e.Message}");
+        }
+        finally
+        {
+            Applying = false;
+        }
+
+        if (ids.All(id => Find.Maps.Any(m => m.uniqueID == id)))
+            return;
+        Messages.Message("RimMult.CoopNewMap".Translate(), MessageTypeDefOf.NeutralEvent, historical: false);
+        _returnToMap = Find.CurrentMap?.uniqueID;
+        Pending.Clear();
+        PendingPositions.Clear();
+        Deferred.Clear();
+        State = Phase.Requested;
+        SendToHost(CoopChannel.JoinRequest, Array.Empty<byte>());
     }
 
     private static int HostId(ClientSession session) => session.Players.FirstOrDefault(p => p.IsHost)?.Id ?? -1;

@@ -279,6 +279,7 @@ internal static class ScribeMemory
     {
         foreach (var map in Find.Maps)
         {
+            yield return map;
             foreach (var thing in map.listerThings.AllThings)
             {
                 yield return thing;

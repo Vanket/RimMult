@@ -38,7 +38,7 @@ internal static class CoopSpawnPatches
 [HarmonyPatch(typeof(TickManager), nameof(TickManager.DoSingleTick))]
 internal static class CoopTickPatch
 {
-    private static bool Prefix() => !CoopGuest.Active;
+    private static bool Prefix() => !CoopGuest.CopyInPlay;
 }
 
 /// <summary>The guest's copy is not theirs to keep while playing: saving would only save a stale copy.</summary>
@@ -47,7 +47,7 @@ internal static class CoopNoSavePatch
 {
     private static bool Prefix()
     {
-        if (!CoopGuest.Active)
+        if (!CoopGuest.CopyInPlay)
             return true;
         Messages.Message("RimMult.CoopNoSave".Translate(), MessageTypeDefOf.RejectInput, historical: false);
         return false;

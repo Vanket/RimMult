@@ -32,6 +32,7 @@ internal static class CoopWorldSync
     private static readonly Dictionary<string, float> SentProgress = new();
     private static int? _factionsHash;
     private static int? _policiesHash;
+    private static int? _questsSignature;
     private static string? _sentCurrent;
     private static float _lastCheck;
 
@@ -40,6 +41,7 @@ internal static class CoopWorldSync
     {
         _factionsHash = null;
         _policiesHash = null;
+        _questsSignature = null;
         CoopGlobe.Forget();
         _sentCurrent = null;
         SentProgress.Clear();
@@ -123,6 +125,16 @@ internal static class CoopWorldSync
             world.CurrentResearch = current;
         }
 
+        // Quests: a cheap signature every check, the whole quest log when it changed (a guest got the log with the game).
+        var questsSignature = QuestsSignature();
+        if (_questsSignature == null)
+            _questsSignature = questsSignature;
+        else if (questsSignature != _questsSignature)
+        {
+            _questsSignature = questsSignature;
+            world.Quests = ScribeMemory.Save(Find.QuestManager.ExposeData);
+        }
+
         var policies = CoopEdits.SavePolicies();
         var policiesHash = policies.GetHashCode() ^ policies.Length;
         if (policiesHash != _policiesHash)
@@ -158,12 +170,57 @@ internal static class CoopWorldSync
                 ShowLetter(letter);
             if (world.Policies != null)
                 CoopEdits.ApplyPolicies(world.Policies);
+            if (world.Quests != null)
+                ApplyQuests(world.Quests);
             CoopGlobe.Apply(world);
         }
         catch (Exception e)
         {
             Log.ErrorOnce($"[RimMult] Co-op: could not apply the host's world: {e}", 0x434F574C);
         }
+    }
+
+    private static int QuestsSignature()
+    {
+        unchecked
+        {
+            var hash = 17;
+            foreach (var quest in Find.QuestManager.QuestsListForReading)
+            {
+                hash = hash * 31 + quest.id;
+                hash = hash * 31 + (int)quest.State;
+                hash = hash * 31 + (quest.dismissed ? 1 : 0) + (quest.hidden ? 2 : 0) + (quest.hiddenInUI ? 4 : 0);
+            }
+            return hash;
+        }
+    }
+
+    /// <summary>Guest: the host's quest log replaces the copy's (offers, accepted, finished).</summary>
+    private static void ApplyQuests(string xml)
+    {
+        try
+        {
+            var fresh = new QuestManager();
+            var replaced = new HashSet<string>(Find.QuestManager.QuestsListForReading.Select(q => q.GetUniqueLoadID()));
+            ScribeMemory.Load(ScribeMemory.Parse(xml), replaced, fresh.ExposeData);
+            Current.Game.questManager = fresh;
+        }
+        catch (Exception e)
+        {
+            Log.WarningOnce($"[RimMult] Co-op: could not take over the host's quests: {e}", 0x434F5155);
+        }
+    }
+
+    /// <summary>Host: a guest accepted a quest in its quests tab.</summary>
+    public static void AcceptQuest(CoopCommand command)
+    {
+        var quest = Find.QuestManager.QuestsListForReading.FirstOrDefault(q => q.id == command.Number);
+        if (quest == null || quest.State != QuestState.NotYetAccepted)
+            return;
+        Pawn? by = null;
+        if (command.ThingIds.Count > 0)
+            by = Find.Maps.SelectMany(m => m.mapPawns.AllPawns).FirstOrDefault(p => p.thingIDNumber == command.ThingIds[0]);
+        quest.Accept(by);
     }
 
     private static void ApplyFactions(List<FactionStanding> standings)
@@ -193,6 +250,22 @@ internal static class CoopWorldSync
         if (map != null && cell.InBounds(map))
             look = new LookTargets(new TargetInfo(cell, map));
         Find.LetterStack.ReceiveLetter(LetterMaker.MakeLetter(shared.Label, shared.Text, def, look));
+    }
+}
+
+/// <summary>Guest: accepting a quest in the quests tab accepts it in the host's game.</summary>
+[HarmonyPatch(typeof(Quest), nameof(Quest.Accept))]
+internal static class CoopQuestAcceptPatch
+{
+    private static bool Prefix(Quest __instance, Pawn by)
+    {
+        if (!CoopGuest.Active || CoopGuest.Applying || CoopGuest.Visiting)
+            return true;
+        var command = new CoopCommand { Kind = CoopCommandKind.QuestAccept, Number = __instance.id };
+        if (by != null)
+            command.ThingIds.Add(by.thingIDNumber);
+        CoopCommands.Send(command);
+        return false;
     }
 }
 

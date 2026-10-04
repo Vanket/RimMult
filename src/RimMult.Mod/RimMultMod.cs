@@ -30,6 +30,13 @@ public sealed class RimMultMod : Mod
         });
 
         Log.Message($"[RimMult] {content.ModMetaData.ModVersion} loaded, protocol v{ProtocolInfo.Version}");
+
+        // The other multiplayer mod rewrites the same parts of the game (ticks, orders, saving): never both.
+        if (ModLister.GetActiveModWithIdentifier("rwmt.Multiplayer", ignorePostfix: true) != null)
+        {
+            Log.Error("[RimMult] The \"Multiplayer\" mod (rwmt.Multiplayer) is active: it doesn't work together with RimMult. Disable one of them.");
+            LongEventHandler.ExecuteWhenFinished(() => Find.WindowStack.Add(new Dialog_MessageBox("RimMult.OtherMultiplayerMod".Translate())));
+        }
     }
 
     /// <summary>Applies the patch classes one by one: one that can't be applied (another mod, a game update) doesn't take the rest down.</summary>

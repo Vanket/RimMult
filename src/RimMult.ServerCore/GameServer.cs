@@ -336,10 +336,11 @@ public sealed class GameServer
                 item.Returned = true;
             }
         }
-        else if (!ParcelAddress.IsRaidReturn(parcel.ToTile) && !World.Colonies.Any(c => c.OwnerSteamId == parcel.ToOwner))
+        else if (!ParcelAddress.IsRaidReturn(parcel.ToTile) && !ParcelAddress.IsHelpReturn(parcel.ToTile)
+                 && !World.Colonies.Any(c => c.OwnerSteamId == parcel.ToOwner))
         {
             // Nobody has a colony there anymore (abandoned, or a stale target): send it back rather than lose it.
-            // (Raiders going home always reach their owner, whenever they next play.)
+            // (Raiders and helpers going home always reach their owner, whenever they next play.)
             item.ToOwner = from;
             item.ToTile = "";
             item.Returned = true;

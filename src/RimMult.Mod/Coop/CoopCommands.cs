@@ -194,6 +194,9 @@ internal static class CoopCommands
                 case CoopCommandKind.Edit:
                     CoopEdits.Apply(command, map);
                     break;
+                case CoopCommandKind.QuestAccept:
+                    CoopWorldSync.AcceptQuest(command);
+                    break;
                 case CoopCommandKind.CaravanGoto:
                 case CoopCommandKind.WorldFloatMenu:
                 case CoopCommandKind.FormCaravan:

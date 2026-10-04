@@ -93,4 +93,32 @@ public static class ParcelAddress
         tile = parts[1];
         return survivors >= 0 && captives >= 0;
     }
+
+    private const string HelpPrefix = "help:";
+    private const string HelpReturnPrefix = "helpret:";
+
+    /// <summary>An ally's people coming to help (the ally leads them in person, in this player's game).</summary>
+    public static string ForHelp(string helpId, RaidArrival arrival) =>
+        $"{HelpPrefix}{helpId}|{(arrival == RaidArrival.DropPods ? "p" : "c")}";
+
+    public static bool IsHelp(string address) => address.StartsWith(HelpPrefix);
+
+    public static bool TryParseHelp(string address, out string helpId, out RaidArrival arrival)
+    {
+        helpId = "";
+        arrival = RaidArrival.WalkIn;
+        if (!IsHelp(address))
+            return false;
+        var parts = address.Substring(HelpPrefix.Length).Split('|');
+        if (parts.Length != 2 || parts[0].Length == 0)
+            return false;
+        helpId = parts[0];
+        arrival = parts[1] == "p" ? RaidArrival.DropPods : RaidArrival.WalkIn;
+        return true;
+    }
+
+    /// <summary>The ally's people going home after helping (they land at home by pod).</summary>
+    public static string ForHelpReturn(string helpId) => HelpReturnPrefix + helpId;
+
+    public static bool IsHelpReturn(string address) => address.StartsWith(HelpReturnPrefix);
 }

@@ -248,13 +248,14 @@ public class CoopTests
         {
             Tick = 3,
             Maps = { new MapDelta { MapId = 1, Areas = "<root><areas/></root>" } },
-            World = new CoopWorld { Policies = "<root><outfits/></root>" },
+            World = new CoopWorld { Policies = "<root><outfits/></root>", Quests = "<root><quests/></root>" },
         };
 
         var copy = CoopBatch.Decode(batch.Encode());
 
         Assert.Equal("<root><areas/></root>", copy.Maps[0].Areas);
         Assert.Equal("<root><outfits/></root>", copy.World.Policies);
+        Assert.Equal("<root><quests/></root>", copy.World.Quests);
         Assert.False(copy.World.IsEmpty);
         Assert.Null(CoopBatch.Decode(new CoopBatch { Maps = { new MapDelta() } }.Encode()).Maps[0].Areas);
     }
