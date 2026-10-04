@@ -18,8 +18,11 @@ public sealed class RimMultMod : Mod
         Instance = this;
         Settings = GetSettings<RimMultSettings>();
         var harmony = new Harmony(HarmonyId);
+        Harmony = harmony;
         PatchAll(harmony);
-        Patches.CoopOverridePatches.Apply(harmony);
+        // Patches over every mod's subclasses (all designators, buttons, verbs, job drivers) wait for the game to
+        // have loaded: patching compiles those methods, which runs their classes' static constructors, and many
+        // load textures there — off the main thread, in the middle of mod loading, that crashes the game.
 
         LongEventHandler.ExecuteWhenFinished(() =>
         {
@@ -39,11 +42,19 @@ public sealed class RimMultMod : Mod
         }
     }
 
-    /// <summary>Applies the patch classes one by one: one that can't be applied (another mod, a game update) doesn't take the rest down.</summary>
-    private static void PatchAll(Harmony harmony)
+    public static Harmony Harmony { get; private set; } = null!;
+
+    /// <summary>
+    /// Applies the patch classes one by one: one that can't be applied (another mod, a game update) doesn't take the
+    /// rest down. <paramref name="late"/>: the ones marked <see cref="Patches.LatePatchAttribute"/> (see the constructor).
+    /// </summary>
+    public static void PatchAll(Harmony harmony, bool late = false)
     {
         foreach (var type in AccessTools.GetTypesFromAssembly(typeof(RimMultMod).Assembly))
         {
+            if (!System.Attribute.IsDefined(type, typeof(HarmonyAttribute), inherit: false)
+                || System.Attribute.IsDefined(type, typeof(Patches.LatePatchAttribute), inherit: false) != late)
+                continue;
             try
             {
                 harmony.CreateClassProcessor(type).Patch();

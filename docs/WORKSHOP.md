@@ -1,5 +1,9 @@
 # Публикация в Steam Workshop
 
+Мод опубликован: https://steamcommunity.com/sharedfiles/filedetails/?id=3813029532 — номер лежит в
+`mod/About/PublishedFileId.txt`, поэтому загрузка из игры обновляет этот предмет. Для обновления: новый тег →
+архив из Releases → заменить папку в `RimWorld/Mods` → «Загрузить в Мастерскую Steam».
+
 ## Подготовка
 
 1. Поставить тег версии: `git tag v0.5.0 && git push origin v0.5.0` — GitHub Actions соберёт релиз

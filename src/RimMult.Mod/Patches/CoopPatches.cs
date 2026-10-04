@@ -55,6 +55,28 @@ internal static class CoopNoSavePatch
 }
 
 /// <summary>
+/// Marks a patch class whose targets are every mod's subclasses of something: applied once the game has loaded
+/// (on the main thread), not while mods load (see <see cref="RimMultMod"/>).
+/// </summary>
+[AttributeUsage(AttributeTargets.Class)]
+internal sealed class LatePatchAttribute : Attribute
+{
+}
+
+/// <summary>Applies the late patches when the game has finished loading, on the main thread.</summary>
+[StaticConstructorOnStartup]
+internal static class LatePatches
+{
+    static LatePatches()
+    {
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        RimMultMod.PatchAll(RimMultMod.Harmony, late: true);
+        CoopOverridePatches.Apply(RimMultMod.Harmony);
+        Log.Message($"[RimMult] Patched mods' buttons and orders in {watch.ElapsedMilliseconds} ms");
+    }
+}
+
+/// <summary>
 /// Guest orders that live in overridable methods (every designator's Designate*, every gizmo's ProcessInput, mods'
 /// included). Patched one by one, so a mod's odd override can't stop the rest from being patched.
 /// </summary>

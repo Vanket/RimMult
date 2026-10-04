@@ -3,7 +3,7 @@
 	// RimWorld's Steam app id.
 	"appid"		"294100"
 	// 0 for the first upload; then the id Steam gave the item (also in mod/About/PublishedFileId.txt).
-	"publishedfileid"		"0"
+	"publishedfileid"		"3813029532"
 	// Absolute path to the packaged mod folder (the unzipped release, or mod/ after a Release build).
 	"contentfolder"		"C:\\path\\to\\RimMult"
 	"previewfile"		"C:\\path\\to\\RimMult\\About\\Preview.png"
