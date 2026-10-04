@@ -501,4 +501,18 @@ If these are Workshop mods, the host probably has a newer version than the Works
   <RimMult.Market.OrderExpiredText>Nobody delivered your order in time; the reward is back: {1}.</RimMult.Market.OrderExpiredText>
   <RimMult.Chronicle.MarketSale>{0} bought from {1} on the market: {5} for {2} silver.</RimMult.Chronicle.MarketSale>
   <RimMult.Chronicle.OrderDelivered>{0} delivered {1}'s order: {5}, reward {2} silver.</RimMult.Chronicle.OrderDelivered>
+  <RimMult.AllowWatch>Allies may watch my colony</RimMult.AllowWatch>
+  <RimMult.AllowWatchHint>Separate colonies: an ally can come and watch your colony live. They can't give any orders.</RimMult.AllowWatchHint>
+  <RimMult.Watch>Watch colony</RimMult.Watch>
+  <RimMult.WatchDesc>Go and watch {0}'s colony live (no orders). Your own colony leaves the world while you watch.</RimMult.WatchDesc>
+  <RimMult.WatchConfirm>Watch {0}'s colony? Your game is saved and {0}'s game is loaded; your colony leaves the world meanwhile. "Go home" at the top of the screen brings you back.</RimMult.WatchConfirm>
+  <RimMult.WatchGoing>Your colony is saved. Loading {0}'s colony to watch…</RimMult.WatchGoing>
+  <RimMult.WatchStartedLabel>Visiting an ally</RimMult.WatchStartedLabel>
+  <RimMult.WatchStartedText>You are watching your ally's colony. You can look at everything but give no orders. "Go home" at the top of the screen brings you back.</RimMult.WatchStartedText>
+  <RimMult.WatchOnly>You are only watching.</RimMult.WatchOnly>
+  <RimMult.WatchGoHome>Go home</RimMult.WatchGoHome>
+  <RimMult.WatchRefused>{0} doesn't let anyone watch right now</RimMult.WatchRefused>
+  <RimMult.WatchJoining>{0} is coming to watch your colony.</RimMult.WatchJoining>
+  <RimMult.WatchJoined>{0} is watching your colony.</RimMult.WatchJoined>
+  <RimMult.WatchLeft>{0} stopped watching your colony.</RimMult.WatchLeft>
 </LanguageData>

@@ -57,6 +57,9 @@ internal static class PlayerVisits
     public const int RaidVisit = 0;
     public const int HelpVisit = 1;
 
+    /// <summary>An ally only watching (also what its join request says).</summary>
+    public const int WatchVisit = 2;
+
     /// <summary>Jobs a visitor may give its raiders: moving, fighting, taking things and people, looking after themselves.</summary>
     private static readonly HashSet<string> AllowedJobs = new()
     {
@@ -74,8 +77,16 @@ internal static class PlayerVisits
     {
         public RaidRecord? Raid;
         public HelpRecord? Help;
-        public List<Pawn> Pawns => Raid?.Raiders ?? Help!.Helpers;
-        public string Leader => Raid?.AttackerName ?? Help!.HelperName;
+
+        /// <summary>An ally watching (no pawns of its own here): its name.</summary>
+        public string? Watcher;
+
+        /// <summary>Its owner key, to end the visit if the alliance does.</summary>
+        public ulong WatcherOwner;
+
+        private static readonly List<Pawn> NoPawns = new();
+        public List<Pawn> Pawns => Raid?.Raiders ?? Help?.Helpers ?? NoPawns;
+        public string Leader => Raid?.AttackerName ?? Help?.HelperName ?? Watcher ?? "?";
     }
 
     /// <summary>Visitor (player id) → what it leads here.</summary>
@@ -100,8 +111,25 @@ internal static class PlayerVisits
         return null;
     }
 
-    /// <summary>A player may visit while its live raid is on here, or while its helpers are here.</summary>
-    public static bool CanHost(ClientSession session, int playerId) => VisitOf(session, playerId) != null;
+    /// <summary>
+    /// A player may visit while its live raid is on here, or while its helpers are here; an ally may come to watch
+    /// (<paramref name="request"/> says so) if this player allows it.
+    /// </summary>
+    public static bool CanHost(ClientSession session, int playerId, byte[] request) =>
+        IsWatchRequest(request) ? WatchOf(session, playerId) != null : VisitOf(session, playerId) != null;
+
+    private static bool IsWatchRequest(byte[] request) => request.Length == 1 && request[0] == WatchVisit;
+
+    private static Visit? WatchOf(ClientSession session, int playerId)
+    {
+        if (!RimMultMod.Instance.Settings.AllowWatch || OwnerOf(session, playerId) is not { } owner
+            || session.RelationWith(owner) != Shared.World.PlayerRelation.Allied)
+            return null;
+        return new Visit { Watcher = session.NameOf(playerId), WatcherOwner = owner };
+    }
+
+    /// <summary>This visitor only watches.</summary>
+    public static bool IsWatching(int playerId) => Visitors.TryGetValue(playerId, out var visit) && visit.Watcher != null;
 
     /// <summary>Pawns some visitor commands (nobody else orders them).</summary>
     public static bool IsControlled(Pawn pawn)
@@ -124,12 +152,18 @@ internal static class PlayerVisits
     public static string? LeaderOf(Pawn pawn) => Visitors.Values.FirstOrDefault(v => v.Pawns.Contains(pawn))?.Leader;
 
     /// <summary>The visitor got this game: its pawns are its own from now on.</summary>
-    public static void Joined(ClientSession session, int playerId)
+    public static void Joined(ClientSession session, int playerId, byte[] request)
     {
-        var visit = VisitOf(session, playerId);
+        var visit = IsWatchRequest(request) ? WatchOf(session, playerId) : VisitOf(session, playerId);
         if (visit == null)
             return;
         Visitors[playerId] = visit;
+        if (visit.Watcher != null)
+        {
+            session.SendCoop(CoopChannel.VisitInfo, CoopIds.Encode(new List<int> { WatchVisit }), playerId);
+            Messages.Message("RimMult.WatchJoining".Translate(visit.Watcher), MessageTypeDefOf.NeutralEvent, historical: false);
+            return;
+        }
         foreach (var pawn in visit.Pawns.Where(p => p != null))
         {
             pawn.GetLord()?.RemovePawn(pawn);
@@ -148,6 +182,11 @@ internal static class PlayerVisits
         if (!Visitors.TryGetValue(playerId, out var visit))
             return;
         Visitors.Remove(playerId);
+        if (visit.Watcher != null)
+        {
+            Messages.Message("RimMult.WatchLeft".Translate(visit.Watcher), MessageTypeDefOf.NeutralEvent, historical: false);
+            return;
+        }
         var comp = RimMultGameComp.Instance;
         if (visit.Help != null)
         {
@@ -181,7 +220,10 @@ internal static class PlayerVisits
 
         foreach (var pair in Visitors.ToList())
         {
-            var over = pair.Value.Raid != null ? comp?.Raids.Contains(pair.Value.Raid) != true : comp?.Helps.Contains(pair.Value.Help!) != true;
+            // A raid or help is over when its record is gone; watching, when the alliance is.
+            var over = pair.Value.Watcher != null
+                ? session.RelationWith(pair.Value.WatcherOwner) != Shared.World.PlayerRelation.Allied
+                : pair.Value.Raid != null ? comp?.Raids.Contains(pair.Value.Raid) != true : comp?.Helps.Contains(pair.Value.Help!) != true;
             if (over)
             {
                 // The raid is over (its survivors are on their way back): the visit ends with it.
@@ -441,8 +483,8 @@ internal static class PlayerVisit
 
     private static readonly AccessTools.FieldRef<Pawn_JobTracker, Pawn> TrackerPawn = AccessTools.FieldRefAccess<Pawn_JobTracker, Pawn>("pawn");
 
-    /// <summary>A visit to start once the current tick is over: (defender's owner key, name).</summary>
-    private static (ulong Owner, string Name)? _pending;
+    /// <summary>A visit to start once the current tick is over: (defender's owner key, name, only to watch).</summary>
+    private static (ulong Owner, string Name, bool Watch)? _pending;
 
     /// <summary>The copy being left: until a different game is playing, this player isn't home yet.</summary>
     private static Game? _leaving;
@@ -451,7 +493,7 @@ internal static class PlayerVisit
     public static bool Travelling { get; private set; }
 
     /// <summary>Called when the raid has been sent: the trip starts on the next frame (not in the middle of a tick).</summary>
-    public static void Start(ulong defenderOwner, string defenderName) => _pending = (defenderOwner, defenderName);
+    public static void Start(ulong defenderOwner, string defenderName, bool watch = false) => _pending = (defenderOwner, defenderName, watch);
 
     public static void Update(ClientSession? session)
     {
@@ -493,8 +535,8 @@ internal static class PlayerVisit
             Travelling = false;
             return;
         }
-        Messages.Message("RimMult.VisitGoing".Translate(pending.Name), MessageTypeDefOf.NeutralEvent, historical: false);
-        CoopGuest.RequestVisit(session, defender.Id);
+        Messages.Message((pending.Watch ? "RimMult.WatchGoing" : "RimMult.VisitGoing").Translate(pending.Name), MessageTypeDefOf.NeutralEvent, historical: false);
+        CoopGuest.RequestVisit(session, defender.Id, pending.Watch);
     }
 
     public static bool IsMine(Pawn pawn) => CoopGuest.Visiting && CoopGuest.VisitPawns.Contains(pawn.thingIDNumber);
@@ -509,6 +551,12 @@ internal static class PlayerVisit
     /// </summary>
     public static void CopyLoaded()
     {
+        if (CoopGuest.VisitWatch)
+        {
+            // Nothing changes sides: this player only looks.
+            Find.LetterStack.ReceiveLetter("RimMult.WatchStartedLabel".Translate(), "RimMult.WatchStartedText".Translate(), LetterDefOf.NeutralEvent);
+            return;
+        }
         var enemy = CoopGuest.VisitHelp ? null : Enemy();
         foreach (var map in Find.Maps)
         {
@@ -536,7 +584,11 @@ internal static class PlayerVisit
     }
 
     /// <summary>A thing the defender's game just sent, before it spawns: the same swap of sides.</summary>
-    public static void AdjustLoaded(Thing thing) => Adjust(thing, CoopGuest.VisitHelp ? null : Enemy());
+    public static void AdjustLoaded(Thing thing)
+    {
+        if (!CoopGuest.VisitWatch)
+            Adjust(thing, CoopGuest.VisitHelp ? null : Enemy());
+    }
 
     private static bool Adjust(Thing thing, Faction? enemy)
     {
@@ -765,7 +817,7 @@ internal static class VisitHiddenJobPatch
         if (pawn == null)
             return;
         var hide = CoopGuest.Visiting
-            ? !CoopGuest.VisitHelp && !PlayerVisit.IsMine(pawn) && pawn.RaceProps.Humanlike
+            ? !CoopGuest.VisitHelp && !CoopGuest.VisitWatch && !PlayerVisit.IsMine(pawn) && pawn.RaceProps.Humanlike
             : PlayerVisits.IsControlledRaider(pawn);
         if (hide)
             __result = "RimMult.VisitHiddenJob".Translate();

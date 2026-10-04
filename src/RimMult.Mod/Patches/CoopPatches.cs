@@ -189,8 +189,15 @@ internal static class CoopGizmoPatch
         if (!CoopGuest.Active || CoopGuest.Applying || RunningLocally || __instance is Designator)
             return true;
         // A visitor's buttons work in its copy; what they order its raiders to do goes out as jobs. Mods' buttons
-        // registered as local only open the mod's own window.
-        if (CoopGuest.Visiting || ModSync.IsLocalGizmo(__instance.GetType()))
+        // registered as local only open the mod's own window. Someone only watching presses nothing.
+        if (ModSync.IsLocalGizmo(__instance.GetType()))
+            return true;
+        if (CoopGuest.Visiting && CoopGuest.VisitWatch)
+        {
+            Messages.Message("RimMult.WatchOnly".Translate(), MessageTypeDefOf.RejectInput, historical: false);
+            return false;
+        }
+        if (CoopGuest.Visiting)
             return true;
         if (CoopTargeting.IsTargeting(__instance))
         {

@@ -501,4 +501,18 @@
   <RimMult.Market.OrderExpiredText>Никто не выполнил ваш заказ вовремя, награда вернулась: {1}.</RimMult.Market.OrderExpiredText>
   <RimMult.Chronicle.MarketSale>{0} купил на рынке у {1}: {5} за {2} серебра.</RimMult.Chronicle.MarketSale>
   <RimMult.Chronicle.OrderDelivered>{0} выполнил заказ {1}: {5}, награда {2} серебра.</RimMult.Chronicle.OrderDelivered>
+  <RimMult.AllowWatch>Союзники могут смотреть мою колонию</RimMult.AllowWatch>
+  <RimMult.AllowWatchHint>Раздельные колонии: союзник может зайти посмотреть вашу колонию вживую. Командовать он не может.</RimMult.AllowWatchHint>
+  <RimMult.Watch>Посмотреть колонию</RimMult.Watch>
+  <RimMult.WatchDesc>Посмотреть колонию {0} вживую (без управления). Ваша колония на это время выйдет из мира.</RimMult.WatchDesc>
+  <RimMult.WatchConfirm>Посмотреть колонию {0}? Ваша игра сохранится, загрузится игра {0}; ваша колония на это время выйдет из мира. Вернуться — кнопка «Вернуться домой» вверху экрана.</RimMult.WatchConfirm>
+  <RimMult.WatchGoing>Ваша колония сохранена. Загружаем колонию {0}, чтобы посмотреть…</RimMult.WatchGoing>
+  <RimMult.WatchStartedLabel>В гостях у союзника</RimMult.WatchStartedLabel>
+  <RimMult.WatchStartedText>Вы смотрите колонию союзника. Видно всё, но командовать нельзя. «Вернуться домой» — кнопка вверху экрана.</RimMult.WatchStartedText>
+  <RimMult.WatchOnly>Вы только смотрите.</RimMult.WatchOnly>
+  <RimMult.WatchGoHome>Вернуться домой</RimMult.WatchGoHome>
+  <RimMult.WatchRefused>{0} сейчас никого не пускает посмотреть</RimMult.WatchRefused>
+  <RimMult.WatchJoining>{0} заходит посмотреть вашу колонию.</RimMult.WatchJoining>
+  <RimMult.WatchJoined>{0} смотрит вашу колонию.</RimMult.WatchJoined>
+  <RimMult.WatchLeft>{0} больше не смотрит вашу колонию.</RimMult.WatchLeft>
 </LanguageData>

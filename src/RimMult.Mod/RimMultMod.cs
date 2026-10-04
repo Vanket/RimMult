@@ -116,6 +116,7 @@ public sealed class RimMultMod : Mod
         list.Gap(6f);
         list.CheckboxLabeled("RimMult.SyncModComponents".Translate(), ref Settings.SyncModComponents, "RimMult.SyncModComponentsHint".Translate());
         list.CheckboxLabeled("RimMult.ShowCursors".Translate(), ref Settings.ShowCursors, "RimMult.ShowCursorsHint".Translate());
+        list.CheckboxLabeled("RimMult.AllowWatch".Translate(), ref Settings.AllowWatch, "RimMult.AllowWatchHint".Translate());
         list.Label("RimMult.ModListHash".Translate(ModList.ComputeHash()));
         list.Label("RimMult.ModListHashHint".Translate());
         list.End();
@@ -138,6 +139,9 @@ public sealed class RimMultSettings : ModSettings
     /// <summary>Co-op: share this player's cursor and show the others' (with what they have selected).</summary>
     public bool ShowCursors = true;
 
+    /// <summary>Separate colonies: allies may come and watch this colony live (they can't give orders).</summary>
+    public bool AllowWatch = true;
+
     /// <summary>Join this host (or address) again when the game starts: set before restarting for a mod list change.</summary>
     public ulong RejoinSteamHost;
     public string RejoinAddress = "";
@@ -158,6 +162,7 @@ public sealed class RimMultSettings : ModSettings
         Scribe_Values.Look(ref HostAllowPvp, "hostAllowPvp", true);
         Scribe_Values.Look(ref SyncModComponents, "syncModComponents", true);
         Scribe_Values.Look(ref ShowCursors, "showCursors", true);
+        Scribe_Values.Look(ref AllowWatch, "allowWatch", true);
         Scribe_Values.Look(ref RejoinSteamHost, "rejoinSteamHost");
         Scribe_Values.Look(ref RejoinAddress, "rejoinAddress", "");
         RejoinAddress ??= "";

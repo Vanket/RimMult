@@ -116,7 +116,31 @@ public sealed class RemoteColony : WorldObject
         yield return command;
 
         yield return DiplomacyUi.Gizmo(OwnerSteamId, OwnerName);
+
+        if (session?.RelationWith(OwnerSteamId) == Shared.World.PlayerRelation.Allied)
+        {
+            var watch = new Command_Action
+            {
+                defaultLabel = "RimMult.Watch".Translate(),
+                defaultDesc = "RimMult.WatchDesc".Translate(OwnerName),
+                icon = WatchIcon,
+                action = () => Find.WindowStack.Add(Dialog_MessageBox.CreateConfirmation(
+                    "RimMult.WatchConfirm".Translate(OwnerName), () => PlayerVisit.Start(OwnerSteamId, OwnerName, watch: true))),
+            };
+            if (owner == null || !owner.InWorld)
+                watch.Disable("RimMult.TradeOwnerAway".Translate(OwnerName));
+            else if (!WorldSync.InWorld)
+                watch.Disable("RimMult.TradeNotInWorld".Translate());
+            yield return watch;
+        }
     }
+
+    private static Texture2D? _watchIcon;
+
+    private static Texture2D WatchIcon => _watchIcon ??=
+        ContentFinder<Texture2D>.Get("UI/Commands/ViewQuest", reportFailure: false)
+        ?? ContentFinder<Texture2D>.Get("UI/Commands/FormCaravan", reportFailure: false)
+        ?? BaseContent.BadTex;
 
     private static Texture2D? _tradeIcon;
 
