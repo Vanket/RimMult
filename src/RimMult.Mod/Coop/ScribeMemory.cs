@@ -27,8 +27,67 @@ internal static class ScribeMemory
     /// <summary>Whether the save system is free (not in the middle of a real save or load).</summary>
     public static bool Idle => Scribe.mode == LoadSaveMode.Inactive;
 
+    private static readonly AccessTools.FieldRef<Corpse, ThingOwner<Pawn>> CorpseContainer = AccessTools.FieldRefAccess<Corpse, ThingOwner<Pawn>>("innerContainer");
+
     /// <summary>One thing as a standalone fragment: <c>&lt;root&gt;&lt;li Class="..."&gt;…&lt;/li&gt;&lt;/root&gt;</c>.</summary>
-    public static string SaveThing(Thing thing) => Save(() => Scribe_Deep.Look(ref thing, "li"));
+    public static string SaveThing(Thing thing)
+    {
+        // A corpse only refers to its dead pawn, which the host keeps among its world pawns, out of a guest's reach
+        // (the corpse then spawns "in a bugged state" and is destroyed): the pawn is saved inside the corpse instead.
+        var corpses = new List<(ThingOwner<Pawn> Container, LookMode Mode)>();
+        foreach (var corpse in CorpsesIn(thing))
+        {
+            var container = CorpseContainer(corpse);
+            if (container != null && container.contentsLookMode != LookMode.Deep)
+            {
+                corpses.Add((container, container.contentsLookMode));
+                container.contentsLookMode = LookMode.Deep;
+            }
+        }
+        try
+        {
+            return Save(() => Scribe_Deep.Look(ref thing, "li"));
+        }
+        finally
+        {
+            foreach (var (container, mode) in corpses)
+                container.contentsLookMode = mode;
+        }
+    }
+
+    /// <summary>The thing if it is a corpse, and the corpses it holds (one a pawn carries, …).</summary>
+    private static IEnumerable<Corpse> CorpsesIn(Thing thing)
+    {
+        if (thing is Corpse corpse)
+            yield return corpse;
+        if (thing is not IThingHolder holder)
+            yield break;
+        var held = new List<Thing>();
+        try
+        {
+            ThingOwnerUtility.GetAllThingsRecursively(holder, held, allowUnreal: false);
+        }
+        catch (Exception)
+        {
+            yield break;
+        }
+        foreach (var inner in held)
+            if (inner is Corpse innerCorpse && innerCorpse != thing)
+                yield return innerCorpse;
+    }
+
+    /// <summary>
+    /// References a guest can't have: battles and combat log entries live in the host's logs only. They are cut from a
+    /// fragment before loading (a pawn just doesn't show which battle it is in), instead of failing to resolve.
+    /// </summary>
+    public static void StripHostOnlyReferences(XmlNode fragment)
+    {
+        var nodes = fragment.SelectNodes(".//*[not(*)][starts-with(normalize-space(text()), 'Battle_') or starts-with(normalize-space(text()), 'LogEntry_')]");
+        if (nodes == null)
+            return;
+        foreach (XmlNode node in nodes)
+            node.InnerText = "null";
+    }
 
     /// <summary>Runs <paramref name="expose"/> (ExposeData calls) in saving mode and returns the XML.</summary>
     public static string Save(Action expose)

@@ -172,7 +172,6 @@
   <RimMult.CoopToMainMenu>Главное меню</RimMult.CoopToMainMenu>
   <RimMult.CoopKeepCopy>Остаться</RimMult.CoopKeepCopy>
   <RimMult.CoopNoSave>В коопе игру сохраняет только хост.</RimMult.CoopNoSave>
-  <RimMult.CoopTargetUnsupported>Команды с выбором цели пока не работают у гостей коопа. Используйте приказы правой кнопкой.</RimMult.CoopTargetUnsupported>
   <!-- Этап 5: дипломатия и PvP-рейды -->
   <RimMult.AllowPvp>Разрешить войны между игроками (PvP)</RimMult.AllowPvp>
   <RimMult.AllowPvpTip>Игроки могут объявлять друг другу войну и нападать на колонии друг друга караванами и десантными капсулами.</RimMult.AllowPvpTip>

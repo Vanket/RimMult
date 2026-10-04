@@ -214,6 +214,7 @@ public class CoopTests
             Number = 1,
             X = 1.5f,
             Z = -2.25f,
+            Queue = true,
         };
 
         var copy = CoopCommand.Decode(command.Encode());
@@ -225,6 +226,37 @@ public class CoopTests
         Assert.Equal(("RimWorld.Designator_Build", "Wall", "WoodLog"), (copy.Name, copy.Detail, copy.Extra));
         Assert.Equal(1, copy.Number);
         Assert.Equal((1.5f, -2.25f), (copy.X, copy.Z));
+        Assert.True(copy.Queue);
+    }
+
+    [Fact]
+    public void EditCarriesItsSavedState()
+    {
+        var xml = "<root><bills><li Class=\"Bill_Production\"><recipe>Make_Stew</recipe></li></bills></root>";
+        var copy = CoopCommand.Decode(new CoopCommand { Kind = CoopCommandKind.Edit, MapId = 1, ThingIds = { 42 }, Name = "bills", Extra = xml }.Encode());
+
+        Assert.Equal(CoopCommandKind.Edit, copy.Kind);
+        Assert.Equal("bills", copy.Name);
+        Assert.Equal(xml, copy.Extra);
+        Assert.False(copy.Queue);
+    }
+
+    [Fact]
+    public void AreasAndPoliciesRoundTrip()
+    {
+        var batch = new CoopBatch
+        {
+            Tick = 3,
+            Maps = { new MapDelta { MapId = 1, Areas = "<root><areas/></root>" } },
+            World = new CoopWorld { Policies = "<root><outfits/></root>" },
+        };
+
+        var copy = CoopBatch.Decode(batch.Encode());
+
+        Assert.Equal("<root><areas/></root>", copy.Maps[0].Areas);
+        Assert.Equal("<root><outfits/></root>", copy.World.Policies);
+        Assert.False(copy.World.IsEmpty);
+        Assert.Null(CoopBatch.Decode(new CoopBatch { Maps = { new MapDelta() } }.Encode()).Maps[0].Areas);
     }
 
     [Fact]

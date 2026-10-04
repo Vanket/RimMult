@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
 using RimMult.Coop;
+using RimMult.Shared.Coop;
 using RimWorld;
 using UnityEngine;
 using Verse;
@@ -67,17 +68,23 @@ internal static class CoopOverridePatches
             TryPatch(harmony, method, designatePrefix);
 
         var gizmoPrefix = new HarmonyMethod(typeof(CoopGizmoPatch), nameof(CoopGizmoPatch.Prefix));
+        var gizmoPostfix = new HarmonyMethod(typeof(CoopGizmoPatch), nameof(CoopGizmoPatch.Postfix));
         foreach (var method in Patchable(typeof(Command), m => m.Name == nameof(Command.ProcessInput)
                                                              && m.GetParameters().Length == 1
                                                              && m.GetParameters()[0].ParameterType == typeof(Event)))
-            TryPatch(harmony, method, gizmoPrefix);
+            TryPatch(harmony, method, gizmoPrefix, gizmoPostfix);
+
+        // Guest: a pawn copy loaded from the host must not run its life stage's side effects (they fail half-loaded).
+        var lifeStagePrefix = new HarmonyMethod(typeof(CoopLifeStagePatch), nameof(CoopLifeStagePatch.Prefix));
+        foreach (var method in Patchable(typeof(LifeStageWorker), m => m.Name == nameof(LifeStageWorker.Notify_LifeStageStarted)))
+            TryPatch(harmony, method, lifeStagePrefix);
     }
 
-    private static void TryPatch(Harmony harmony, MethodBase method, HarmonyMethod prefix)
+    private static void TryPatch(Harmony harmony, MethodBase method, HarmonyMethod prefix, HarmonyMethod? postfix = null)
     {
         try
         {
-            harmony.Patch(method, prefix: prefix);
+            harmony.Patch(method, prefix: prefix, postfix: postfix);
         }
         catch (Exception e)
         {
@@ -137,27 +144,42 @@ internal static class CoopDesignatorPatch
 
 /// <summary>
 /// Guest: gizmo buttons (draft, forbid, …) become orders for the host. Designator buttons stay local (they only pick
-/// the designator); targeting commands (attack this, cast at…) can't be relayed yet and are refused.
+/// the designator); targeting gizmos aim in the guest's copy and send the pick (see <see cref="CoopTargeting"/>).
+/// Buttons that open a window run locally when the host says so (<see cref="CoopChannel.RunLocally"/>).
 /// </summary>
 internal static class CoopGizmoPatch
 {
+    /// <summary>Guest: the button runs in the copy as it is (the host sent it back to be run here).</summary>
+    public static bool RunningLocally { get; set; }
+
     public static bool Prefix(Command __instance)
     {
         // Host: whatever the button changes on the selection goes to the guests at once (medical bed, forbid, …).
         if (CoopHost.Active && __instance is not Designator)
             foreach (var thing in Find.Selector.SelectedObjects.OfType<Thing>())
                 CoopHost.Touch(thing);
-        if (!CoopGuest.Active || CoopGuest.Applying || __instance is Designator)
+        if (!CoopGuest.Active || CoopGuest.Applying || RunningLocally || __instance is Designator)
             return true;
-        if (__instance is Command_Target or Command_VerbTarget)
+        if (CoopTargeting.IsTargeting(__instance))
         {
-            Messages.Message("RimMult.CoopTargetUnsupported".Translate(), MessageTypeDefOf.RejectInput, historical: false);
-            return false;
+            CoopTargeting.Pressed(__instance);
+            return true;
         }
         CoopCommands.SendGizmo(__instance);
-        Log.Message($"[RimMult] Co-op guest: button '{__instance.Label}' sent to the host");
         return false;
     }
+
+    public static void Postfix(Command __instance)
+    {
+        if (CoopGuest.Active && !CoopGuest.Applying && !RunningLocally && __instance is not Designator && CoopTargeting.IsTargeting(__instance))
+            CoopTargeting.AfterPressed(__instance);
+    }
+}
+
+/// <summary>Guest: see <see cref="CoopOverridePatches"/>.</summary>
+internal static class CoopLifeStagePatch
+{
+    public static bool Prefix() => !CoopGuest.Applying;
 }
 
 /// <summary>Guest: a right-click order on the map is sent to the host, which picks the same option by label.</summary>

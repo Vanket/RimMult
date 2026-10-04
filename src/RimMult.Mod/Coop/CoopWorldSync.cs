@@ -11,8 +11,8 @@ using Verse;
 namespace RimMult.Coop;
 
 /// <summary>
-/// Co-op is one colony, so its NPC world is shared too: relations with the factions, research and the letters the
-/// storyteller sends all come from the host's game and show up on the guests' side as they happen.
+/// Co-op is one colony, so its NPC world is shared too: relations with the factions, research, the letters the
+/// storyteller sends and the colony's policies all come from the host's game and show up on the guests' side as they happen.
 /// (In separate colonies each colony keeps its own relations, quests and traders.)
 /// </summary>
 internal static class CoopWorldSync
@@ -31,6 +31,7 @@ internal static class CoopWorldSync
     private static readonly List<CoopLetter> Letters = new();
     private static readonly Dictionary<string, float> SentProgress = new();
     private static int? _factionsHash;
+    private static int? _policiesHash;
     private static string? _sentCurrent;
     private static float _lastCheck;
 
@@ -38,6 +39,7 @@ internal static class CoopWorldSync
     public static void Forget()
     {
         _factionsHash = null;
+        _policiesHash = null;
         _sentCurrent = null;
         SentProgress.Clear();
     }
@@ -118,6 +120,14 @@ internal static class CoopWorldSync
             _sentCurrent = current;
             world.CurrentResearch = current;
         }
+
+        var policies = CoopEdits.SavePolicies();
+        var policiesHash = policies.GetHashCode() ^ policies.Length;
+        if (policiesHash != _policiesHash)
+        {
+            _policiesHash = policiesHash;
+            world.Policies = policies;
+        }
         return world;
     }
 
@@ -144,6 +154,8 @@ internal static class CoopWorldSync
                     : DefDatabase<ResearchProjectDef>.GetNamedSilentFail(world.CurrentResearch);
             foreach (var letter in world.Letters)
                 ShowLetter(letter);
+            if (world.Policies != null)
+                CoopEdits.ApplyPolicies(world.Policies);
         }
         catch (Exception e)
         {

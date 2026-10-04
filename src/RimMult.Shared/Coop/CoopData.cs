@@ -40,6 +40,12 @@ public enum CoopChannel : byte
 
     /// <summary>Guest → host: these things (ids) didn't load here, send them again in full.</summary>
     Resync = 8,
+
+    /// <summary>
+    /// Host → guest: the gizmo this guest pressed (its <see cref="CoopCommand"/> sent back) opens a window or starts
+    /// aiming; it runs in the guest's copy, and what the guest picks there comes back as an order or an edit.
+    /// </summary>
+    RunLocally = 9,
 }
 
 /// <summary>A pawn aiming at something (the warm-up before a shot): guests draw the aim pie and, when selected, the line.</summary>
@@ -383,6 +389,9 @@ public sealed class MapDelta
     /// <summary>The map's zones (stockpiles, growing zones, …) as Scribe XML, when they changed; null otherwise.</summary>
     public string? Zones { get; set; }
 
+    /// <summary>The map's areas (home, allowed areas, …) as Scribe XML, when they changed; null otherwise.</summary>
+    public string? Areas { get; set; }
+
     public void Write(ByteWriter writer)
     {
         writer.WriteVarInt(MapId);
@@ -415,6 +424,7 @@ public sealed class MapDelta
         }
         writer.WriteString(Grids);
         writer.WriteString(Zones);
+        writer.WriteString(Areas);
     }
 
     public static MapDelta Read(ByteReader reader)
@@ -445,6 +455,7 @@ public sealed class MapDelta
         }
         delta.Grids = reader.ReadString();
         delta.Zones = reader.ReadString();
+        delta.Areas = reader.ReadString();
         return delta;
     }
 
@@ -521,7 +532,10 @@ public sealed class CoopWorld
 
     public List<CoopLetter> Letters { get; set; } = new();
 
-    public bool IsEmpty => Factions == null && Research == null && CurrentResearch == null && Letters.Count == 0;
+    /// <summary>The colony's apparel, drug and food policies as Scribe XML, when they changed; null otherwise.</summary>
+    public string? Policies { get; set; }
+
+    public bool IsEmpty => Factions == null && Research == null && CurrentResearch == null && Letters.Count == 0 && Policies == null;
 
     public void Write(ByteWriter writer)
     {
@@ -550,6 +564,7 @@ public sealed class CoopWorld
         writer.WriteVarUInt((ulong)Letters.Count);
         foreach (var letter in Letters)
             letter.Write(writer);
+        writer.WriteString(Policies);
     }
 
     public static CoopWorld Read(ByteReader reader)
@@ -573,6 +588,7 @@ public sealed class CoopWorld
         var letters = MapDelta.Count(reader, 1000);
         for (var i = 0; i < letters; i++)
             world.Letters.Add(CoopLetter.Read(reader));
+        world.Policies = reader.ReadString();
         return world;
     }
 }
@@ -627,6 +643,15 @@ public enum CoopCommandKind : byte
 
     /// <summary>The current research project.</summary>
     Research = 5,
+
+    /// <summary>A targeting gizmo (attack, cast an ability, rescue, …) aimed at a thing or a cell.</summary>
+    Target = 6,
+
+    /// <summary>
+    /// Settings the guest changed in its copy (bills, storage, plants, owners, a pawn's schedule and policies, the
+    /// policies themselves, areas), sent as their saved state for the host to take over.
+    /// </summary>
+    Edit = 7,
 }
 
 /// <summary>An order a co-op guest gave; the host finds the same designator/option/gizmo in its game and runs it.</summary>
@@ -652,6 +677,9 @@ public sealed class CoopCommand
     public float X { get; set; }
     public float Z { get; set; }
 
+    /// <summary>The order was given with the queue key held (Shift): it goes after the pawn's current orders.</summary>
+    public bool Queue { get; set; }
+
     public byte[] Encode()
     {
         var writer = new ByteWriter();
@@ -669,6 +697,7 @@ public sealed class CoopCommand
         writer.WriteVarInt(Number);
         writer.WriteFloat(X);
         writer.WriteFloat(Z);
+        writer.WriteBool(Queue);
         return writer.ToArray();
     }
 
@@ -676,7 +705,7 @@ public sealed class CoopCommand
     {
         var reader = new ByteReader(data);
         var command = new CoopCommand { Kind = (CoopCommandKind)reader.ReadByte(), MapId = (int)reader.ReadVarInt() };
-        if (command.Kind < CoopCommandKind.Designate || command.Kind > CoopCommandKind.Research)
+        if (command.Kind < CoopCommandKind.Designate || command.Kind > CoopCommandKind.Edit)
             throw new ProtocolException($"Unknown co-op command {(byte)command.Kind}");
         var things = MapDelta.Count(reader, 100_000);
         for (var i = 0; i < things; i++)
@@ -692,6 +721,7 @@ public sealed class CoopCommand
         command.Number = (int)reader.ReadVarInt();
         command.X = reader.ReadFloat();
         command.Z = reader.ReadFloat();
+        command.Queue = reader.ReadBool();
         reader.EnsureFullyRead();
         return command;
     }

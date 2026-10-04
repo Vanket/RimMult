@@ -18,7 +18,7 @@ public sealed class RimMultMod : Mod
         Instance = this;
         Settings = GetSettings<RimMultSettings>();
         var harmony = new Harmony(HarmonyId);
-        harmony.PatchAll(typeof(RimMultMod).Assembly);
+        PatchAll(harmony);
         Patches.CoopOverridePatches.Apply(harmony);
 
         LongEventHandler.ExecuteWhenFinished(() =>
@@ -30,6 +30,22 @@ public sealed class RimMultMod : Mod
         });
 
         Log.Message($"[RimMult] {content.ModMetaData.ModVersion} loaded, protocol v{ProtocolInfo.Version}");
+    }
+
+    /// <summary>Applies the patch classes one by one: one that can't be applied (another mod, a game update) doesn't take the rest down.</summary>
+    private static void PatchAll(Harmony harmony)
+    {
+        foreach (var type in AccessTools.GetTypesFromAssembly(typeof(RimMultMod).Assembly))
+        {
+            try
+            {
+                harmony.CreateClassProcessor(type).Patch();
+            }
+            catch (System.Exception e)
+            {
+                Log.Error($"[RimMult] Could not apply patch {type.FullName}: {e}");
+            }
+        }
     }
 
     public static RimMultMod Instance { get; private set; } = null!;
