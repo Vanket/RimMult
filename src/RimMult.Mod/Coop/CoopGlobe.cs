@@ -332,7 +332,8 @@ internal static class CoopCaravanGotoPatch
     {
         if (!CoopGuest.Active || CoopGuest.Applying)
             return true;
-        CoopGlobe.SendGoto(__0, __1);
+        if (!CoopGuest.Visiting)
+            CoopGlobe.SendGoto(__0, __1);
         return false;
     }
 }
@@ -344,7 +345,13 @@ internal static class CoopWorldFloatMenuPatch
     private static void Postfix(PlanetTile __0, Caravan __1, List<FloatMenuOption> __result)
     {
         if (CoopGuest.Active && !CoopGuest.Applying && __result != null && __1 != null)
-            CoopGlobe.RememberOptions(__result, __0, __1);
+        {
+            // A visitor's globe is another player's: nothing to order there.
+            if (CoopGuest.Visiting)
+                __result.Clear();
+            else
+                CoopGlobe.RememberOptions(__result, __0, __1);
+        }
     }
 }
 
@@ -356,8 +363,9 @@ internal static class CoopFormCaravanPatch
     {
         if (!CoopGuest.Active || CoopGuest.Applying)
             return true;
-        CoopGlobe.SendFormCaravan(__instance);
-        __result = true;
+        if (!CoopGuest.Visiting)
+            CoopGlobe.SendFormCaravan(__instance);
+        __result = !CoopGuest.Visiting;
         return false;
     }
 }

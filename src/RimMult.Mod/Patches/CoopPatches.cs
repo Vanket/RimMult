@@ -125,6 +125,12 @@ internal static class CoopDesignatorPatch
     {
         if (!CoopGuest.Active || CoopGuest.Applying)
             return true;
+        if (CoopGuest.Visiting)
+        {
+            // Leading a raid in another player's game: their map is not this player's to mark up.
+            Messages.Message("RimMult.VisitNoDesignate".Translate(), MessageTypeDefOf.RejectInput, historical: false);
+            return false;
+        }
 
         switch (__originalMethod.Name)
         {
@@ -160,6 +166,9 @@ internal static class CoopGizmoPatch
                 CoopHost.Touch(thing);
         if (!CoopGuest.Active || CoopGuest.Applying || RunningLocally || __instance is Designator)
             return true;
+        // A visitor's buttons work in its copy; what they order its raiders to do goes out as jobs.
+        if (CoopGuest.Visiting)
+            return true;
         if (CoopTargeting.IsTargeting(__instance))
         {
             CoopTargeting.Pressed(__instance);
@@ -171,7 +180,7 @@ internal static class CoopGizmoPatch
 
     public static void Postfix(Command __instance)
     {
-        if (CoopGuest.Active && !CoopGuest.Applying && !RunningLocally && __instance is not Designator && CoopTargeting.IsTargeting(__instance))
+        if (CoopGuest.Active && !CoopGuest.Applying && !CoopGuest.Visiting && !RunningLocally && __instance is not Designator && CoopTargeting.IsTargeting(__instance))
             CoopTargeting.AfterPressed(__instance);
     }
 }
@@ -219,7 +228,7 @@ internal static class CoopFloatMenuPatch
     [HarmonyPatch(typeof(FloatMenuOption), nameof(FloatMenuOption.Chosen))]
     private static bool Chosen(FloatMenuOption __instance)
     {
-        if (!CoopGuest.Active || CoopGuest.Applying)
+        if (!CoopGuest.Active || CoopGuest.Applying || CoopGuest.Visiting)
             return true;
         if (CoopGlobe.TryRelayChosen(__instance))
             return false;
@@ -239,7 +248,7 @@ internal static class CoopSettingsPatches
     [HarmonyPatch(typeof(Pawn_WorkSettings), nameof(Pawn_WorkSettings.SetPriority))]
     private static void WorkPriority(Pawn_WorkSettings __instance, WorkTypeDef w, int priority)
     {
-        if (CoopGuest.Active && !CoopGuest.Applying)
+        if (CoopGuest.Active && !CoopGuest.Applying && !CoopGuest.Visiting)
             CoopCommands.SendWorkPriority(__instance, w, priority);
     }
 
@@ -247,7 +256,7 @@ internal static class CoopSettingsPatches
     [HarmonyPatch(typeof(ResearchManager), nameof(ResearchManager.SetCurrentProject))]
     private static void Research(ResearchProjectDef proj)
     {
-        if (CoopGuest.Active && !CoopGuest.Applying)
+        if (CoopGuest.Active && !CoopGuest.Applying && !CoopGuest.Visiting)
             CoopCommands.SendResearch(proj);
     }
 }

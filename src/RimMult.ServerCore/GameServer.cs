@@ -499,7 +499,10 @@ public sealed class GameServer
     private void HandleCoop(PlayerInfo sender, CoopMessage message)
     {
         if (Settings.Mode != Shared.Coop.GameMode.Coop)
+        {
+            HandleVisit(sender, message);
             return;
+        }
 
         if (sender.IsHost)
         {
@@ -528,6 +531,35 @@ public sealed class GameServer
         var host = _sessions.Values.FirstOrDefault(s => s.Player is { IsHost: true });
         if (host != null)
             Send(host, new CoopMessage { PlayerId = sender.Id, Channel = message.Channel, Data = message.Data });
+    }
+
+    /// <summary>
+    /// Separate colonies: a visit (a player fighting their raid live in the defender's game). The same co-op traffic,
+    /// but between two players only: each message names the other one and is passed on stamped with the sender.
+    /// The world is held paused while the visitor loads the game it visits.
+    /// </summary>
+    private void HandleVisit(PlayerInfo sender, CoopMessage message)
+    {
+        if (message.PlayerId == sender.Id)
+            return;
+        var target = _sessions.Values.FirstOrDefault(s => s.Player is { } p && p.Id == message.PlayerId);
+        if (target == null)
+            return;
+
+        switch (message.Channel)
+        {
+            case Shared.Coop.CoopChannel.JoinRequest:
+                Time.SetHold(sender.Id, true);
+                break;
+            case Shared.Coop.CoopChannel.Ready:
+            case Shared.Coop.CoopChannel.NotReady:
+                // Loaded, or the visited player refused: either way nobody is loading any more.
+                Time.SetHold(message.Channel == Shared.Coop.CoopChannel.Ready ? sender.Id : target.Player!.Id, false);
+                break;
+        }
+
+        var mode = message.Channel == Shared.Coop.CoopChannel.Positions ? DeliveryMode.UnreliableSequenced : DeliveryMode.ReliableOrdered;
+        _transport.Send(target.ConnectionId, PacketCodec.Encode(new CoopMessage { PlayerId = sender.Id, Channel = message.Channel, Data = message.Data }), mode);
     }
 
     /// <summary>Passes a message to another player in the world, stamped with the real sender.</summary>

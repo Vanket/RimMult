@@ -62,13 +62,16 @@ public sealed class RemoteColony : WorldObject
             yield return option;
         if (Multiplayer.Session is { AllowPvp: true } session && session.RelationWith(OwnerSteamId) == Shared.World.PlayerRelation.Hostile)
         {
-            foreach (var option in TransportersArrivalActionUtility.GetFloatMenuOptions(
-                         () => TransportersArrivalAction_RaidPlayer.CanAttack(pods, this),
-                         () => new TransportersArrivalAction_RaidPlayer(this),
-                         "RimMult.RaidPods".Translate(OwnerName),
-                         launchAction,
-                         Tile))
-                yield return option;
+            foreach (var live in new[] { true, false })
+            {
+                foreach (var option in TransportersArrivalActionUtility.GetFloatMenuOptions(
+                             () => TransportersArrivalAction_RaidPlayer.CanAttack(pods, this),
+                             () => new TransportersArrivalAction_RaidPlayer(this, live),
+                             (live ? "RimMult.RaidPodsLive" : "RimMult.RaidPods").Translate(OwnerName),
+                             launchAction,
+                             Tile))
+                    yield return option;
+            }
         }
     }
 
@@ -112,14 +115,17 @@ public sealed class RemoteColony : WorldObject
             yield return option;
         if (Multiplayer.Session is { AllowPvp: true } session && session.RelationWith(OwnerSteamId) == Shared.World.PlayerRelation.Hostile)
         {
-            foreach (var option in CaravanArrivalActionUtility.GetFloatMenuOptions(
-                         () => CaravanArrivalAction_RaidPlayer.CanAttack(caravan, this),
-                         () => new CaravanArrivalAction_RaidPlayer(this),
-                         "RimMult.RaidAttack".Translate(OwnerName),
-                         caravan,
-                         Tile,
-                         this))
-                yield return option;
+            foreach (var live in new[] { true, false })
+            {
+                foreach (var option in CaravanArrivalActionUtility.GetFloatMenuOptions(
+                             () => CaravanArrivalAction_RaidPlayer.CanAttack(caravan, this),
+                             () => new CaravanArrivalAction_RaidPlayer(this, live),
+                             (live ? "RimMult.RaidAttackLive" : "RimMult.RaidAttack").Translate(OwnerName),
+                             caravan,
+                             Tile,
+                             this))
+                    yield return option;
+            }
             // No trading, gifts or moving in with an enemy.
             yield break;
         }

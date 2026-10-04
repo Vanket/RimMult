@@ -74,7 +74,7 @@ internal static class CoopEdits
     public static void GuestUpdate(bool force)
     {
         var now = Time.realtimeSinceStartup;
-        if ((!force && now - _lastCheck < CheckInterval) || !ScribeMemory.Idle)
+        if ((!force && now - _lastCheck < CheckInterval) || !ScribeMemory.Idle || CoopGuest.Visiting)
             return;
         _lastCheck = now;
         try
@@ -131,7 +131,7 @@ internal static class CoopEdits
             return;
         var current = SaveZone(zone);
         if (Changed($"z:{zone.Map.uniqueID}:{zone.ID}", current))
-            Multiplayer.Session?.SendCoop(CoopChannel.Command, new CoopCommand
+            CoopGuest.SendToHost(CoopChannel.Command, new CoopCommand
             {
                 Kind = CoopCommandKind.Edit, MapId = zone.Map.uniqueID, Name = "zone", Number = zone.ID, Extra = current,
             }.Encode());
@@ -186,7 +186,7 @@ internal static class CoopEdits
         var changed = summary.Where(p => old.TryGetValue(p.Key, out var v) && v.Split('|').Last() != p.Value.Split('|').Last()).Select(p => p.Key);
         var added = summary.Keys.Where(k => !old.ContainsKey(k));
         var removed = old.Keys.Where(k => !summary.ContainsKey(k));
-        Multiplayer.Session?.SendCoop(CoopChannel.Command, new CoopCommand
+        CoopGuest.SendToHost(CoopChannel.Command, new CoopCommand
         {
             Kind = CoopCommandKind.Edit,
             MapId = map.uniqueID,
@@ -217,7 +217,7 @@ internal static class CoopEdits
         var command = new CoopCommand { Kind = CoopCommandKind.Edit, MapId = map?.uniqueID ?? -1, Name = part, Extra = value };
         if (thingId >= 0)
             command.ThingIds.Add(thingId);
-        Multiplayer.Session?.SendCoop(CoopChannel.Command, command.Encode());
+        CoopGuest.SendToHost(CoopChannel.Command, command.Encode());
     }
 
     // ---------- which things open windows edit ----------

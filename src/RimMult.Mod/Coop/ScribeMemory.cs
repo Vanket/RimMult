@@ -283,8 +283,24 @@ internal static class ScribeMemory
             {
                 yield return thing;
                 if (thing is Pawn pawn)
+                {
                     foreach (var gear in PawnGear(pawn))
                         yield return gear;
+                    // What a job may name: the pawn's abilities and verbs (a visitor's orders refer to them).
+                    if (pawn.abilities != null)
+                        foreach (var ability in pawn.abilities.AllAbilitiesForReading)
+                        {
+                            yield return ability;
+                            if (ability.verb != null)
+                                yield return ability.verb;
+                        }
+                    if (pawn.verbTracker != null)
+                        foreach (var verb in pawn.verbTracker.AllVerbs)
+                            yield return verb;
+                    if (pawn.equipment?.Primary?.TryGetComp<CompEquippable>() is { } equippable)
+                        foreach (var verb in equippable.AllVerbs)
+                            yield return verb;
+                }
             }
             foreach (var zone in map.zoneManager.AllZones)
                 yield return zone;

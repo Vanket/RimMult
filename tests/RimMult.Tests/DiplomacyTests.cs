@@ -285,4 +285,15 @@ public class DiplomacyTests
         Assert.Empty(old.Relations);
         Assert.Equal(2, old.Colonies.Count);
     }
+
+    [Fact]
+    public void LiveRaidAddressSaysSo()
+    {
+        var live = ParcelAddress.ForRaid("r2", ParcelAddress.RaidArrival.WalkIn, "31", live: true);
+        Assert.True(ParcelAddress.TryParseRaid(live, out var id, out var arrival, out var tile, out var isLive));
+        Assert.Equal(("r2", ParcelAddress.RaidArrival.WalkIn, "31", true), (id, arrival, tile, isLive));
+
+        Assert.True(ParcelAddress.TryParseRaid(ParcelAddress.ForRaid("r3", ParcelAddress.RaidArrival.DropPods, "5"), out _, out _, out _, out isLive));
+        Assert.False(isLive);
+    }
 }

@@ -26,6 +26,9 @@ public sealed class RaidRecord : IExposable
 
     public int StartedTick;
 
+    /// <summary>The attacker leads this raid in person (joining this game as a visitor); the AI only stands in.</summary>
+    public bool Live;
+
     /// <summary>Raiders still on the map (alive or not).</summary>
     public List<Pawn> Raiders = new();
 
@@ -39,6 +42,7 @@ public sealed class RaidRecord : IExposable
         Scribe_Values.Look(ref AttackerName, "attackerName", "");
         Scribe_Values.Look(ref ColonyTile, "colonyTile", "");
         Scribe_Values.Look(ref StartedTick, "startedTick");
+        Scribe_Values.Look(ref Live, "live");
         Scribe_Collections.Look(ref Raiders, "raiders", LookMode.Reference);
         Scribe_Collections.Look(ref Gone, "gone", LookMode.Deep);
         Raiders ??= new List<Pawn>();
@@ -94,21 +98,24 @@ internal static class PlayerRaids
     }
 
     /// <summary>Sends the war party; the caller removes the pawns from this game once this returns true.</summary>
-    public static bool Launch(ParcelTarget target, ParcelAddress.RaidArrival arrival, List<Pawn> pawns)
+    public static bool Launch(ParcelTarget target, ParcelAddress.RaidArrival arrival, List<Pawn> pawns, bool live = false)
     {
         var id = Guid.NewGuid().ToString("N").Substring(0, 8);
-        var address = ParcelAddress.ForRaid(id, arrival, target.Tile);
+        var address = ParcelAddress.ForRaid(id, arrival, target.Tile, live);
         var summary = string.Join(", ", pawns.Select(p => p.LabelShortCap));
         if (!Parcels.Send(target.OwnerSteamId, target.OwnerName, address, pawns.Cast<Thing>().ToList(), summary, quiet: true))
             return false;
-        Messages.Message("RimMult.RaidLaunched".Translate(target.OwnerName), MessageTypeDefOf.ThreatBig, historical: false);
+        if (live)
+            PlayerVisit.Start(target.OwnerSteamId, target.OwnerName);
+        else
+            Messages.Message("RimMult.RaidLaunched".Translate(target.OwnerName), MessageTypeDefOf.ThreatBig, historical: false);
         return true;
     }
 
     // ---------- defender ----------
 
     /// <summary>An enemy war party arrives: raiders enter the map and attack under a raid lord.</summary>
-    public static bool BeginDefense(ParcelRecord parcel, string raidId, ParcelAddress.RaidArrival arrival, string tileText)
+    public static bool BeginDefense(ParcelRecord parcel, string raidId, ParcelAddress.RaidArrival arrival, string tileText, bool live = false)
     {
         var comp = RimMultGameComp.Instance;
         Map? map = null;
@@ -162,11 +169,15 @@ internal static class PlayerRaids
             ColonyTile = map.Tile.ToString(),
             StartedTick = Find.TickManager.TicksGame,
             Raiders = raiders,
+            Live = live,
         });
 
+        var text = "RimMult.RaidArrivedText".Translate(parcel.FromName, raiders.Count, string.Join(", ", raiders.Select(p => p.LabelShortCap))).ToString();
+        if (live)
+            text += "\n\n" + "RimMult.RaidArrivedLive".Translate(parcel.FromName);
         Find.LetterStack.ReceiveLetter(
             "RimMult.RaidArrivedLabel".Translate(parcel.FromName),
-            "RimMult.RaidArrivedText".Translate(parcel.FromName, raiders.Count, string.Join(", ", raiders.Select(p => p.LabelShortCap))),
+            text,
             LetterDefOf.ThreatBig,
             new LookTargets(raiders));
         return true;
@@ -376,16 +387,20 @@ public sealed class CaravanArrivalAction_RaidPlayer : CaravanArrivalAction
 {
     private ParcelTarget _target = new();
 
+    /// <summary>Lead the raid in person (join the defender's game) instead of leaving it to the defender's AI.</summary>
+    private bool _live;
+
     public CaravanArrivalAction_RaidPlayer()
     {
     }
 
-    public CaravanArrivalAction_RaidPlayer(RemoteColony colony)
+    public CaravanArrivalAction_RaidPlayer(RemoteColony colony, bool live)
     {
         _target = new ParcelTarget(colony);
+        _live = live;
     }
 
-    public override string Label => "RimMult.RaidAttack".Translate(_target.OwnerName);
+    public override string Label => (_live ? "RimMult.RaidAttackLive" : "RimMult.RaidAttack").Translate(_target.OwnerName);
 
     public override string ReportString => "RimMult.RaidAttackReport".Translate(_target.OwnerName);
 
@@ -410,7 +425,7 @@ public sealed class CaravanArrivalAction_RaidPlayer : CaravanArrivalAction
 
         // Everything a caravan carries sits in its members' inventories, so packing the pawns takes it all along.
         var pawns = caravan.PawnsListForReading.ToList();
-        if (!PlayerRaids.Launch(_target, ParcelAddress.RaidArrival.WalkIn, pawns))
+        if (!PlayerRaids.Launch(_target, ParcelAddress.RaidArrival.WalkIn, pawns, _live))
             return;
         foreach (var pawn in pawns)
         {
@@ -427,6 +442,7 @@ public sealed class CaravanArrivalAction_RaidPlayer : CaravanArrivalAction
     {
         base.ExposeData();
         Scribe_Deep.Look(ref _target, "target");
+        Scribe_Values.Look(ref _live, "live");
         _target ??= new ParcelTarget();
     }
 }
@@ -435,14 +451,16 @@ public sealed class CaravanArrivalAction_RaidPlayer : CaravanArrivalAction
 public sealed class TransportersArrivalAction_RaidPlayer : TransportersArrivalAction
 {
     private ParcelTarget _target = new();
+    private bool _live;
 
     public TransportersArrivalAction_RaidPlayer()
     {
     }
 
-    public TransportersArrivalAction_RaidPlayer(RemoteColony colony)
+    public TransportersArrivalAction_RaidPlayer(RemoteColony colony, bool live)
     {
         _target = new ParcelTarget(colony);
+        _live = live;
     }
 
     public static FloatMenuAcceptanceReport CanAttack(IEnumerable<IThingHolder> pods, RemoteColony colony)
@@ -488,7 +506,7 @@ public sealed class TransportersArrivalAction_RaidPlayer : TransportersArrivalAc
             carriers[index++ % carriers.Count].inventory.innerContainer.TryAdd(item);
         }
 
-        if (!PlayerRaids.Launch(_target, ParcelAddress.RaidArrival.DropPods, pawns))
+        if (!PlayerRaids.Launch(_target, ParcelAddress.RaidArrival.DropPods, pawns, _live))
             return;
         TransportersArrivalActionUtility.RemovePawnsFromWorldPawns(transporters);
         foreach (var transporter in transporters)
@@ -499,6 +517,7 @@ public sealed class TransportersArrivalAction_RaidPlayer : TransportersArrivalAc
     {
         base.ExposeData();
         Scribe_Deep.Look(ref _target, "target");
+        Scribe_Values.Look(ref _live, "live");
         _target ??= new ParcelTarget();
     }
 }
