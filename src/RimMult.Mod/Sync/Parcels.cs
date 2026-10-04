@@ -158,8 +158,8 @@ internal static class Parcels
     private static bool TryDeliver(ParcelRecord parcel)
     {
         // Raids: an enemy war party arriving, or our own coming home. A refused raid comes back like any parcel.
-        if (!parcel.Returned && ParcelAddress.TryParseRaid(parcel.ToTile, out var raidId, out var arrival, out var raidTile))
-            return PlayerRaids.BeginDefense(parcel, raidId, arrival, raidTile);
+        if (!parcel.Returned && ParcelAddress.TryParseRaid(parcel.ToTile, out var raidId, out var arrival, out var raidTile, out var live))
+            return PlayerRaids.BeginDefense(parcel, raidId, arrival, raidTile, live);
         if (ParcelAddress.TryParseRaidReturn(parcel.ToTile, out raidId, out raidTile, out var survivors, out var captives))
             return PlayerRaids.DeliverReturn(parcel, raidTile, survivors, captives);
 

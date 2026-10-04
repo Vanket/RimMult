@@ -46,6 +46,15 @@ public enum CoopChannel : byte
     /// aiming; it runs in the guest's copy, and what the guest picks there comes back as an order or an edit.
     /// </summary>
     RunLocally = 9,
+
+    /// <summary>
+    /// Separate colonies, visited player → visitor: the visit is on, with the ids of the pawns the visitor commands
+    /// (<see cref="CoopIds"/>) — the raiders of their live raid.
+    /// </summary>
+    VisitInfo = 10,
+
+    /// <summary>Either way: the visit is over (the raid ended, or the visitor went home).</summary>
+    VisitEnd = 11,
 }
 
 /// <summary>A pawn aiming at something (the warm-up before a shot): guests draw the aim pie and, when selected, the line.</summary>
@@ -734,6 +743,9 @@ public enum CoopCommandKind : byte
 
     /// <summary>A caravan formed in the "form caravan" window: which things (id, count) and where to.</summary>
     FormCaravan = 10,
+
+    /// <summary>A visitor's order to one of its pawns: the job as Scribe XML (go there, attack that, cast, kidnap…).</summary>
+    Job = 11,
 }
 
 /// <summary>An order a co-op guest gave; the host finds the same designator/option/gizmo in its game and runs it.</summary>
@@ -787,7 +799,7 @@ public sealed class CoopCommand
     {
         var reader = new ByteReader(data);
         var command = new CoopCommand { Kind = (CoopCommandKind)reader.ReadByte(), MapId = (int)reader.ReadVarInt() };
-        if (command.Kind < CoopCommandKind.Designate || command.Kind > CoopCommandKind.FormCaravan)
+        if (command.Kind < CoopCommandKind.Designate || command.Kind > CoopCommandKind.Job)
             throw new ProtocolException($"Unknown co-op command {(byte)command.Kind}");
         var things = MapDelta.Count(reader, 100_000);
         for (var i = 0; i < things; i++)

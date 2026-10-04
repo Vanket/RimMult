@@ -211,9 +211,9 @@
   <RimMult.RaidNotAtWar>вы не воюете с {0}</RimMult.RaidNotAtWar>
   <RimMult.RaidOwnerAway>{0} сейчас не играет</RimMult.RaidOwnerAway>
   <RimMult.RaidNoFighters>нет колонистов, способных сражаться</RimMult.RaidNoFighters>
-  <RimMult.RaidAttack>Напасть на колонию {0}</RimMult.RaidAttack>
+  <RimMult.RaidAttack>Отправить рейд на {0} (ведёт ИИ)</RimMult.RaidAttack>
   <RimMult.RaidAttackReport>Идёт нападать на {0}.</RimMult.RaidAttackReport>
-  <RimMult.RaidPods>Десант в капсулах на {0}</RimMult.RaidPods>
+  <RimMult.RaidPods>Десант в капсулах на {0} (ведёт ИИ)</RimMult.RaidPods>
   <RimMult.RaidLaunched>Ваш отряд атакует {0}! Когда бой закончится, вы узнаете результат.</RimMult.RaidLaunched>
   <RimMult.RaidCancelled>Нападение на {0} отменено: {1}</RimMult.RaidCancelled>
   <RimMult.RaidArrivedLabel>Рейд игрока {0}!</RimMult.RaidArrivedLabel>
@@ -229,4 +229,28 @@
   <RimMult.RaidNobody>никто</RimMult.RaidNobody>
   <RimMult.RaidBouncedLabel>Нападение не состоялось</RimMult.RaidBouncedLabel>
   <RimMult.RaidBouncedText>Атака не состоялась (заключён мир или противник вышел из игры). Ваши люди вернулись домой: {0}.</RimMult.RaidBouncedText>
+  <RimMult.RaidAttackLive>Напасть лично на {0}</RimMult.RaidAttackLive>
+  <RimMult.RaidPodsLive>Десант в капсулах на {0} — вести лично</RimMult.RaidPodsLive>
+  <RimMult.RaidArrivedLive>{0} ведёт этот рейд лично: управляет своими бойцами из вашей игры.</RimMult.RaidArrivedLive>
+  <RimMult.VisitGoing>Ваша колония сохранена. Загружаем колонию {0} — вы поведёте рейд лично.</RimMult.VisitGoing>
+  <RimMult.VisitRefused>{0} не пускает в бой (рейд не дошёл или уже закончился)</RimMult.VisitRefused>
+  <RimMult.VisitJoining>{0} входит в бой лично — мир на паузе, пока игра загружается.</RimMult.VisitJoining>
+  <RimMult.VisitJoined>{0} лично ведёт свой рейд!</RimMult.VisitJoined>
+  <RimMult.VisitLeft>{0} покинул бой — его рейдом снова управляет ИИ.</RimMult.VisitLeft>
+  <RimMult.VisitStartedLabel>Вы ведёте рейд</RimMult.VisitStartedLabel>
+  <RimMult.VisitStartedText>Это колония противника. Вашими бойцами можно управлять как обычно: призыв, приказы правой кнопкой, Shift, атака по цели, способности.\n\nКнопки бойцов: «Отступить» (уйти за край карты с добычей), «Похитить» (унести упавшего врага), «Украсть» (унести предмет), «Вернуться домой».\n\nКогда бой закончится, загрузится ваша колония, а выжившие придут караваном.</RimMult.VisitStartedText>
+  <RimMult.VisitOver>Рейд закончился — возвращаемся домой.</RimMult.VisitOver>
+  <RimMult.VisitInterrupted>Бой прерван: {0}. Возвращаемся домой.</RimMult.VisitInterrupted>
+  <RimMult.VisitBackHome>Вы снова дома. Итоги рейда придут письмом.</RimMult.VisitBackHome>
+  <RimMult.VisitRetreat>Отступить</RimMult.VisitRetreat>
+  <RimMult.VisitRetreatDesc>Уйти за ближайший край карты — с тем, что несёт. Ушедшие вернутся домой.</RimMult.VisitRetreatDesc>
+  <RimMult.VisitKidnap>Похитить</RimMult.VisitKidnap>
+  <RimMult.VisitKidnapDesc>Унести упавшего врага за край карты — он станет вашим пленником.</RimMult.VisitKidnapDesc>
+  <RimMult.VisitSteal>Украсть</RimMult.VisitSteal>
+  <RimMult.VisitStealDesc>Унести предмет за край карты.</RimMult.VisitStealDesc>
+  <RimMult.VisitGoHome>Вернуться домой</RimMult.VisitGoHome>
+  <RimMult.VisitGoHomeDesc>Загрузить свою колонию. Бойцы останутся здесь под управлением ИИ.</RimMult.VisitGoHomeDesc>
+  <RimMult.VisitGoHomeConfirm>Вернуться домой? Рейд продолжится без вас: бойцами будет управлять ИИ.</RimMult.VisitGoHomeConfirm>
+  <RimMult.VisitHiddenJob>действует</RimMult.VisitHiddenJob>
+  <RimMult.VisitNoDesignate>В чужой колонии можно только командовать своими бойцами.</RimMult.VisitNoDesignate>
 </LanguageData>

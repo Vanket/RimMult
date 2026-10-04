@@ -68,12 +68,33 @@ internal static class CoopHost
     private static float _lastGrid;
     private static float _lastPawnRoll;
 
-    /// <summary>Hosting a co-op game with the colony loaded: changes are recorded and streamed.</summary>
+    /// <summary>
+    /// Hosting a co-op game with the colony loaded, or (separate colonies) being visited by a player leading a live
+    /// raid here: changes are recorded and streamed.
+    /// </summary>
     public static bool Active =>
-        Multiplayer.IsHosting
-        && Multiplayer.Session is { State: ClientState.Connected, Mode: GameMode.Coop }
+        Multiplayer.Session is { State: ClientState.Connected } session
+        && (session.Mode == GameMode.Coop ? Multiplayer.IsHosting : Guests.Count > 0)
         && Current.ProgramState == ProgramState.Playing
         && !LongEventHandler.AnyEventNowOrWaiting;
+
+    /// <summary>Separate colonies: this game is visited (a live raid), not a co-op host.</summary>
+    private static bool Visited(ClientSession session) => session.Mode != GameMode.Coop;
+
+    /// <summary>To every guest: the server passes co-op traffic to all guests, a visit's only to the named player.</summary>
+    private static void Broadcast(ClientSession session, CoopChannel channel, byte[] data)
+    {
+        if (!Visited(session))
+        {
+            session.SendCoop(channel, data);
+            return;
+        }
+        foreach (var guest in Guests)
+            session.SendCoop(channel, data, guest);
+    }
+
+    /// <summary>A visitor's visit is over (the raid ended): it gets nothing more.</summary>
+    public static void DropGuest(int guestId) => Guests.Remove(guestId);
 
     public static void Attach(ClientSession session) => session.CoopReceived += OnCoop;
 
@@ -151,7 +172,14 @@ internal static class CoopHost
 
     public static void Update(ClientSession session)
     {
-        Guests.RemoveWhere(id => !session.Players.Any(p => p.Id == id));
+        foreach (var gone in Guests.Where(id => !session.Players.Any(p => p.Id == id)).ToList())
+        {
+            Guests.Remove(gone);
+            if (Visited(session))
+                Sync.PlayerVisits.Left(gone);
+        }
+        if (Visited(session))
+            Sync.PlayerVisits.Update(session);
         if (!Active || Guests.Count == 0 || !ScribeMemory.Idle)
         {
             Spawned.Clear();
@@ -185,7 +213,8 @@ internal static class CoopHost
         if (rollPawn)
             _lastPawnRoll = now;
 
-        var batch = new CoopBatch { Tick = Find.TickManager.TicksGame, World = CoopWorldSync.Build() };
+        // A visitor shares nothing of this colony's NPC world (letters, research, policies, the globe): only the maps.
+        var batch = new CoopBatch { Tick = Find.TickManager.TicksGame, World = Visited(session) ? new CoopWorld() : CoopWorldSync.Build() };
         var budget = MaxFragmentsPerBatch;
         foreach (var map in Find.Maps)
         {
@@ -197,7 +226,7 @@ internal static class CoopHost
         Despawned.Clear();
         Shots.Clear();
         if (batch.Maps.Count > 0 || !batch.World.IsEmpty)
-            session.SendCoop(CoopChannel.State, Compress(batch.Encode()));
+            Broadcast(session, CoopChannel.State, Compress(batch.Encode()));
     }
 
     private static bool IsEmpty(MapDelta delta) =>
@@ -229,7 +258,7 @@ internal static class CoopHost
         _lastPositionsData = key;
         _lastPositionsSent = now;
         foreach (var frame in PositionsFrame.Split(Find.TickManager.TicksGame, maps, PositionsFrameBytes, aims, bars))
-            session.SendCoop(CoopChannel.Positions, frame);
+            Broadcast(session, CoopChannel.Positions, frame);
     }
 
     private static readonly AccessTools.FieldRef<Stance_Warmup, float>? PieSize =
@@ -520,14 +549,18 @@ internal static class CoopHost
 
     private static void OnCoop(int guestId, CoopChannel channel, byte[] data)
     {
-        if (!Multiplayer.IsHosting)
+        if (Multiplayer.Session is not { } session || (!Visited(session) && !Multiplayer.IsHosting))
             return;
-        var session = Multiplayer.Session!;
+        var visit = Visited(session);
+        // A visitor talks to this game only about its own visit.
+        if (visit && channel != CoopChannel.JoinRequest && !Guests.Contains(guestId))
+            return;
 
         switch (channel)
         {
             case CoopChannel.JoinRequest:
-                if (Current.ProgramState != ProgramState.Playing || LongEventHandler.AnyEventNowOrWaiting || !ScribeMemory.Idle)
+                if (Current.ProgramState != ProgramState.Playing || LongEventHandler.AnyEventNowOrWaiting || !ScribeMemory.Idle
+                    || (visit && !Sync.PlayerVisits.CanHost(session, guestId)))
                 {
                     session.SendCoop(CoopChannel.NotReady, Array.Empty<byte>(), guestId);
                     return;
@@ -536,13 +569,24 @@ internal static class CoopHost
                 Guests.Add(guestId);
                 // Everything after this save reaches the guest as batches; grids, zones and designations go out in full again.
                 ForgetSentState();
-                Messages.Message("RimMult.CoopGuestJoining".Translate(session.NameOf(guestId)), RimWorld.MessageTypeDefOf.NeutralEvent, historical: false);
+                if (visit)
+                    Sync.PlayerVisits.Joined(session, guestId);
+                else
+                    Messages.Message("RimMult.CoopGuestJoining".Translate(session.NameOf(guestId)), RimWorld.MessageTypeDefOf.NeutralEvent, historical: false);
                 break;
             case CoopChannel.Ready:
-                Messages.Message("RimMult.CoopGuestJoined".Translate(session.NameOf(guestId)), RimWorld.MessageTypeDefOf.PositiveEvent, historical: false);
+                Messages.Message((visit ? "RimMult.VisitJoined" : "RimMult.CoopGuestJoined").Translate(session.NameOf(guestId)),
+                    visit ? RimWorld.MessageTypeDefOf.ThreatBig : RimWorld.MessageTypeDefOf.PositiveEvent, historical: false);
+                break;
+            case CoopChannel.Command when visit:
+                Sync.PlayerVisits.Execute(guestId, data);
                 break;
             case CoopChannel.Command:
                 CoopCommands.Execute(guestId, data);
+                break;
+            case CoopChannel.VisitEnd when visit:
+                Guests.Remove(guestId);
+                Sync.PlayerVisits.Left(guestId);
                 break;
             case CoopChannel.Resync:
                 Resync(data);

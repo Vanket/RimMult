@@ -135,7 +135,7 @@ internal static class CoopCommands
         Send(new CoopCommand { Kind = CoopCommandKind.Research, Name = project?.defName ?? "" });
 
     public static void Send(CoopCommand command) =>
-        Multiplayer.Session?.SendCoop(CoopChannel.Command, command.Encode());
+        CoopGuest.SendToHost(CoopChannel.Command, command.Encode());
 
     // ---------- host side: find and run ----------
 

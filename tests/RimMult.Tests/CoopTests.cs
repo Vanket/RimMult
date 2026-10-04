@@ -444,4 +444,39 @@ public class CoopTests
         Assert.Equal(GameSpeed.Normal, host.Server.Time.ResolveSpeed());
         Assert.Equal(ClientState.Connected, b.State);
     }
+
+    [Fact]
+    public void VisitTrafficGoesBetweenTheTwoPlayersOnly()
+    {
+        var host = new Host(GameMode.SeparateColonies);
+        var a = host.Join("Host", 100);
+        host.Pump(a);
+        var b = host.Join("Defender", 200);
+        var c = host.Join("Attacker", 300);
+        host.Pump(a, b, c);
+        var atHost = Record(a);
+        var atDefender = Record(b);
+        var atAttacker = Record(c);
+        a.VoteSpeed(GameSpeed.Normal);
+        b.VoteSpeed(GameSpeed.Normal);
+
+        c.SendCoop(CoopChannel.JoinRequest, [1], b.PlayerId);
+        host.Pump(a, b, c);
+
+        var request = Assert.Single(atDefender);
+        Assert.Equal((c.PlayerId, CoopChannel.JoinRequest), (request.From, request.Channel));
+        Assert.Empty(atHost);
+        // The world waits while the attacker loads the defender's game.
+        Assert.Equal(GameSpeed.Paused, host.Server.Time.ResolveSpeed());
+
+        b.SendCoop(CoopChannel.Game, [7], c.PlayerId);
+        host.Pump(a, b, c);
+        var game = Assert.Single(atAttacker);
+        Assert.Equal((b.PlayerId, CoopChannel.Game), (game.From, game.Channel));
+
+        c.SendCoop(CoopChannel.Ready, [], b.PlayerId);
+        host.Pump(a, b, c);
+        Assert.Equal(GameSpeed.Normal, host.Server.Time.ResolveSpeed());
+        Assert.Empty(atHost);
+    }
 }

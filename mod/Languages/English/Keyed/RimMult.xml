@@ -211,9 +211,9 @@
   <RimMult.RaidNotAtWar>you are not at war with {0}</RimMult.RaidNotAtWar>
   <RimMult.RaidOwnerAway>{0} is not playing right now</RimMult.RaidOwnerAway>
   <RimMult.RaidNoFighters>no colonist able to fight</RimMult.RaidNoFighters>
-  <RimMult.RaidAttack>Attack {0}'s colony</RimMult.RaidAttack>
+  <RimMult.RaidAttack>Send a raid on {0} (AI-led)</RimMult.RaidAttack>
   <RimMult.RaidAttackReport>Going to attack {0}.</RimMult.RaidAttackReport>
-  <RimMult.RaidPods>Drop pod assault on {0}</RimMult.RaidPods>
+  <RimMult.RaidPods>Drop pod assault on {0} (AI-led)</RimMult.RaidPods>
   <RimMult.RaidLaunched>Your war party attacks {0}! You will hear how it went when it's over.</RimMult.RaidLaunched>
   <RimMult.RaidCancelled>The attack on {0} is off: {1}</RimMult.RaidCancelled>
   <RimMult.RaidArrivedLabel>Raid by {0}!</RimMult.RaidArrivedLabel>
@@ -229,4 +229,28 @@
   <RimMult.RaidNobody>nobody</RimMult.RaidNobody>
   <RimMult.RaidBouncedLabel>The raid didn't happen</RimMult.RaidBouncedLabel>
   <RimMult.RaidBouncedText>The attack could not take place (peace was made, or the enemy left the game). Your people are back home: {0}.</RimMult.RaidBouncedText>
+  <RimMult.RaidAttackLive>Attack {0} in person</RimMult.RaidAttackLive>
+  <RimMult.RaidPodsLive>Drop pod assault on {0}, led in person</RimMult.RaidPodsLive>
+  <RimMult.RaidArrivedLive>{0} leads this raid in person, commanding their fighters from your game.</RimMult.RaidArrivedLive>
+  <RimMult.VisitGoing>Your colony is saved. Loading {0}'s colony: you will lead the raid in person.</RimMult.VisitGoing>
+  <RimMult.VisitRefused>{0} won't let you in (the raid hasn't arrived or is already over)</RimMult.VisitRefused>
+  <RimMult.VisitJoining>{0} joins the fight in person: the world is paused while their game loads.</RimMult.VisitJoining>
+  <RimMult.VisitJoined>{0} leads their raid in person!</RimMult.VisitJoined>
+  <RimMult.VisitLeft>{0} left the fight: their raid is AI-led again.</RimMult.VisitLeft>
+  <RimMult.VisitStartedLabel>You lead the raid</RimMult.VisitStartedLabel>
+  <RimMult.VisitStartedText>This is the enemy's colony. Command your fighters as usual: draft, right-click orders, Shift, attack target, abilities.\n\nYour fighters' buttons: "Retreat" (leave over the map edge with the loot), "Kidnap" (carry off a downed enemy), "Steal" (carry off an item), "Go home".\n\nWhen the fight is over your colony loads again and the survivors come back as a caravan.</RimMult.VisitStartedText>
+  <RimMult.VisitOver>The raid is over: going home.</RimMult.VisitOver>
+  <RimMult.VisitInterrupted>The fight was interrupted: {0}. Going home.</RimMult.VisitInterrupted>
+  <RimMult.VisitBackHome>You are home again. The raid's results come by letter.</RimMult.VisitBackHome>
+  <RimMult.VisitRetreat>Retreat</RimMult.VisitRetreat>
+  <RimMult.VisitRetreatDesc>Leave over the nearest map edge, with whatever is carried. Those who leave go home.</RimMult.VisitRetreatDesc>
+  <RimMult.VisitKidnap>Kidnap</RimMult.VisitKidnap>
+  <RimMult.VisitKidnapDesc>Carry a downed enemy off the map: they become your prisoner.</RimMult.VisitKidnapDesc>
+  <RimMult.VisitSteal>Steal</RimMult.VisitSteal>
+  <RimMult.VisitStealDesc>Carry an item off the map.</RimMult.VisitStealDesc>
+  <RimMult.VisitGoHome>Go home</RimMult.VisitGoHome>
+  <RimMult.VisitGoHomeDesc>Load your colony. Your fighters stay here, AI-led.</RimMult.VisitGoHomeDesc>
+  <RimMult.VisitGoHomeConfirm>Go home? The raid goes on without you, AI-led.</RimMult.VisitGoHomeConfirm>
+  <RimMult.VisitHiddenJob>acting</RimMult.VisitHiddenJob>
+  <RimMult.VisitNoDesignate>In another player's colony you can only command your fighters.</RimMult.VisitNoDesignate>
 </LanguageData>

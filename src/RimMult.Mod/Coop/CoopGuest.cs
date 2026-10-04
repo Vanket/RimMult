@@ -36,6 +36,10 @@ internal static class CoopGuest
 
     private const string SaveName = "RimMult_CoopGuest";
 
+    /// <summary>A visited player not ready yet (the raiders still on their way) is asked again this often, this many times.</summary>
+    private const float VisitRetryInterval = 3f;
+    private const int VisitTries = 20;
+
     /// <summary>A load that ended in the main menu after this long went wrong (bad save, missing mods).</summary>
     private const float LoadFailAfter = 5f;
 
@@ -66,6 +70,21 @@ internal static class CoopGuest
 
     public static Phase State { get; private set; }
 
+    /// <summary>Who this guest plays with: -1 for the co-op host (the server knows who that is), else the visited player.</summary>
+    public static int Target { get; private set; } = -1;
+
+    /// <summary>
+    /// Separate colonies: this player is visiting another player's game for a live raid (see <see cref="Sync.PlayerVisit"/>),
+    /// commanding only <see cref="VisitPawns"/>.
+    /// </summary>
+    public static bool Visiting { get; private set; }
+
+    /// <summary>The pawns (thing ids in the visited game) this visitor commands: its raiders.</summary>
+    public static HashSet<int> VisitPawns { get; private set; } = new();
+
+    private static int _visitTries;
+    private static float _retryAt;
+
     /// <summary>Playing the host's colony right now: orders go to the host, the local copy doesn't tick.</summary>
     public static bool Active => State == Phase.Active && Current.ProgramState == ProgramState.Playing && Current.Game == _game;
 
@@ -83,6 +102,10 @@ internal static class CoopGuest
     public static void Reset()
     {
         State = Phase.None;
+        Target = -1;
+        Visiting = false;
+        VisitPawns = new HashSet<int>();
+        _retryAt = 0f;
         Pending.Clear();
         PendingPositions.Clear();
         Deferred.Clear();
@@ -101,16 +124,27 @@ internal static class CoopGuest
     public static void Leave(string reason)
     {
         var wasActive = Active;
+        var visiting = Visiting;
         Reset();
-        if (wasActive)
+        if (visiting)
+            Sync.PlayerVisit.ReturnHome(reason);
+        else if (wasActive)
             OfferMainMenu(reason);
     }
+
+    /// <summary>Sends to the co-op host, or to the visited player.</summary>
+    public static void SendToHost(CoopChannel channel, byte[] data) => Multiplayer.Session?.SendCoop(channel, data, Target);
 
     /// <summary>Gives up waiting for the host's game.</summary>
     public static void CancelJoin(ClientSession session)
     {
         if (State != Phase.Requested)
             return;
+        if (Visiting)
+        {
+            Leave("");
+            return;
+        }
         State = Phase.None;
         session.LeaveWorld();
     }
@@ -123,6 +157,20 @@ internal static class CoopGuest
         Pending.Clear();
         State = Phase.Requested;
         session.SendCoop(CoopChannel.JoinRequest, Array.Empty<byte>());
+    }
+
+    /// <summary>Separate colonies: asks <paramref name="playerId"/> for their game, to lead a live raid in it.</summary>
+    public static void RequestVisit(ClientSession session, int playerId)
+    {
+        if (State != Phase.None)
+            return;
+        Pending.Clear();
+        State = Phase.Requested;
+        Target = playerId;
+        Visiting = true;
+        _visitTries = 1;
+        _retryAt = 0f;
+        SendToHost(CoopChannel.JoinRequest, Array.Empty<byte>());
     }
 
     public static void Update(ClientSession? session)
@@ -138,11 +186,21 @@ internal static class CoopGuest
 
         switch (State)
         {
+            case Phase.Requested when Visiting && _retryAt > 0f && Time.realtimeSinceStartup >= _retryAt:
+                _retryAt = 0f;
+                _visitTries++;
+                SendToHost(CoopChannel.JoinRequest, Array.Empty<byte>());
+                break;
             case Phase.Loading:
                 UpdateLoading(session);
                 break;
             case Phase.Active when !Active:
                 // The guest left the host's colony on their own (main menu, another save).
+                if (Visiting)
+                {
+                    Leave("");
+                    break;
+                }
                 Reset();
                 session.LeaveWorld();
                 break;
@@ -158,11 +216,33 @@ internal static class CoopGuest
 
     private static void OnCoop(int sender, CoopChannel channel, byte[] data)
     {
-        if (Multiplayer.IsHosting || Multiplayer.Session is not { } session)
+        if (Multiplayer.Session is not { } session || (session.Mode == GameMode.Coop ? Multiplayer.IsHosting : !Visiting || sender != Target))
             return;
 
         switch (channel)
         {
+            case CoopChannel.NotReady when State == Phase.Requested && Visiting:
+                // The raiders may not have arrived yet: ask again in a moment.
+                if (_visitTries >= VisitTries)
+                    Leave("RimMult.VisitRefused".Translate(session.NameOf(Target)));
+                else
+                    _retryAt = Time.realtimeSinceStartup + VisitRetryInterval;
+                break;
+            case CoopChannel.VisitInfo:
+                try
+                {
+                    VisitPawns = new HashSet<int>(CoopIds.Decode(data));
+                }
+                catch (Exception)
+                {
+                    VisitPawns = new HashSet<int>();
+                }
+                if (Active)
+                    Sync.PlayerVisit.CopyLoaded();
+                break;
+            case CoopChannel.VisitEnd when Visiting:
+                Sync.PlayerVisit.Over();
+                break;
             case CoopChannel.NotReady when State == Phase.Requested:
                 State = Phase.None;
                 session.LeaveWorld(); // releases the server's pause hold
@@ -220,14 +300,22 @@ internal static class CoopGuest
             MyVote = null;
             DeleteSave();
             ScribeMemory.ResetCache();
-            session.SendCoop(CoopChannel.Ready, Array.Empty<byte>());
+            SendToHost(CoopChannel.Ready, Array.Empty<byte>());
+            if (Visiting)
+                Sync.PlayerVisit.CopyLoaded();
             ApplyPending();
             ApplyPositions();
-            Messages.Message("RimMult.CoopJoined".Translate(session.NameOf(HostId(session))), MessageTypeDefOf.PositiveEvent, historical: false);
+            if (!Visiting)
+                Messages.Message("RimMult.CoopJoined".Translate(session.NameOf(HostId(session))), MessageTypeDefOf.PositiveEvent, historical: false);
         }
         else if (Current.ProgramState == ProgramState.Entry && Time.realtimeSinceStartup - _loadStarted > LoadFailAfter)
         {
             DeleteSave();
+            if (Visiting)
+            {
+                Leave("RimMult.CoopLoadFailed".Translate());
+                return;
+            }
             Reset();
             session.LeaveWorld();
             Messages.Message("RimMult.CoopLoadFailed".Translate(), MessageTypeDefOf.RejectInput, historical: false);
@@ -575,7 +663,7 @@ internal static class CoopGuest
             return;
         foreach (var id in ask)
             ResyncAsked[id] = now;
-        Multiplayer.Session?.SendCoop(CoopChannel.Resync, CoopIds.Encode(ask));
+        SendToHost(CoopChannel.Resync, CoopIds.Encode(ask));
     }
 
     /// <summary>Small changes in place: no reload, no respawn, only a redraw of that cell when the look changed.</summary>
@@ -671,10 +759,13 @@ internal static class CoopGuest
                 continue;
 
             var selected = false;
+            var drafted = false;
             List<DesignationDef>? designations = null;
             if (byId.TryGetValue(thing.thingIDNumber, out var old))
             {
                 selected = Find.Selector.IsSelected(old);
+                // A visitor drafts its raiders in its own copy only (the defender's game doesn't know): kept across copies.
+                drafted = Visiting && old is Pawn { Drafted: true };
                 if (old.Spawned)
                 {
                     // Designations on the old object (chop this tree) carry over; the host only re-sends them when they change.
@@ -683,6 +774,8 @@ internal static class CoopGuest
                 }
             }
 
+            if (Visiting)
+                Sync.PlayerVisit.AdjustLoaded(thing);
             try
             {
                 GenSpawn.Spawn(thing, position, map, thing.Rotation, WipeMode.Vanish, respawningAfterLoad: true);
@@ -698,6 +791,8 @@ internal static class CoopGuest
             if (designations != null)
                 foreach (var def in designations)
                     map.designationManager.AddDesignation(new Designation(thing, def));
+            if (drafted && thing is Pawn { drafter: { } drafter })
+                drafter.Drafted = true;
             if (selected)
                 Find.Selector.Select(thing, playSound: false, forceDesignatorDeselect: false);
             anyPawn |= thing is Pawn;

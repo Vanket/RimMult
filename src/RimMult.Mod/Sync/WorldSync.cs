@@ -70,8 +70,9 @@ internal static class WorldSync
             NewColonyFlowActive = false;
         }
 
-        // A co-op guest plays a copy of the host's game (its save says it is in the world): only the host is.
-        var coopGuest = Coop.CoopGuest.IsGuest(session);
+        // A co-op guest plays a copy of the host's game (its save says it is in the world): only the host is. The
+        // same for a player away leading a live raid in another player's game.
+        var coopGuest = Coop.CoopGuest.IsGuest(session) || Coop.CoopGuest.Visiting || PlayerVisit.Travelling;
         var shouldBeIn = !coopGuest && CurrentGameIsInWorld(session);
         if (shouldBeIn && !InWorld && !_entering)
         {
@@ -98,6 +99,17 @@ internal static class WorldSync
         // Show other players' colonies while playing this world, and on the planet picked for a new colony.
         var showColonies = shouldBeIn || (!coopGuest && NewColonyFlowActive && session.World != null && Current.Game?.World != null);
         RemoteColonies.Reconcile(session, showColonies);
+    }
+
+    /// <summary>Leaves the world right now (before this player loads another player's game for a live raid).</summary>
+    public static void LeaveNow(ClientSession session)
+    {
+        if (InWorld || _entering)
+            session.LeaveWorld();
+        _entering = false;
+        InWorld = false;
+        _lastColoniesKey = "";
+        TimeSync.End();
     }
 
     /// <summary>A new game started from the multiplayer window: tie it to the shared world (or create the world).</summary>

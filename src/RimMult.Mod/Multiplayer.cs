@@ -221,6 +221,7 @@ internal static class Multiplayer
         if (Session != null)
             CoopHost.Update(Session);
         CoopGuest.Update(Session);
+        PlayerVisit.Update(Session);
     }
 
     public static void OpenDialog()

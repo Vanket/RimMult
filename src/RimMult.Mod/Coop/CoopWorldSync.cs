@@ -202,7 +202,7 @@ internal static class CoopLetterPatch
 {
     private static void Postfix(Letter let)
     {
-        if (!CoopHost.Active || let == null)
+        if (!CoopHost.Active || let == null || Multiplayer.Session?.Mode != GameMode.Coop)
             return;
         try
         {

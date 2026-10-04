@@ -39,24 +39,34 @@ public static class ParcelAddress
         DropPods,
     }
 
-    /// <summary>Raiders (a war party) sent to attack the colony on <paramref name="tile"/>.</summary>
-    public static string ForRaid(string raidId, RaidArrival arrival, string tile) =>
-        $"{RaidPrefix}{raidId}|{(arrival == RaidArrival.DropPods ? "p" : "c")}|{tile}";
+    private const string LiveMark = "live";
+
+    /// <summary>
+    /// Raiders (a war party) sent to attack the colony on <paramref name="tile"/>. A <paramref name="live"/> raid is
+    /// led by the attacker in person (they join the defender's game to command it); otherwise the defender's AI runs it.
+    /// </summary>
+    public static string ForRaid(string raidId, RaidArrival arrival, string tile, bool live = false) =>
+        $"{RaidPrefix}{raidId}|{(arrival == RaidArrival.DropPods ? "p" : "c")}|{tile}{(live ? "|" + LiveMark : "")}";
 
     public static bool IsRaid(string address) => address.StartsWith(RaidPrefix);
 
-    public static bool TryParseRaid(string address, out string raidId, out RaidArrival arrival, out string tile)
+    public static bool TryParseRaid(string address, out string raidId, out RaidArrival arrival, out string tile) =>
+        TryParseRaid(address, out raidId, out arrival, out tile, out _);
+
+    public static bool TryParseRaid(string address, out string raidId, out RaidArrival arrival, out string tile, out bool live)
     {
         raidId = tile = "";
         arrival = RaidArrival.WalkIn;
+        live = false;
         if (!IsRaid(address))
             return false;
         var parts = address.Substring(RaidPrefix.Length).Split('|');
-        if (parts.Length != 3)
+        if (parts.Length != 3 && parts.Length != 4)
             return false;
         raidId = parts[0];
         arrival = parts[1] == "p" ? RaidArrival.DropPods : RaidArrival.WalkIn;
         tile = parts[2];
+        live = parts.Length == 4 && parts[3] == LiveMark;
         return true;
     }
 
