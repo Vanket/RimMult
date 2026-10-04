@@ -21,6 +21,8 @@ internal static class CoopCommands
     private static readonly AccessTools.FieldRef<Designator_Place, Rot4> PlacingRot = AccessTools.FieldRefAccess<Designator_Place, Rot4>("placingRot");
     private static readonly AccessTools.FieldRef<Pawn_WorkSettings, Pawn> WorkSettingsPawn = AccessTools.FieldRefAccess<Pawn_WorkSettings, Pawn>("pawn");
 
+    private const string WorldPrefix = "world:";
+
     private static int _lastGizmoFrame = -1;
     private static string _lastGizmoKey = "";
 
@@ -90,7 +92,9 @@ internal static class CoopCommands
 
     public static void SendGizmo(Command gizmo)
     {
-        var selected = Find.Selector.SelectedObjects.OfType<Thing>().ToList();
+        // In the globe view the buttons belong to the selected caravans and settlements.
+        var worldObjects = CoopGlobe.SelectedWorldObjects();
+        var selected = worldObjects.Count > 0 ? new List<Thing>() : Find.Selector.SelectedObjects.OfType<Thing>().ToList();
         var key = gizmo.GetType().FullName + "|" + gizmo.Label;
 
         // Grouped gizmos (three pawns, one "draft" button) are processed once per member in the same frame:
@@ -108,7 +112,8 @@ internal static class CoopCommands
             Name = gizmo.GetType().FullName ?? "",
             Detail = gizmo.Label ?? "",
             // A zone's buttons (allow sowing, …): the zone has no thing id, it goes by its own.
-            Number = selected.Count == 0 && Find.Selector.SelectedZone is { } zone ? zone.ID : -1,
+            Number = selected.Count == 0 && worldObjects.Count == 0 && Find.Selector.SelectedZone is { } zone ? zone.ID : -1,
+            Extra = worldObjects.Count > 0 ? WorldPrefix + string.Join(",", worldObjects.Select(o => o.ID)) : "",
             Queue = QueueHeld(),
         });
     }
@@ -188,6 +193,11 @@ internal static class CoopCommands
                     break;
                 case CoopCommandKind.Edit:
                     CoopEdits.Apply(command, map);
+                    break;
+                case CoopCommandKind.CaravanGoto:
+                case CoopCommandKind.WorldFloatMenu:
+                case CoopCommandKind.FormCaravan:
+                    CoopGlobe.Execute(command, map);
                     break;
             }
         }
@@ -326,6 +336,12 @@ internal static class CoopCommands
             Press(zone.GetGizmos());
             CoopHost.TouchZones(map);
         }
+        foreach (var worldObject in CoopGlobe.WorldObjectsByIds(WorldIds(command)))
+        {
+            Press(worldObject.GetGizmos());
+            if (Find.WindowStack.Windows.Any(w => !windows.Contains(w)))
+                break;
+        }
 
         var all = Find.Maps.SelectMany(ThingsById).GroupBy(p => p.Key).ToDictionary(g => g.Key, g => g.First().Value);
         foreach (var id in command.ThingIds)
@@ -374,7 +390,11 @@ internal static class CoopCommands
         }
         var map = Find.Maps.FirstOrDefault(m => m.uniqueID == command.MapId);
         IEnumerable<Gizmo> gizmos;
-        if (command.ThingIds.Count == 0 && command.Number >= 0 && map?.zoneManager.AllZones.FirstOrDefault(z => z.ID == command.Number) is { } zone)
+        if (WorldIds(command).Count > 0)
+        {
+            gizmos = CoopGlobe.WorldObjectsByIds(WorldIds(command)).SelectMany(o => o.GetGizmos());
+        }
+        else if (command.ThingIds.Count == 0 && command.Number >= 0 && map?.zoneManager.AllZones.FirstOrDefault(z => z.ID == command.Number) is { } zone)
         {
             gizmos = zone.GetGizmos();
         }
@@ -420,6 +440,13 @@ internal static class CoopCommands
             }
         }
     }
+
+    /// <summary>The world objects (caravans, settlements) a guest's button was pressed for.</summary>
+    private static List<int> WorldIds(CoopCommand command) =>
+        command.Kind == CoopCommandKind.Gizmo && command.Extra.StartsWith(WorldPrefix, StringComparison.Ordinal)
+            ? command.Extra.Substring(WorldPrefix.Length).Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => int.TryParse(s, out var id) ? id : -1).Where(id => id >= 0).ToList()
+            : new List<int>();
 
     public static Dictionary<int, Thing> ThingsById(Map map)
     {

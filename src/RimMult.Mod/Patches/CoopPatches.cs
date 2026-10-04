@@ -219,7 +219,11 @@ internal static class CoopFloatMenuPatch
     [HarmonyPatch(typeof(FloatMenuOption), nameof(FloatMenuOption.Chosen))]
     private static bool Chosen(FloatMenuOption __instance)
     {
-        if (!CoopGuest.Active || CoopGuest.Applying || !Origins.TryGetValue(__instance, out var origin))
+        if (!CoopGuest.Active || CoopGuest.Applying)
+            return true;
+        if (CoopGlobe.TryRelayChosen(__instance))
+            return false;
+        if (!Origins.TryGetValue(__instance, out var origin))
             return true;
         if (!__instance.Disabled)
             CoopCommands.SendFloatMenu(__instance, origin.Pawns, origin.ClickPos);

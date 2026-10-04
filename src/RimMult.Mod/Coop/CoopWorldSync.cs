@@ -12,7 +12,7 @@ namespace RimMult.Coop;
 
 /// <summary>
 /// Co-op is one colony, so its NPC world is shared too: relations with the factions, research, the letters the
-/// storyteller sends and the colony's policies all come from the host's game and show up on the guests' side as they happen.
+/// storyteller sends, the colony's policies and its caravans on the globe all come from the host's game and show up on the guests' side as they happen.
 /// (In separate colonies each colony keeps its own relations, quests and traders.)
 /// </summary>
 internal static class CoopWorldSync
@@ -40,6 +40,7 @@ internal static class CoopWorldSync
     {
         _factionsHash = null;
         _policiesHash = null;
+        CoopGlobe.Forget();
         _sentCurrent = null;
         SentProgress.Clear();
     }
@@ -78,6 +79,7 @@ internal static class CoopWorldSync
         var world = new CoopWorld();
         world.Letters.AddRange(Letters);
         Letters.Clear();
+        CoopGlobe.Build(world);
 
         var now = Time.realtimeSinceStartup;
         if (now - _lastCheck < CheckInterval)
@@ -156,6 +158,7 @@ internal static class CoopWorldSync
                 ShowLetter(letter);
             if (world.Policies != null)
                 CoopEdits.ApplyPolicies(world.Policies);
+            CoopGlobe.Apply(world);
         }
         catch (Exception e)
         {

@@ -518,7 +518,44 @@ public readonly struct FactionStanding
     public byte Kind { get; }
 }
 
-/// <summary>One NPC-world part of the shared game in co-op: relations, research, letters.</summary>
+/// <summary>Where a caravan of the colony is on the globe and how far into its next tile (tiles as RimWorld's text form).</summary>
+public sealed class CaravanPosition
+{
+    public int Id { get; set; }
+    public string Tile { get; set; } = "";
+    public string NextTile { get; set; } = "";
+    public string PreviousTile { get; set; } = "";
+    public float CostLeft { get; set; }
+    public float CostTotal { get; set; }
+    public bool Moving { get; set; }
+    public bool Paused { get; set; }
+
+    public void Write(ByteWriter writer)
+    {
+        writer.WriteVarInt(Id);
+        writer.WriteString(Tile);
+        writer.WriteString(NextTile);
+        writer.WriteString(PreviousTile);
+        writer.WriteFloat(CostLeft);
+        writer.WriteFloat(CostTotal);
+        writer.WriteBool(Moving);
+        writer.WriteBool(Paused);
+    }
+
+    public static CaravanPosition Read(ByteReader reader) => new()
+    {
+        Id = (int)reader.ReadVarInt(),
+        Tile = reader.ReadRequiredString(),
+        NextTile = reader.ReadRequiredString(),
+        PreviousTile = reader.ReadRequiredString(),
+        CostLeft = reader.ReadFloat(),
+        CostTotal = reader.ReadFloat(),
+        Moving = reader.ReadBool(),
+        Paused = reader.ReadBool(),
+    };
+}
+
+/// <summary>One NPC-world part of the shared game in co-op: relations, research, letters, the globe.</summary>
 public sealed class CoopWorld
 {
     /// <summary>All faction relations, when one changed; null otherwise.</summary>
@@ -535,7 +572,17 @@ public sealed class CoopWorld
     /// <summary>The colony's apparel, drug and food policies as Scribe XML, when they changed; null otherwise.</summary>
     public string? Policies { get; set; }
 
-    public bool IsEmpty => Factions == null && Research == null && CurrentResearch == null && Letters.Count == 0 && Policies == null;
+    /// <summary>The colony's caravans on the globe, when one moved; null otherwise.</summary>
+    public List<CaravanPosition>? Caravans { get; set; }
+
+    /// <summary>World objects (caravans, sites, …) that appeared or changed, as Scribe XML.</summary>
+    public List<string> WorldObjects { get; set; } = new();
+
+    /// <summary>Ids of world objects that are gone.</summary>
+    public List<int> RemovedWorldObjects { get; set; } = new();
+
+    public bool IsEmpty => Factions == null && Research == null && CurrentResearch == null && Letters.Count == 0 && Policies == null
+                           && Caravans == null && WorldObjects.Count == 0 && RemovedWorldObjects.Count == 0;
 
     public void Write(ByteWriter writer)
     {
@@ -565,6 +612,19 @@ public sealed class CoopWorld
         foreach (var letter in Letters)
             letter.Write(writer);
         writer.WriteString(Policies);
+        writer.WriteBool(Caravans != null);
+        if (Caravans != null)
+        {
+            writer.WriteVarUInt((ulong)Caravans.Count);
+            foreach (var caravan in Caravans)
+                caravan.Write(writer);
+        }
+        writer.WriteVarUInt((ulong)WorldObjects.Count);
+        foreach (var xml in WorldObjects)
+            writer.WriteString(xml);
+        writer.WriteVarUInt((ulong)RemovedWorldObjects.Count);
+        foreach (var id in RemovedWorldObjects)
+            writer.WriteVarInt(id);
     }
 
     public static CoopWorld Read(ByteReader reader)
@@ -589,6 +649,19 @@ public sealed class CoopWorld
         for (var i = 0; i < letters; i++)
             world.Letters.Add(CoopLetter.Read(reader));
         world.Policies = reader.ReadString();
+        if (reader.ReadBool())
+        {
+            var count = MapDelta.Count(reader, 10_000);
+            world.Caravans = new List<CaravanPosition>(count);
+            for (var i = 0; i < count; i++)
+                world.Caravans.Add(CaravanPosition.Read(reader));
+        }
+        var objects = MapDelta.Count(reader, 100_000);
+        for (var i = 0; i < objects; i++)
+            world.WorldObjects.Add(reader.ReadRequiredString());
+        var removed = MapDelta.Count(reader, 100_000);
+        for (var i = 0; i < removed; i++)
+            world.RemovedWorldObjects.Add((int)reader.ReadVarInt());
         return world;
     }
 }
@@ -652,6 +725,15 @@ public enum CoopCommandKind : byte
     /// policies themselves, areas), sent as their saved state for the host to take over.
     /// </summary>
     Edit = 7,
+
+    /// <summary>A caravan sent to a tile (right-click on the globe).</summary>
+    CaravanGoto = 8,
+
+    /// <summary>A right-click menu option on the globe, picked by label for a caravan at a tile.</summary>
+    WorldFloatMenu = 9,
+
+    /// <summary>A caravan formed in the "form caravan" window: which things (id, count) and where to.</summary>
+    FormCaravan = 10,
 }
 
 /// <summary>An order a co-op guest gave; the host finds the same designator/option/gizmo in its game and runs it.</summary>
@@ -705,7 +787,7 @@ public sealed class CoopCommand
     {
         var reader = new ByteReader(data);
         var command = new CoopCommand { Kind = (CoopCommandKind)reader.ReadByte(), MapId = (int)reader.ReadVarInt() };
-        if (command.Kind < CoopCommandKind.Designate || command.Kind > CoopCommandKind.Edit)
+        if (command.Kind < CoopCommandKind.Designate || command.Kind > CoopCommandKind.FormCaravan)
             throw new ProtocolException($"Unknown co-op command {(byte)command.Kind}");
         var things = MapDelta.Count(reader, 100_000);
         for (var i = 0; i < things; i++)

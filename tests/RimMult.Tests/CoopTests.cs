@@ -260,6 +260,40 @@ public class CoopTests
     }
 
     [Fact]
+    public void GlobeRoundTrips()
+    {
+        var world = new CoopWorld
+        {
+            WorldObjects = { "<root><li Class=\"Caravan\"><ID>7</ID></li></root>" },
+            RemovedWorldObjects = { 3, 9 },
+        };
+        world.Caravans = new List<CaravanPosition>
+        {
+            new() { Id = 7, Tile = "1234", NextTile = "1235", PreviousTile = "1233", CostLeft = 40.5f, CostTotal = 100f, Moving = true },
+        };
+
+        var copy = CoopBatch.Decode(new CoopBatch { World = world }.Encode()).World;
+
+        var caravan = Assert.Single(copy.Caravans!);
+        Assert.Equal((7, "1234", "1235", "1233"), (caravan.Id, caravan.Tile, caravan.NextTile, caravan.PreviousTile));
+        Assert.Equal((40.5f, 100f, true, false), (caravan.CostLeft, caravan.CostTotal, caravan.Moving, caravan.Paused));
+        Assert.Equal(world.WorldObjects, copy.WorldObjects);
+        Assert.Equal([3, 9], copy.RemovedWorldObjects);
+        Assert.False(copy.IsEmpty);
+        Assert.Null(CoopBatch.Decode(new CoopBatch().Encode()).World.Caravans);
+    }
+
+    [Fact]
+    public void FormCaravanCommandRoundTrips()
+    {
+        var command = new CoopCommand { Kind = CoopCommandKind.FormCaravan, MapId = 1, Cells = { 512, 1, 77, 35 }, Detail = "4021" };
+        var copy = CoopCommand.Decode(command.Encode());
+        Assert.Equal(CoopCommandKind.FormCaravan, copy.Kind);
+        Assert.Equal([512, 1, 77, 35], copy.Cells);
+        Assert.Equal("4021", copy.Detail);
+    }
+
+    [Fact]
     public void UnknownCommandIsRejected()
     {
         var data = new CoopCommand { Kind = CoopCommandKind.Research }.Encode();
