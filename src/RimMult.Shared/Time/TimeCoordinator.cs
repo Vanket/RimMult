@@ -7,12 +7,16 @@ namespace RimMult.Shared.Time;
 /// <summary>Result of one coordination step: how far everyone may simulate and at what speed.</summary>
 public readonly struct TickGrantInfo
 {
-    public TickGrantInfo(long horizonTick, GameSpeed speed, int bottleneckPlayerId)
+    public TickGrantInfo(long horizonTick, GameSpeed speed, int bottleneckPlayerId, bool boost = false)
     {
         HorizonTick = horizonTick;
         Speed = speed;
         BottleneckPlayerId = bottleneckPlayerId;
+        Boost = boost;
     }
+
+    /// <summary>Superfast may run doubled (RimWorld's "nothing happening" speed-up): every authority is idle.</summary>
+    public bool Boost { get; }
 
     /// <summary>No authority may simulate past this tick.</summary>
     public long HorizonTick { get; }
@@ -75,12 +79,28 @@ public sealed class TimeCoordinator
     }
 
     /// <summary>How far ahead of the slowest authority the others may run at <paramref name="speed"/>.</summary>
-    public long DriftTicks(GameSpeed speed) =>
-        Math.Max(Settings.MaxDriftTicks, (long)(speed.TicksPerSecond() * Settings.MaxDriftSeconds));
+    public long DriftTicks(GameSpeed speed, bool boost = false) => Settings.DriftTicks(speed.TicksPerSecond(boost));
 
-    public void ReportAuthority(int playerId, long tick, float sustainableTicksPerSecond)
+    /// <param name="idle">Nothing happens in this game (everyone asleep, no threats): it could run Superfast doubled.</param>
+    public void ReportAuthority(int playerId, long tick, float sustainableTicksPerSecond, bool idle = false)
     {
-        _authorities[playerId] = new AuthorityState(tick, sustainableTicksPerSecond);
+        _authorities[playerId] = new AuthorityState(tick, sustainableTicksPerSecond, idle);
+    }
+
+    /// <summary>
+    /// RimWorld doubles Superfast while nothing happens. With one clock for everyone that may only happen when it holds
+    /// in every game: one colony racing at x12 while another runs x6 would only stop and go at the horizon.
+    /// </summary>
+    public bool ResolveBoost(GameSpeed speed)
+    {
+        if (speed != GameSpeed.Superfast || _authorities.Count == 0)
+            return false;
+        foreach (var state in _authorities.Values)
+        {
+            if (!state.Idle)
+                return false;
+        }
+        return true;
     }
 
     /// <summary>The player stopped simulating (left to the main menu) but may still vote.</summary>
@@ -151,12 +171,13 @@ public sealed class TimeCoordinator
         var speed = ResolveSpeed();
         if (_authorities.Count == 0)
             return new TickGrantInfo(_horizon, speed, -1);
+        var boost = ResolveBoost(speed);
 
         var minTick = long.MaxValue;
         var maxTick = long.MinValue;
         var bottleneck = -1;
         var bottleneckRate = float.MaxValue;
-        var targetRate = speed.TicksPerSecond() * BottleneckThreshold;
+        var targetRate = speed.TicksPerSecond(boost) * BottleneckThreshold;
 
         foreach (var pair in _authorities)
         {
@@ -172,11 +193,11 @@ public sealed class TimeCoordinator
         }
 
         // While paused, let laggards catch up to the leader so everyone resumes from the same tick.
-        var candidate = speed == GameSpeed.Paused ? maxTick : minTick + DriftTicks(speed);
+        var candidate = speed == GameSpeed.Paused ? maxTick : minTick + DriftTicks(speed, boost);
 
         // The horizon never moves backwards: an authority may already have simulated up to the old one.
         _horizon = Math.Max(_horizon, candidate);
-        return new TickGrantInfo(_horizon, speed, bottleneck);
+        return new TickGrantInfo(_horizon, speed, bottleneck, boost);
     }
 
     private GameSpeed Lowest()
@@ -208,13 +229,15 @@ public sealed class TimeCoordinator
 
     private readonly struct AuthorityState
     {
-        public AuthorityState(long tick, float sustainableRate)
+        public AuthorityState(long tick, float sustainableRate, bool idle)
         {
             Tick = tick;
             SustainableRate = sustainableRate;
+            Idle = idle;
         }
 
         public long Tick { get; }
         public float SustainableRate { get; }
+        public bool Idle { get; }
     }
 }

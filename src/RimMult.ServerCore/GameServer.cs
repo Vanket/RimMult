@@ -122,7 +122,7 @@ public sealed partial class GameServer
             case AuthorityReport report:
                 // Reports from the lobby are meaningless (no colony is running there); only in-world clients drive time.
                 if (player.InWorld)
-                    Time.ReportAuthority(player.Id, report.Tick, report.SustainableTicksPerSecond);
+                    Time.ReportAuthority(player.Id, report.Tick, report.SustainableTicksPerSecond, report.Idle);
                 break;
             case WorldCreate create:
                 HandleWorldCreate(session, player, create);

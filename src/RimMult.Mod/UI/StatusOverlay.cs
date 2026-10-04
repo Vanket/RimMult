@@ -66,12 +66,14 @@ internal static class StatusOverlay
 
         var speed = session.LastGrant?.Speed ?? GameSpeed.Paused;
         string text = "RimMult.StatusConnected".Translate(session.Players.Count, SpeedLabel(speed));
+        if (session.LastGrant is { Boost: true } && speed == GameSpeed.Superfast)
+            text += " " + "RimMult.StatusBoost".Translate();
         if (CoopGuest.Active)
             text += " · " + "RimMult.StatusCoop".Translate();
 
         if ((TimeSync.MyVote ?? CoopGuest.MyVote) is { } vote && vote != speed)
             text += " " + "RimMult.StatusMyVote".Translate(SpeedLabel(vote));
-        if (TimeSync.BlockedByHorizon && speed != GameSpeed.Paused)
+        if (TimeSync.Waiting && speed != GameSpeed.Paused)
         {
             var bottleneck = session.LastGrant?.BottleneckPlayerId ?? -1;
             text += bottleneck >= 0 && bottleneck != session.PlayerId

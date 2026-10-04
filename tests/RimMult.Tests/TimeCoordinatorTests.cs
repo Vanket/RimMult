@@ -213,4 +213,52 @@ public class TimeCoordinatorTests
         Assert.False(time.AnyHold);
         Assert.Equal(GameSpeed.Superfast, time.ResolveSpeed());
     }
+
+    [Fact]
+    public void SuperfastDoublesOnlyWhenNothingHappensAnywhere()
+    {
+        var time = new TimeCoordinator(new TimeSettings { MaxDriftTicks = 60, MaxDriftSeconds = 1.5f, MaxSpeed = GameSpeed.Superfast });
+        time.SetVote(1, GameSpeed.Superfast);
+        time.ReportAuthority(1, 1000, 2000, idle: true);
+        time.ReportAuthority(2, 1000, 2000, idle: false);
+
+        // One colony asleep, the other not: everyone runs x6 (360 tps, 540 ticks of slack).
+        var grant = time.ComputeGrant();
+        Assert.False(grant.Boost);
+        Assert.Equal(1540, grant.HorizonTick);
+
+        // Everyone asleep: x12 (720 tps), the slack doubles with it.
+        time.ReportAuthority(2, 1000, 2000, idle: true);
+        grant = time.ComputeGrant();
+        Assert.True(grant.Boost);
+        Assert.Equal(1000 + 1080, grant.HorizonTick);
+        Assert.Equal(720, GameSpeed.Superfast.TicksPerSecond(boost: true));
+    }
+
+    [Fact]
+    public void NoBoostBelowSuperfastOrWithoutAuthorities()
+    {
+        var time = Create();
+        time.SetVote(1, GameSpeed.Fast);
+        time.ReportAuthority(1, 0, 1000, idle: true);
+        Assert.False(time.ComputeGrant().Boost);
+
+        var empty = Create();
+        Assert.False(empty.ResolveBoost(GameSpeed.Superfast));
+        Assert.Equal(360, GameSpeed.Superfast.TicksPerSecond(boost: false));
+        Assert.Equal(180, GameSpeed.Fast.TicksPerSecond(boost: true));
+    }
+
+    [Fact]
+    public void BoostedSpeedRaisesTheBottleneckBar()
+    {
+        var time = Create();
+        time.SetVote(1, GameSpeed.Superfast);
+        // 500 tps keeps up with x6 but not with x12.
+        time.ReportAuthority(1, 0, 500, idle: true);
+        time.ReportAuthority(2, 0, 2000, idle: true);
+        Assert.Equal(1, time.ComputeGrant().BottleneckPlayerId);
+        time.ReportAuthority(2, 0, 2000, idle: false);
+        Assert.Equal(-1, time.ComputeGrant().BottleneckPlayerId);
+    }
 }
