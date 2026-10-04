@@ -247,6 +247,7 @@ internal static class CoopTargeterOrderPatch
 
 /// <summary>Guest: a verb or ability ordered at what the guest picked is relayed to the host instead.</summary>
 [HarmonyPatch]
+[Patches.LatePatch]
 internal static class CoopVerbOrderPatch
 {
     private static IEnumerable<MethodBase> TargetMethods()
@@ -267,6 +268,7 @@ internal static class CoopVerbOrderPatch
 
 /// <summary>Guest: a turret's forced target picked by the guest is relayed to the host instead.</summary>
 [HarmonyPatch]
+[Patches.LatePatch]
 internal static class CoopTurretOrderPatch
 {
     private static IEnumerable<MethodBase> TargetMethods()

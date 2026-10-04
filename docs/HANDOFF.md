@@ -173,6 +173,12 @@
 * **Steamworks на выходе из игры** бросает `InvalidOperationException` → обёрнуто.
 * **Settlement.def.texture == null в 1.6** → цвета игроков: красить исходный материал, в try/catch.
 * **Тайлы в 1.6 — `PlanetTile`** (слои), в протоколе передаются строкой (`ToString`/`TryParse`).
+* **Краш при запуске с большой сборкой (0.5.0):** патчи на всех наследников (`Designator.Designate*`,
+  `Command.ProcessInput`, `Verb.OrderForceTarget`, `JobDriver.GetReport`) ставились в конструкторе мода — Harmony
+  компилирует целевые методы, это запускает статические конструкторы классов других модов, а они грузят текстуры
+  не из главного потока → «Graphics device is null», краш. Теперь такие патчи помечены `[LatePatch]` и ставятся
+  в `LatePatches` (`[StaticConstructorOnStartup]`, главный поток, после загрузки). Новые патчи «по всем
+  наследникам» — только так.
 * **Мод Multiplayer (Zetrith)** несовместим (`incompatibleWith` в `About.xml` + предупреждение при запуске).
 
 ## 9. Ключевые файлы — куда смотреть

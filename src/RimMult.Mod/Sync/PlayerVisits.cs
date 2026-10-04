@@ -744,6 +744,7 @@ internal static class VisitGizmosPatch
 /// the visitor doesn't see what the defender's people were told.
 /// </summary>
 [HarmonyPatch]
+[Patches.LatePatch]
 internal static class VisitHiddenJobPatch
 {
     private static IEnumerable<MethodBase> TargetMethods()
