@@ -121,4 +121,43 @@ public static class ParcelAddress
     public static string ForHelpReturn(string helpId) => HelpReturnPrefix + helpId;
 
     public static bool IsHelpReturn(string address) => address.StartsWith(HelpReturnPrefix);
+
+    private const string ResearchPrefix = "research:";
+    private const string TributePrefix = "tribute:";
+
+    /// <summary>
+    /// Research notes from an ally: <paramref name="points"/> of progress on the project <paramref name="defName"/>
+    /// (the parcel itself carries no items).
+    /// </summary>
+    public static string ForResearch(string defName, int points) => $"{ResearchPrefix}{defName}|{points}";
+
+    public static bool IsResearch(string address) => address.StartsWith(ResearchPrefix);
+
+    public static bool TryParseResearch(string address, out string defName, out int points)
+    {
+        defName = "";
+        points = 0;
+        if (!IsResearch(address))
+            return false;
+        var parts = address.Substring(ResearchPrefix.Length).Split('|');
+        if (parts.Length != 2 || parts[0].Length == 0 || !int.TryParse(parts[1], out points))
+            return false;
+        defName = parts[0];
+        return points > 0;
+    }
+
+    /// <summary>A tribute payment (<paramref name="amount"/> silver) under treaty <paramref name="treatyId"/>; lands like any parcel.</summary>
+    public static string ForTribute(long treatyId, int amount) => $"{TributePrefix}{treatyId}|{amount}";
+
+    public static bool IsTribute(string address) => address.StartsWith(TributePrefix);
+
+    public static bool TryParseTribute(string address, out long treatyId, out int amount)
+    {
+        treatyId = 0;
+        amount = 0;
+        if (!IsTribute(address))
+            return false;
+        var parts = address.Substring(TributePrefix.Length).Split('|');
+        return parts.Length == 2 && long.TryParse(parts[0], out treatyId) && int.TryParse(parts[1], out amount) && amount >= 0;
+    }
 }

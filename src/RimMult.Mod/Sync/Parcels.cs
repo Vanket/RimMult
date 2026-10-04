@@ -167,6 +167,9 @@ internal static class Parcels
             return PlayerVisits.BeginHelp(parcel, helpId, helpArrival);
         if (ParcelAddress.IsHelpReturn(parcel.ToTile))
             return PlayerVisits.DeliverHelpReturn(parcel);
+        // An ally's research notes: no goods, just progress.
+        if (!parcel.Returned && ParcelAddress.TryParseResearch(parcel.ToTile, out var project, out var points))
+            return ResearchShare.Deliver(parcel, project, points);
 
         ParcelAddress.Parse(parcel.ToTile, out var caravanId, out var tileText);
         var caravan = caravanId is { } id
@@ -209,6 +212,11 @@ internal static class Parcels
         {
             label = "RimMult.ParcelReturnedLabel".Translate();
             text = "RimMult.ParcelReturnedText".Translate(parcel.Summary);
+        }
+        else if (ParcelAddress.IsTribute(parcel.ToTile))
+        {
+            label = "RimMult.TributeParcelLabel".Translate(parcel.FromName);
+            text = "RimMult.TributeParcelText".Translate(parcel.FromName, parcel.Summary);
         }
         else
         {

@@ -63,6 +63,7 @@ internal static class WorldSync
         TimeSync.End();
         RemoteColonies.Clear();
         SharedSettlements.Reset();
+        Tribute.Reset();
     }
 
     /// <summary>Whether the loaded save belongs to the server's world.</summary>
@@ -124,6 +125,7 @@ internal static class WorldSync
             ReportColonies(session);
             ReportStats(session);
             Parcels.Update(session);
+            Tribute.Update(session);
             SharedSettlements.Apply(session);
         }
 

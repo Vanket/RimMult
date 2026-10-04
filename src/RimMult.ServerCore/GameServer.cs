@@ -32,7 +32,7 @@ public sealed partial class GameServer
         _log = log ?? (_ => { });
         Time = new TimeCoordinator(settings.Time);
         World = world ?? new WorldState();
-        Diplomacy = new DiplomacyBook(World.Relations);
+        Diplomacy = new DiplomacyBook(World.Relations, World.Treaties, () => World.NextTreatyId++);
         Settings.ModListHash ??= World.ModListHash;
         Settings.GameVersion ??= World.GameVersion;
     }
@@ -186,6 +186,7 @@ public sealed partial class GameServer
         var grant = PacketCodec.Encode(TickGrant.From(Time.ComputeGrant()));
         Broadcast(grant, DeliveryMode.UnreliableSequenced);
         UpdateWorldTick();
+        CheckTreaties();
     }
 
     public void Shutdown()
@@ -329,6 +330,7 @@ public sealed partial class GameServer
 
         // Parcels that arrived while they were away.
         var key = OwnerKey(player);
+        ForgetDueNotices(key);
         foreach (var item in World.Mail.Where(m => m.ToOwner == key))
             Send(session, new ParcelDeliver { Item = item });
     }
@@ -344,6 +346,11 @@ public sealed partial class GameServer
         }
 
         var from = OwnerKey(player);
+        if (ParcelAddress.IsResearch(parcel.ToTile) && Diplomacy.Get(from, parcel.ToOwner) != PlayerRelation.Allied)
+        {
+            _log($"Research from {player.Name} to a non-ally dropped");
+            return;
+        }
         var item = new MailItem
         {
             Id = World.NextMailId++,
@@ -379,6 +386,8 @@ public sealed partial class GameServer
         WorldChanged?.Invoke();
         _log($"Parcel {item.Id} from {player.Name}{(item.Returned ? " returned to sender" : "")}: {item.Summary}");
         NoteParcel(item, parcel.ToTile);
+        if (!item.Returned && ParcelAddress.TryParseTribute(parcel.ToTile, out var treatyId, out var amount))
+            NoteTribute(from, item.ToOwner, treatyId, amount);
 
         foreach (var session in _sessions.Values)
         {
@@ -463,6 +472,7 @@ public sealed partial class GameServer
         Colonies = World.Colonies,
         DestroyedSettlements = World.DestroyedSettlements,
         Relations = World.Relations,
+        Treaties = World.Treaties,
     };
 
     /// <summary>Why a raid from <paramref name="attacker"/> on <paramref name="defender"/> can't happen, or null if it can.</summary>
@@ -487,27 +497,32 @@ public sealed partial class GameServer
         var target = Players.FirstOrDefault(p => OwnerKey(p) == request.Target);
         // Proposals need someone to answer them; war can be declared on anyone with a colony.
         var targetKnown = target != null || World.Colonies.Any(c => c.OwnerSteamId == request.Target);
-        var needsOnline = request.Action is DiplomacyAction.ProposePeace or DiplomacyAction.ProposeAlliance;
+        var needsOnline = request.Action is DiplomacyAction.ProposePeace or DiplomacyAction.ProposeAlliance
+            or DiplomacyAction.ProposePact or DiplomacyAction.DemandTribute;
         if (!targetKnown || (needsOnline && target == null))
             return;
 
-        var happened = Diplomacy.Apply(from, request.Target, request.Action, Settings.AllowPvp);
+        var happened = Diplomacy.Apply(from, request.Target, request.Action, Settings.AllowPvp, World.Tick, request.Terms);
         if (happened is not { } kind)
             return;
+        var treaty = Diplomacy.LastTreaty;
 
         var notice = new DiplomacyNotice
         {
             From = from,
             FromName = player.Name,
             To = request.Target,
-            ToName = target?.Name ?? World.Colonies.FirstOrDefault(c => c.OwnerSteamId == request.Target)?.OwnerName ?? "",
+            ToName = target?.Name ?? NameOfOwner(request.Target),
             Event = kind,
+            Terms = Diplomacy.LastTerms,
+            TreatyId = treaty?.Id ?? 0,
         };
         _log($"Diplomacy: {notice.FromName} → {notice.ToName}: {kind}");
 
         switch (kind)
         {
-            case DiplomacyEvent.PeaceProposed or DiplomacyEvent.AllianceProposed or DiplomacyEvent.ProposalDeclined:
+            case DiplomacyEvent.PeaceProposed or DiplomacyEvent.AllianceProposed or DiplomacyEvent.PactProposed
+                or DiplomacyEvent.TributeDemanded or DiplomacyEvent.ProposalDeclined:
                 foreach (var session in _sessions.Values)
                 {
                     if (session.Player is { } p && OwnerKey(p) == request.Target)
@@ -518,8 +533,10 @@ public sealed partial class GameServer
                 WorldChanged?.Invoke();
                 Broadcast(PacketCodec.Encode(WorldUpdatePacket()), DeliveryMode.ReliableOrdered);
                 Broadcast(PacketCodec.Encode(notice), DeliveryMode.ReliableOrdered);
-                if (KindOf(kind) is { } chronicled)
-                    Record(chronicled, from, request.Target);
+                NoteDiplomacy(kind, from, request.Target, notice.Terms, treaty);
+                // A tribute starts with its first payment.
+                if (treaty is { Kind: TreatyKind.Tribute })
+                    CheckTreaties();
                 break;
         }
     }
@@ -656,7 +673,38 @@ public sealed partial class GameServer
             return;
         }
 
-        Broadcast(PacketCodec.Encode(new ChatMessage { SenderId = sender.Id, Text = text }), DeliveryMode.ReliableOrdered);
+        var line = new ChatMessage { SenderId = sender.Id, Text = text, Scope = chat.Scope, TargetId = chat.TargetId };
+        var me = _sessions.Values.FirstOrDefault(s => s.Player == sender);
+        switch (chat.Scope)
+        {
+            case ChatScope.Allies:
+                var owner = OwnerKey(sender);
+                var allies = _sessions.Values.Where(s => s.Player is { } p && (p == sender || Diplomacy.Get(owner, OwnerKey(p)) == PlayerRelation.Allied)).ToList();
+                if (allies.Count < 2 && me != null)
+                {
+                    Reply(me, "No ally of yours is here.");
+                    return;
+                }
+                foreach (var session in allies)
+                    Send(session, line);
+                break;
+            case ChatScope.Whisper:
+                var to = _sessions.Values.FirstOrDefault(s => s.Player is { } p && p.Id == chat.TargetId && p != sender);
+                if (to == null)
+                {
+                    if (me != null)
+                        Reply(me, "That player isn't here.");
+                    return;
+                }
+                Send(to, line);
+                if (me != null)
+                    Send(me, line);
+                break;
+            default:
+                line.TargetId = -1;
+                Broadcast(PacketCodec.Encode(line), DeliveryMode.ReliableOrdered);
+                break;
+        }
     }
 
     private void PromoteNextHost()

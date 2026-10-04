@@ -19,7 +19,13 @@
 - **Посылки** капсулами или караваном — даже тому, кто сейчас не в игре: получит, когда зайдёт.
 - **Переселение** колонистов и животных к другу.
 - **Обмен**: «Предложить обмен» на колонии игрока или приход караваном. Оба принимают — товары прилетают капсулами.
-- **Дипломатия**: нейтралитет, союз, война (PvP хост может выключить).
+- **Дипломатия**: нейтралитет, союз, война (PvP хост может выключить). **Договоры**: пакт о ненападении на срок,
+  перемирие после мира, мир с данью, ультиматум «плати или война» — дань уходит серебром раз в квартал. Разорвать
+  договор можно, но это видят все: **репутация** игрока (объявил войн, нарушил и соблюл договоров) — в летописи и на
+  его колонии.
+- **Союзникам**: свой канал чата (`/a`, кнопка «Союз»), шёпот (`/w Имя`, `/r`), **исследования** в подарок
+  (половина стоимости изученного проекта).
+- **Выкуп пленных** во время войны: обмен пленных на серебро.
 - **Рейды** караваном или капсулами: под управлением ИИ или **лично** — вы загружаете игру защитника и командуете
   своими бойцами (отступить, похитить, украсть, вернуться домой), пока он обороняется. Выжившие возвращаются
   караваном с добычей и пленными.
@@ -139,7 +145,9 @@ Mods don't cause desyncs, and a weak PC isn't slowed down by other players' colo
 > allies, the chronicle and parts of co-op are written and being checked.
 
 **Separate colonies** — everyone founds their own colony on one shared planet, one calendar, speed by vote:
-parcels (even to offline players), moving colonists over, trade, diplomacy (alliance / war), raids led by the AI or
+parcels (even to offline players), moving colonists over, trade, diplomacy (alliance / war, timed non-aggression
+pacts, truces, peace with tribute, "pay or it's war" ultimatums, public treaty-breaking and reputation), an allies'
+chat channel and whispers, research shared with allies, prisoner ransom in wartime, raids led by the AI or
 **in person** (you load the defender's game and command your fighters), helping an ally in person, a shared NPC
 world (settlements in the same places for everyone), and a **world chronicle** with players' stats — kept by the host's save or the dedicated server.
 

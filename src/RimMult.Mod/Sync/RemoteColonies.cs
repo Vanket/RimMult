@@ -44,7 +44,13 @@ public sealed class RemoteColony : WorldObject
     {
         var text = "RimMult.RemoteColonyInspect".Translate(OwnerName).ToString();
         if (Multiplayer.Session is { } session)
+        {
             text += "\n" + "RimMult.RelationInspect".Translate(DiplomacyUi.Label(session.RelationWith(OwnerSteamId)));
+            foreach (var treaty in session.TreatiesWith(OwnerSteamId))
+                text += "\n" + DiplomacyUi.TreatyLine(treaty, session, OwnerName);
+            if (session.Stats.FirstOrDefault(s => s.Owner == OwnerSteamId) is { } stats)
+                text += "\n" + Reputation.Inspect(stats);
+        }
         return text;
     }
 
@@ -94,10 +100,12 @@ public sealed class RemoteColony : WorldObject
 
         var session = Multiplayer.Session;
         var owner = session?.Players.FirstOrDefault(p => Multiplayer.OwnerKey(p) == OwnerSteamId);
+        // At war a trade is a ransom: silver and prisoners only.
+        var atWar = session?.RelationWith(OwnerSteamId) == Shared.World.PlayerRelation.Hostile;
         var command = new Command_Action
         {
-            defaultLabel = "RimMult.TradeOffer".Translate(),
-            defaultDesc = "RimMult.TradeOfferDesc".Translate(OwnerName),
+            defaultLabel = (atWar ? "RimMult.TradeRansom" : "RimMult.TradeOffer").Translate(),
+            defaultDesc = (atWar ? "RimMult.TradeRansomDesc" : "RimMult.TradeOfferDesc").Translate(OwnerName),
             icon = TradeIcon,
             action = () => Multiplayer.StartTrade(owner!.Id),
         };
@@ -105,8 +113,6 @@ public sealed class RemoteColony : WorldObject
             command.Disable("RimMult.TradeOwnerAway".Translate(OwnerName));
         else if (!WorldSync.InWorld)
             command.Disable("RimMult.TradeNotInWorld".Translate());
-        else if (session!.RelationWith(OwnerSteamId) == Shared.World.PlayerRelation.Hostile)
-            command.Disable("RimMult.TradeAtWar".Translate(OwnerName));
         yield return command;
 
         yield return DiplomacyUi.Gizmo(OwnerSteamId, OwnerName);
