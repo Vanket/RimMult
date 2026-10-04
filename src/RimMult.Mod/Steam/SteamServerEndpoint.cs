@@ -112,6 +112,7 @@ internal sealed class SteamServerEndpoint : IServerEndpoint
 
             peer = new Peer(remote) { LastHeard = now, Nonce = P2PFrame.ConnectNonce(payload) };
             _bySteamId[remote.m_SteamID] = peer;
+            SteamKeepAlive.Add(remote);
             peer.ConnectionId = _hub.RegisterConnection(this);
             _byConnection[peer.ConnectionId] = peer;
         }
@@ -162,7 +163,8 @@ internal sealed class SteamServerEndpoint : IServerEndpoint
 
     private void Drop(Peer peer)
     {
-        _bySteamId.Remove(peer.SteamId.m_SteamID);
+        if (_bySteamId.Remove(peer.SteamId.m_SteamID))
+            SteamKeepAlive.Remove(peer.SteamId);
         if (_byConnection.Remove(peer.ConnectionId))
             _hub.ConnectionClosed(peer.ConnectionId);
     }

@@ -111,6 +111,8 @@ internal sealed class SteamClientTransport : IClientTransport
         if (_connecting || _connected)
             SendFrame(P2PFrame.Control(P2PFrameKind.Disconnect), reliable: true);
 
+        if (_connected)
+            SteamKeepAlive.Remove(_host);
         _closed = true;
         _connecting = false;
         _connected = false;
@@ -129,6 +131,7 @@ internal sealed class SteamClientTransport : IClientTransport
             case P2PFrameKind.Accept when _connecting:
                 _connecting = false;
                 _connected = true;
+                SteamKeepAlive.Add(_host);
                 Connected?.Invoke();
                 break;
             case P2PFrameKind.Disconnect:
