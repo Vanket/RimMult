@@ -151,6 +151,43 @@ public static class ParcelAddress
 
     public static bool IsTribute(string address) => address.StartsWith(TributePrefix);
 
+    private const string MarketPrefix = "market:";
+
+    /// <summary>What a parcel from the world's market is (it lands at any home colony).</summary>
+    public enum MarketKind
+    {
+        /// <summary>Goods bought from a lot.</summary>
+        Bought,
+
+        /// <summary>The silver for one's lot that sold.</summary>
+        Sold,
+
+        /// <summary>One's lot, taken back.</summary>
+        LotReturned,
+
+        /// <summary>Silver back: a lot sold before the purchase went through, or an order called off.</summary>
+        Refund,
+
+        /// <summary>The goods one ordered, delivered.</summary>
+        OrderDelivered,
+
+        /// <summary>The reward for delivering someone's order.</summary>
+        Reward,
+
+        /// <summary>An order nobody delivered in time: its reward back.</summary>
+        OrderExpired,
+    }
+
+    public static string ForMarket(MarketKind kind) => MarketPrefix + kind;
+
+    public static bool IsMarket(string address) => address.StartsWith(MarketPrefix);
+
+    public static bool TryParseMarket(string address, out MarketKind kind)
+    {
+        kind = MarketKind.Bought;
+        return IsMarket(address) && System.Enum.TryParse(address.Substring(MarketPrefix.Length), out kind);
+    }
+
     public static bool TryParseTribute(string address, out long treatyId, out int amount)
     {
         treatyId = 0;

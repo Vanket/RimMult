@@ -32,6 +32,8 @@ public enum PacketType : ushort
     ColonyStatsReport = 81,
     ModListQuery = 90,
     ServerModList = 91,
+    MarketAction = 100,
+    MarketState = 101,
 }
 
 /// <summary>A message body. <see cref="PacketCodec"/> adds the type header.</summary>

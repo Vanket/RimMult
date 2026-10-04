@@ -26,6 +26,9 @@
 - **Союзникам**: свой канал чата (`/a`, кнопка «Союз»), шёпот (`/w Имя`, `/r`), **исследования** в подарок
   (половина стоимости изученного проекта).
 - **Выкуп пленных** во время войны: обмен пленных на серебро.
+- **Витрина** в обмене: видно склад партнёра, можно попросить нужное.
+- **Рынок мира**: лоты (выставил и ушёл — купят без вас) и заказы («нужно 10 медицины, плачу 400» — награда ждёт
+  того, кто привезёт, или возвращается после срока).
 - **Рейды** караваном или капсулами: под управлением ИИ или **лично** — вы загружаете игру защитника и командуете
   своими бойцами (отступить, похитить, украсть, вернуться домой), пока он обороняется. Выжившие возвращаются
   караваном с добычей и пленными.
@@ -147,7 +150,8 @@ Mods don't cause desyncs, and a weak PC isn't slowed down by other players' colo
 **Separate colonies** — everyone founds their own colony on one shared planet, one calendar, speed by vote:
 parcels (even to offline players), moving colonists over, trade, diplomacy (alliance / war, timed non-aggression
 pacts, truces, peace with tribute, "pay or it's war" ultimatums, public treaty-breaking and reputation), an allies'
-chat channel and whispers, research shared with allies, prisoner ransom in wartime, raids led by the AI or
+chat channel and whispers, research shared with allies, prisoner ransom in wartime, a showcase of the partner's stock
+in trades, a **world market** (lots that sell while you're away, orders with a reward and a deadline), raids led by the AI or
 **in person** (you load the defender's game and command your fighters), helping an ally in person, a shared NPC
 world (settlements in the same places for everyone), and a **world chronicle** with players' stats — kept by the host's save or the dedicated server.
 

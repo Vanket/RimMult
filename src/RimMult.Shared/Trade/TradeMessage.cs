@@ -25,11 +25,23 @@ public enum TradeMessageKind : byte
     /// receiver's offer <see cref="TradeMessage.OtherVersion"/>. Each side executes once both commits match.
     /// </summary>
     Commit = 6,
+
+    /// <summary>
+    /// The sender's showcase: everything it could give (<see cref="TradeLine.Count"/> available, <see cref="TradeLine.Value"/>
+    /// per unit), each with a <see cref="TradeLine.Key"/> to ask for it by.
+    /// </summary>
+    Catalog = 7,
+
+    /// <summary>What the sender would like from the receiver's showcase: <see cref="TradeLine.Key"/> and how many (replaces the last request).</summary>
+    Request = 8,
 }
 
 /// <summary>One line of an offer, for display on the other side (the actual items stay in the offerer's game).</summary>
 public sealed class TradeLine
 {
+    /// <summary>Showcase lines: what to ask for this line by (the offerer's own id for it).</summary>
+    public string Key { get; set; } = "";
+
     public string Label { get; set; } = "";
     public int Count { get; set; }
 
@@ -38,6 +50,7 @@ public sealed class TradeLine
 
     public void Write(ByteWriter writer)
     {
+        writer.WriteString(Key);
         writer.WriteString(Label);
         writer.WriteVarInt(Count);
         writer.WriteFloat(Value);
@@ -45,6 +58,7 @@ public sealed class TradeLine
 
     public static TradeLine Read(ByteReader reader) => new()
     {
+        Key = reader.ReadRequiredString(),
         Label = reader.ReadRequiredString(),
         Count = (int)reader.ReadVarInt(),
         Value = reader.ReadFloat(),
@@ -90,7 +104,7 @@ public sealed class TradeMessage
             OtherVersion = (int)reader.ReadVarInt(),
             CaravanId = (int)reader.ReadVarInt(),
         };
-        if (message.Kind < TradeMessageKind.Invite || message.Kind > TradeMessageKind.Commit)
+        if (message.Kind < TradeMessageKind.Invite || message.Kind > TradeMessageKind.Request)
             throw new ProtocolException($"Unknown trade message {(byte)message.Kind}");
         var count = reader.ReadVarUInt();
         if (count > MaxLines)

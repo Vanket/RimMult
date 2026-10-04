@@ -255,8 +255,8 @@ public class ChronicleTests
         var current = World();
         var bytes = current.Serialize();
         // Format 4 is the current one without the chronicle, stats and NPC settlements (empty lists: a zero each)
-        // and the creator (8 bytes), then format 7's treaties and next treaty id (a byte each) at the end.
-        var old = bytes.Take(bytes.Length - 3 - 8 - 2).ToArray();
+        // and the creator (8 bytes), then format 7's treaties and format 8's market (a byte each) at the end.
+        var old = bytes.Take(bytes.Length - 3 - 8 - 2 - 3).ToArray();
         old[0] = 4;
 
         var state = WorldState.Deserialize(old);

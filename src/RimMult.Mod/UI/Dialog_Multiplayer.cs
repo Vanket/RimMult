@@ -248,6 +248,11 @@ internal sealed class Dialog_Multiplayer : Window
         {
             Window_Chronicle.Open();
         }
+        if (session.State == ClientState.Connected && session.Mode != Shared.Coop.GameMode.Coop
+            && Widgets.ButtonText(new Rect(header.xMax - 410f, header.y, 200f, RowHeight), "RimMult.MarketButton".Translate()))
+        {
+            Window_Market.Open();
+        }
 
         var bottom = new Rect(rect.x, rect.yMax - RowHeight - 4f, rect.width, RowHeight + 4f);
         var worldRect = new Rect(rect.x, header.yMax + Gap, rect.width, 76f);

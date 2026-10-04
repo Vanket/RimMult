@@ -167,6 +167,9 @@ public sealed partial class GameServer
             case ColonyStatsReport stats:
                 HandleColonyStats(player, stats);
                 break;
+            case MarketAction market:
+                HandleMarket(player, market);
+                break;
             default:
                 Kick(session, KickReason.BadData, $"Unexpected packet {packet.Type}");
                 break;
@@ -187,6 +190,7 @@ public sealed partial class GameServer
         Broadcast(grant, DeliveryMode.UnreliableSequenced);
         UpdateWorldTick();
         CheckTreaties();
+        CheckMarket();
     }
 
     public void Shutdown()
@@ -286,6 +290,7 @@ public sealed partial class GameServer
         });
         Send(session, WorldUpdatePacket());
         Send(session, ChronicleUpdatePacket(full: true, World.Chronicle));
+        Send(session, MarketStatePacket());
         BroadcastPlayerList();
     }
 

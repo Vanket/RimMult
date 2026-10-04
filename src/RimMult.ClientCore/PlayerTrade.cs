@@ -68,6 +68,17 @@ public sealed class PlayerTrade
     public IReadOnlyList<TradeLine> MyOffer { get; private set; } = Array.Empty<TradeLine>();
     public IReadOnlyList<TradeLine> TheirOffer { get; private set; } = Array.Empty<TradeLine>();
 
+    /// <summary>The partner's showcase: what they could give (count available, value per unit).</summary>
+    public IReadOnlyList<TradeLine> TheirCatalog { get; private set; } = Array.Empty<TradeLine>();
+
+    /// <summary>What we asked for from their showcase (key → count).</summary>
+    public IReadOnlyDictionary<string, int> MyRequests => _myRequests;
+
+    /// <summary>What the partner asked for from our showcase (key → count).</summary>
+    public IReadOnlyDictionary<string, int> TheirRequests { get; private set; } = new Dictionary<string, int>();
+
+    private readonly Dictionary<string, int> _myRequests = new();
+
     public bool IAccepted => _iAccepted == _theirVersion;
     public bool TheyAccepted => _theyAccepted == _myVersion;
 
@@ -96,6 +107,38 @@ public sealed class PlayerTrade
         _myVersion++;
         MyOffer = lines;
         _send(new TradeMessage { Kind = TradeMessageKind.Offer, Version = _myVersion, Lines = lines });
+        Changed?.Invoke();
+    }
+
+    /// <summary>Shows the partner what we could give. Sent again whenever it changes.</summary>
+    public void SetCatalog(List<TradeLine> lines)
+    {
+        if (State != TradeState.Open)
+            return;
+        _send(new TradeMessage { Kind = TradeMessageKind.Catalog, Lines = lines });
+    }
+
+    /// <summary>Asks for <paramref name="count"/> of a line of the partner's showcase (0 takes the wish back).</summary>
+    public void Request(string key, int count)
+    {
+        if (State != TradeState.Open || Locked)
+            return;
+        var line = TheirCatalog.FirstOrDefault(l => l.Key == key);
+        count = Math.Max(0, Math.Min(count, line?.Count ?? 0));
+        if (count == 0)
+            _myRequests.Remove(key);
+        else
+            _myRequests[key] = count;
+        _send(new TradeMessage
+        {
+            Kind = TradeMessageKind.Request,
+            Lines = _myRequests.Select(p => new TradeLine
+            {
+                Key = p.Key,
+                Label = TheirCatalog.FirstOrDefault(l => l.Key == p.Key)?.Label ?? "",
+                Count = p.Value,
+            }).ToList(),
+        });
         Changed?.Invoke();
     }
 
@@ -155,6 +198,21 @@ public sealed class PlayerTrade
             case TradeMessageKind.Commit when State == TradeState.Open:
                 _theirCommit = (message.Version, message.OtherVersion);
                 TryCommit();
+                break;
+            case TradeMessageKind.Catalog when State == TradeState.Open:
+                TheirCatalog = message.Lines;
+                // Wishes for lines that are gone (or fewer now) shrink with them.
+                foreach (var key in _myRequests.Keys.ToList())
+                {
+                    var available = message.Lines.FirstOrDefault(l => l.Key == key)?.Count ?? 0;
+                    if (available <= 0)
+                        _myRequests.Remove(key);
+                    else if (_myRequests[key] > available)
+                        _myRequests[key] = available;
+                }
+                break;
+            case TradeMessageKind.Request when State == TradeState.Open:
+                TheirRequests = message.Lines.Where(l => l.Count > 0).GroupBy(l => l.Key).ToDictionary(g => g.Key, g => g.Sum(l => l.Count));
                 break;
             default:
                 return;
