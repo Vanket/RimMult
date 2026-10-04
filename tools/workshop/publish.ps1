@@ -54,7 +54,16 @@ if ($Check) {
 }
 
 Step "Upload to Workshop item $item"
-Run $tool @('--item', $item, '--content', $stage, '--preview', (Join-Path $stage 'About\Preview.png'), '--note', $Note)
+# Steam first fetches the previous version's manifest from its CDN, which now and then fails for a moment
+# (k_EResultFail, "Failed to download manifest" in Steam/logs/workshop_log.txt): try again before giving up.
+$uploadArgs = @('--item', $item, '--content', $stage, '--preview', (Join-Path $stage 'About\Preview.png'), '--note', $Note)
+for ($try = 1; ; $try++) {
+    & $tool @uploadArgs
+    if ($LASTEXITCODE -eq 0) { break }
+    if ($LASTEXITCODE -ne 3 -or $try -ge 3) { throw "Upload failed (exit $LASTEXITCODE); see Steam/logs/workshop_log.txt" }
+    Write-Warning "Upload attempt $try failed; trying again in 15 s."
+    Start-Sleep -Seconds 15
+}
 
 # Steam may keep the subscribed copy on the old version for hours (even across a game start): fetch it now.
 Step 'Update the subscribed copy on this PC'
