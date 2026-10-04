@@ -278,8 +278,9 @@ public class DiplomacyTests
         var body = new ByteWriter();
         World().Write(body);
         var bodyBytes = body.ToArray();
-        // Drop the (empty) relation list written by the current format: one varint zero at the end.
-        foreach (var b in bodyBytes.Take(bodyBytes.Length - 1))
+        // Drop what the current format writes after format 3's data: the (empty) relation list, chronicle and stats,
+        // one varint zero each at the end.
+        foreach (var b in bodyBytes.Take(bodyBytes.Length - 3))
             writer.WriteByte(b);
         var old = WorldState.Deserialize(writer.ToArray());
         Assert.Empty(old.Relations);

@@ -227,4 +227,27 @@ public class GameServerTests
         Receive(server, 1, hello);
         Assert.Single(transport.To<ServerWelcome>(1));
     }
+
+    [Fact]
+    public void CursorsTravelUnreliablyBothWaysInCoop()
+    {
+        var (server, transport) = Create(new ServerSettings { Mode = Shared.Coop.GameMode.Coop });
+        server.OnConnected(1);
+        Receive(server, 1, Hello(1, "Host"));
+        server.OnConnected(2);
+        Receive(server, 2, Hello(2, "Guest"));
+        transport.Sent.Clear();
+
+        Receive(server, 2, new CoopMessage { Channel = Shared.Coop.CoopChannel.Cursors, Data = [1] });
+        Receive(server, 1, new CoopMessage { Channel = Shared.Coop.CoopChannel.Cursors, Data = [2] });
+        Receive(server, 2, new CoopMessage { Channel = Shared.Coop.CoopChannel.Command, Data = [3] });
+
+        var toHost = transport.Sent.Where(s => s.Connection == 1).ToList();
+        var toGuest = Assert.Single(transport.Sent, s => s.Connection == 2);
+        Assert.Equal(DeliveryMode.UnreliableSequenced, toHost[0].Mode);
+        Assert.Equal(DeliveryMode.UnreliableSequenced, toGuest.Mode);
+        // Orders still go reliably.
+        Assert.Equal(DeliveryMode.ReliableOrdered, toHost[1].Mode);
+        Assert.Equal(2, ((CoopMessage)toHost[0].Packet).PlayerId);
+    }
 }

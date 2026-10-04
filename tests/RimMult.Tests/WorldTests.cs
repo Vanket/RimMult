@@ -80,11 +80,13 @@ public class WorldTests
         Assert.Equal("rimmult", b.World?.SeedString);
         Assert.Equal(["OutlanderCivil", "TribeRough", "TribeRough"], b.World!.Factions);
         Assert.Equal(900_000, host.Server.World.Tick);
-        Assert.Equal(changesBefore + 1, host.WorldChanges);
+        Assert.True(host.WorldChanges > changesBefore);
+        var changesAfter = host.WorldChanges;
 
         // A second creator does not replace it.
         b.CreateWorld(Planet("other"), tick: 5);
         host.Pump(a, b);
+        Assert.Equal(changesAfter, host.WorldChanges);
         Assert.Equal("world-1", host.Server.World.Definition!.WorldId);
         Assert.Equal("world-1", b.World.WorldId);
     }
@@ -291,14 +293,15 @@ public class WorldTests
         var host = new Host();
         var a = host.Join("A", 1);
         host.Pump(a);
-        var changesBefore = host.WorldChanges;
-
         a.CreateWorld(Planet("same"), 100);
+        host.Pump(a);
+        var changesAfterFirst = host.WorldChanges;
         a.CreateWorld(Planet("same"), 200);
         host.Pump(a);
 
         Assert.Equal("same", a.World?.WorldId);
         Assert.Equal(100, host.Server.World.Tick);
-        Assert.Equal(changesBefore + 1, host.WorldChanges);
+        Assert.Equal(changesAfterFirst, host.WorldChanges);
+        Assert.Single(host.Server.World.Chronicle, e => e.Kind == Shared.World.ChronicleKind.WorldCreated);
     }
 }

@@ -151,6 +151,9 @@ public sealed partial class GameServer
             case DiplomacyRequest diplomacy:
                 HandleDiplomacy(player, diplomacy);
                 break;
+            case ColonyStatsReport stats:
+                HandleColonyStats(player, stats);
+                break;
             default:
                 Kick(session, KickReason.BadData, $"Unexpected packet {packet.Type}");
                 break;
@@ -267,6 +270,7 @@ public sealed partial class GameServer
             AllowPvp = Settings.AllowPvp,
         });
         Send(session, WorldUpdatePacket());
+        Send(session, ChronicleUpdatePacket(full: true, World.Chronicle));
         BroadcastPlayerList();
     }
 
@@ -287,6 +291,7 @@ public sealed partial class GameServer
         _log($"{player.Name} created the world (seed '{create.Definition.SeedString}')");
         Broadcast(PacketCodec.Encode(WorldUpdatePacket()), DeliveryMode.ReliableOrdered);
         WorldChanged?.Invoke();
+        Record(ChronicleKind.WorldCreated, OwnerKey(player), text: create.Definition.SeedString);
     }
 
     private void HandleEnterWorld(Session session, PlayerInfo player, EnterWorld enter)
@@ -303,6 +308,7 @@ public sealed partial class GameServer
         Time.ReportAuthority(player.Id, tick, float.MaxValue);
         Send(session, new WorldClock { Tick = tick });
         BroadcastPlayerList();
+        NoteArrival(player);
 
         // Parcels that arrived while they were away.
         var key = OwnerKey(player);
@@ -355,6 +361,7 @@ public sealed partial class GameServer
         World.Mail.Add(item);
         WorldChanged?.Invoke();
         _log($"Parcel {item.Id} from {player.Name}{(item.Returned ? " returned to sender" : "")}: {item.Summary}");
+        NoteParcel(item, parcel.ToTile);
 
         foreach (var session in _sessions.Values)
         {
@@ -377,6 +384,7 @@ public sealed partial class GameServer
 
         // Colonies are keyed by owner, so a player who reconnects (new player id) keeps their colonies.
         var key = OwnerKey(player);
+        var before = World.Colonies.Where(c => c.OwnerSteamId == key).ToList();
         World.Colonies.RemoveAll(c => c.OwnerSteamId == key);
         foreach (var colony in packet.Colonies)
         {
@@ -392,6 +400,7 @@ public sealed partial class GameServer
 
         Broadcast(PacketCodec.Encode(WorldUpdatePacket()), DeliveryMode.ReliableOrdered);
         WorldChanged?.Invoke();
+        NoteColonyChanges(key, before, World.Colonies.Where(c => c.OwnerSteamId == key).ToList());
     }
 
     /// <summary>Steam id identifies a player across sessions; without Steam (tests, dev builds) fall back to the session's player id.</summary>
@@ -466,6 +475,8 @@ public sealed partial class GameServer
                 WorldChanged?.Invoke();
                 Broadcast(PacketCodec.Encode(WorldUpdatePacket()), DeliveryMode.ReliableOrdered);
                 Broadcast(PacketCodec.Encode(notice), DeliveryMode.ReliableOrdered);
+                if (KindOf(kind) is { } chronicled)
+                    Record(chronicled, from, request.Target);
                 break;
         }
     }
@@ -497,6 +508,8 @@ public sealed partial class GameServer
         World.DestroyedSettlements.Add(tile);
         Broadcast(PacketCodec.Encode(WorldUpdatePacket()), DeliveryMode.ReliableOrdered);
         WorldChanged?.Invoke();
+        StatsOf(OwnerKey(player)).SettlementsDestroyed++;
+        Record(ChronicleKind.SettlementDestroyed, OwnerKey(player), text: tile);
     }
 
     /// <summary>
@@ -514,7 +527,7 @@ public sealed partial class GameServer
         if (sender.IsHost)
         {
             var data = PacketCodec.Encode(new CoopMessage { PlayerId = sender.Id, Channel = message.Channel, Data = message.Data });
-            var mode = message.Channel == Shared.Coop.CoopChannel.Positions ? DeliveryMode.UnreliableSequenced : DeliveryMode.ReliableOrdered;
+            var mode = ModeFor(message.Channel);
             foreach (var session in _sessions.Values)
             {
                 if (session.Player is { } guest && !guest.IsHost && (message.PlayerId == -1 || guest.Id == message.PlayerId))
@@ -537,8 +550,11 @@ public sealed partial class GameServer
 
         var host = _sessions.Values.FirstOrDefault(s => s.Player is { IsHost: true });
         if (host != null)
-            Send(host, new CoopMessage { PlayerId = sender.Id, Channel = message.Channel, Data = message.Data });
+            _transport.Send(host.ConnectionId, PacketCodec.Encode(new CoopMessage { PlayerId = sender.Id, Channel = message.Channel, Data = message.Data }), ModeFor(message.Channel));
     }
+
+    private static DeliveryMode ModeFor(Shared.Coop.CoopChannel channel) =>
+        Shared.Coop.CoopChannels.IsUnreliable(channel) ? DeliveryMode.UnreliableSequenced : DeliveryMode.ReliableOrdered;
 
     /// <summary>
     /// Separate colonies: a visit (a player fighting their raid live in the defender's game). The same co-op traffic,
@@ -565,7 +581,7 @@ public sealed partial class GameServer
                 break;
         }
 
-        var mode = message.Channel == Shared.Coop.CoopChannel.Positions ? DeliveryMode.UnreliableSequenced : DeliveryMode.ReliableOrdered;
+        var mode = ModeFor(message.Channel);
         _transport.Send(target.ConnectionId, PacketCodec.Encode(new CoopMessage { PlayerId = sender.Id, Channel = message.Channel, Data = message.Data }), mode);
     }
 

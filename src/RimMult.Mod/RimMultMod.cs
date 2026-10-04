@@ -105,6 +105,7 @@ public sealed class RimMultMod : Mod
 
         list.Gap(6f);
         list.CheckboxLabeled("RimMult.SyncModComponents".Translate(), ref Settings.SyncModComponents, "RimMult.SyncModComponentsHint".Translate());
+        list.CheckboxLabeled("RimMult.ShowCursors".Translate(), ref Settings.ShowCursors, "RimMult.ShowCursorsHint".Translate());
         list.Label("RimMult.ModListHash".Translate(ModList.ComputeHash()));
         list.Label("RimMult.ModListHashHint".Translate());
         list.End();
@@ -124,6 +125,9 @@ public sealed class RimMultSettings : ModSettings
     /// <summary>Co-op host: stream mods' game/world/map components to guests when they change.</summary>
     public bool SyncModComponents = true;
 
+    /// <summary>Co-op: share this player's cursor and show the others' (with what they have selected).</summary>
+    public bool ShowCursors = true;
+
     /// <summary>Lower-case package ids of mods left out of the mod comparison (visual / interface only).</summary>
     public List<string> ClientOnlyMods = ModList.DefaultClientOnly.ToList();
 
@@ -139,6 +143,7 @@ public sealed class RimMultSettings : ModSettings
         Scribe_Values.Look(ref HostMode, "hostMode");
         Scribe_Values.Look(ref HostAllowPvp, "hostAllowPvp", true);
         Scribe_Values.Look(ref SyncModComponents, "syncModComponents", true);
+        Scribe_Values.Look(ref ShowCursors, "showCursors", true);
     }
 }
 
