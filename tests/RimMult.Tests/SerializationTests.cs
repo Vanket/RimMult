@@ -141,6 +141,11 @@ public class SerializationTests
         Assert.Equal(grant.HorizonTick, decoded.HorizonTick);
         Assert.Equal(grant.Speed, decoded.Speed);
         Assert.Equal(-1, decoded.BottleneckPlayerId);
+        Assert.False(decoded.Boost);
+        Assert.True(Assert.IsType<TickGrant>(PacketCodec.Decode(PacketCodec.Encode(new TickGrant { Speed = GameSpeed.Superfast, Boost = true }))).Boost);
+
+        var report = Assert.IsType<AuthorityReport>(PacketCodec.Decode(PacketCodec.Encode(new AuthorityReport { Tick = 9, SustainableTicksPerSecond = 700, Idle = true })));
+        Assert.Equal((9L, 700f, true), (report.Tick, report.SustainableTicksPerSecond, report.Idle));
     }
 
     [Fact]

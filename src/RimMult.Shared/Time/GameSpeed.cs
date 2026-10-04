@@ -25,5 +25,12 @@ public static class GameSpeedExtensions
         _ => throw new ArgumentOutOfRangeException(nameof(speed), speed, null),
     };
 
+    /// <summary>
+    /// Ticks per second with RimWorld's own speed-up: at Superfast the game runs twice as fast (x12) while nothing
+    /// happens (everyone asleep, no threats). In the shared world that is <paramref name="boost"/>, granted by the server.
+    /// </summary>
+    public static int TicksPerSecond(this GameSpeed speed, bool boost) =>
+        speed == GameSpeed.Superfast && boost ? ProtocolInfo.TicksPerSecondAtNormal * 12 : speed.TicksPerSecond();
+
     public static bool IsDefined(this GameSpeed speed) => speed <= GameSpeed.Ultrafast;
 }

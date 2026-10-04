@@ -94,6 +94,21 @@ internal static class TimePatches
     }
 
     /// <summary>
+    /// In the shared world RimWorld's own Superfast doubling ("nothing happening") only applies when the server grants
+    /// it — when nothing happens in anyone's game — and the game eases off while it is ahead of the others.
+    /// </summary>
+    [HarmonyPostfix]
+    [HarmonyPatch(nameof(TickManager.TickRateMultiplier), MethodType.Getter)]
+    private static void SharedRate(TickManager __instance, ref float __result)
+    {
+        if (!TimeSync.Active)
+            return;
+        if (__instance.CurTimeSpeed == TimeSpeed.Superfast && !TimeSync.Boost && __result > 6f)
+            __result = 6f;
+        __result *= TimeSync.SpeedFactor;
+    }
+
+    /// <summary>
     /// The game's own automatic pauses (letters, events) would pause the whole world for everyone through the
     /// speed vote; in a shared world only players pause.
     /// </summary>

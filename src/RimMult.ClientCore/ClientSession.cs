@@ -195,10 +195,10 @@ public sealed class ClientSession
             Send(new LeaveWorld());
     }
 
-    public void ReportAuthority(long tick, float sustainableTicksPerSecond)
+    public void ReportAuthority(long tick, float sustainableTicksPerSecond, bool idle = false)
     {
         if (State == ClientState.Connected)
-            Send(new AuthorityReport { Tick = tick, SustainableTicksPerSecond = sustainableTicksPerSecond });
+            Send(new AuthorityReport { Tick = tick, SustainableTicksPerSecond = sustainableTicksPerSecond, Idle = idle });
     }
 
     public void SendParcel(ulong toOwner, string toTile, string summary, byte[] payload)

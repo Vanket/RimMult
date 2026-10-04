@@ -40,6 +40,9 @@ public sealed class TimeSettings
     /// </summary>
     public float MaxDriftSeconds { get; set; } = 1.5f;
 
+    /// <summary>How far ahead of the slowest authority the others may run, at this many ticks per second.</summary>
+    public long DriftTicks(int ticksPerSecond) => System.Math.Max(MaxDriftTicks, (long)(ticksPerSecond * MaxDriftSeconds));
+
     public void Write(ByteWriter writer)
     {
         writer.WriteByte((byte)VoteMode);

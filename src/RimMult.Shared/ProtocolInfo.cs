@@ -3,7 +3,7 @@ namespace RimMult.Shared;
 public static class ProtocolInfo
 {
     /// <summary>Bumped on every incompatible change to packets or their semantics.</summary>
-    public const int Version = 17;
+    public const int Version = 18;
 
     /// <summary>LiteNetLib connection key; rejects random UDP traffic before the handshake.</summary>
     public const string ConnectionKey = "RimMult";
