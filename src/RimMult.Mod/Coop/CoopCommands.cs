@@ -21,8 +21,26 @@ internal static class CoopCommands
     private static readonly AccessTools.FieldRef<Designator_Place, Rot4> PlacingRot = AccessTools.FieldRefAccess<Designator_Place, Rot4>("placingRot");
     private static readonly AccessTools.FieldRef<Pawn_WorkSettings, Pawn> WorkSettingsPawn = AccessTools.FieldRefAccess<Pawn_WorkSettings, Pawn>("pawn");
 
+    private const string WorldPrefix = "world:";
+
     private static int _lastGizmoFrame = -1;
     private static string _lastGizmoKey = "";
+
+    /// <summary>Host, while a guest's order runs: whether the queue key (Shift) counts as held, as it was for the guest.</summary>
+    public static bool? QueueOverride { get; private set; }
+
+    /// <summary>Guest: whether the queue key (Shift) is held for the order being given.</summary>
+    public static bool QueueHeld()
+    {
+        try
+        {
+            return KeyBindingDefOf.QueueOrder.IsDownEvent || KeyBindingDefOf.QueueOrder.IsDown;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
 
     // ---------- guest side: describe and send ----------
 
@@ -44,6 +62,9 @@ internal static class CoopCommands
         // Installing works on the selected minified thing (or building to reinstall): the host selects the same one.
         if (designator is Designator_Install)
             command.Extra = Find.Selector.SingleSelectedThing?.thingIDNumber.ToString() ?? "";
+        // Expanding or clearing an allowed area works on the area picked in the menu.
+        if (designator is Designator_AreaAllowed)
+            command.Number = Designator_AreaAllowed.SelectedArea?.ID ?? -1;
         if (cells != null)
             foreach (var cell in cells)
             {
@@ -65,12 +86,15 @@ internal static class CoopCommands
             Name = option.Label,
             X = clickPos.x,
             Z = clickPos.z,
+            Queue = QueueHeld(),
         });
     }
 
     public static void SendGizmo(Command gizmo)
     {
-        var selected = Find.Selector.SelectedObjects.OfType<Thing>().ToList();
+        // In the globe view the buttons belong to the selected caravans and settlements.
+        var worldObjects = CoopGlobe.SelectedWorldObjects();
+        var selected = worldObjects.Count > 0 ? new List<Thing>() : Find.Selector.SelectedObjects.OfType<Thing>().ToList();
         var key = gizmo.GetType().FullName + "|" + gizmo.Label;
 
         // Grouped gizmos (three pawns, one "draft" button) are processed once per member in the same frame:
@@ -87,6 +111,10 @@ internal static class CoopCommands
             ThingIds = selected.Select(t => t.thingIDNumber).ToList(),
             Name = gizmo.GetType().FullName ?? "",
             Detail = gizmo.Label ?? "",
+            // A zone's buttons (allow sowing, …): the zone has no thing id, it goes by its own.
+            Number = selected.Count == 0 && worldObjects.Count == 0 && Find.Selector.SelectedZone is { } zone ? zone.ID : -1,
+            Extra = worldObjects.Count > 0 ? WorldPrefix + string.Join(",", worldObjects.Select(o => o.ID)) : "",
+            Queue = QueueHeld(),
         });
     }
 
@@ -106,7 +134,7 @@ internal static class CoopCommands
     public static void SendResearch(ResearchProjectDef? project) =>
         Send(new CoopCommand { Kind = CoopCommandKind.Research, Name = project?.defName ?? "" });
 
-    private static void Send(CoopCommand command) =>
+    public static void Send(CoopCommand command) =>
         Multiplayer.Session?.SendCoop(CoopChannel.Command, command.Encode());
 
     // ---------- host side: find and run ----------
@@ -129,6 +157,7 @@ internal static class CoopCommands
         var previousMap = CurrentMapIndex(game);
         // Whatever the order opens (a dialog, a menu) would pop up on the host's screen: it is closed again.
         var windows = new HashSet<Window>(Find.WindowStack.Windows);
+        QueueOverride = command.Queue;
         // Zone designators grow the selected zone: the host's own selection must not be what the guest's zone grows.
         var selection = command.Kind == CoopCommandKind.Designate ? Find.Selector.SelectedObjects.ToList() : null;
         if (selection != null)
@@ -149,13 +178,26 @@ internal static class CoopCommands
                     FloatMenu(command, map);
                     break;
                 case CoopCommandKind.Gizmo:
-                    Gizmo(command);
+                    if (Gizmo(command, map))
+                        // The button opens a window or starts aiming: that happens on the guest's screen instead.
+                        Multiplayer.Session?.SendCoop(CoopChannel.RunLocally, data, guestId);
                     break;
                 case CoopCommandKind.WorkPriority:
                     WorkPriority(command);
                     break;
                 case CoopCommandKind.Research:
                     Find.ResearchManager.SetCurrentProject(DefDatabase<ResearchProjectDef>.GetNamedSilentFail(command.Name));
+                    break;
+                case CoopCommandKind.Target when map != null:
+                    CoopTargeting.Execute(command, map);
+                    break;
+                case CoopCommandKind.Edit:
+                    CoopEdits.Apply(command, map);
+                    break;
+                case CoopCommandKind.CaravanGoto:
+                case CoopCommandKind.WorldFloatMenu:
+                case CoopCommandKind.FormCaravan:
+                    CoopGlobe.Execute(command, map);
                     break;
             }
         }
@@ -165,6 +207,7 @@ internal static class CoopCommands
         }
         finally
         {
+            QueueOverride = null;
             CurrentMapIndex(game) = previousMap;
             if (selection != null)
             {
@@ -191,6 +234,9 @@ internal static class CoopCommands
         var build = designator as Designator_Build;
         var oldRot = place != null ? PlacingRot(place) : Rot4.North;
         var oldStuff = build != null ? BuildStuff(build) : null;
+        var oldArea = Designator_AreaAllowed.selectedArea;
+        if (designator is Designator_AreaAllowed)
+            Designator_AreaAllowed.selectedArea = CoopEdits.HostArea(map, command.Number);
         if (place != null)
             PlacingRot(place) = new Rot4(command.Number);
         if (build != null && command.Extra.Length > 0)
@@ -205,6 +251,7 @@ internal static class CoopCommands
                 PlacingRot(place) = oldRot;
             if (build != null)
                 BuildStuff(build) = oldStuff;
+            Designator_AreaAllowed.selectedArea = oldArea;
         }
     }
 
@@ -277,19 +324,101 @@ internal static class CoopCommands
             CoopHost.Touch(pawn);
     }
 
-    private static void Gizmo(CoopCommand command)
+    /// <summary>Presses the guest's button; true when it opened a window or started aiming (the guest does that part).</summary>
+    private static bool Gizmo(CoopCommand command, Map? map)
     {
+        var windows = new HashSet<Window>(Find.WindowStack.Windows);
+        var targeting = Find.Targeter.IsTargeting;
+        var worldTargeting = Find.WorldTargeter.IsTargeting;
+
+        if (command.ThingIds.Count == 0 && command.Number >= 0 && map?.zoneManager.AllZones.FirstOrDefault(z => z.ID == command.Number) is { } zone)
+        {
+            Press(zone.GetGizmos());
+            CoopHost.TouchZones(map);
+        }
+        foreach (var worldObject in CoopGlobe.WorldObjectsByIds(WorldIds(command)))
+        {
+            Press(worldObject.GetGizmos());
+            if (Find.WindowStack.Windows.Any(w => !windows.Contains(w)))
+                break;
+        }
+
         var all = Find.Maps.SelectMany(ThingsById).GroupBy(p => p.Key).ToDictionary(g => g.Key, g => g.First().Value);
         foreach (var id in command.ThingIds)
         {
             if (!all.TryGetValue(id, out var thing))
                 continue;
-            var gizmo = thing.GetGizmos().OfType<Command>()
-                .FirstOrDefault(g => g.GetType().FullName == command.Name && g.Label == command.Detail);
-            if (gizmo != null && !gizmo.Disabled)
-                gizmo.ProcessInput(new Event());
+            Press(thing.GetGizmos());
             // The guest wants to see the result right away (a bed made medical, a door held open, …).
             CoopHost.Touch(thing);
+            if (Find.WindowStack.Windows.Any(w => !windows.Contains(w)))
+                break; // a window per selected thing would only open again on the guest's side
+        }
+
+        var local = Find.WindowStack.Windows.Any(w => !windows.Contains(w));
+        if (!targeting && Find.Targeter.IsTargeting)
+        {
+            Find.Targeter.StopTargeting();
+            local = true;
+        }
+        if (!worldTargeting && Find.WorldTargeter.IsTargeting)
+        {
+            Find.WorldTargeter.StopTargeting();
+            local = true;
+        }
+        return local;
+
+        void Press(IEnumerable<Gizmo> gizmos)
+        {
+            var gizmo = gizmos.OfType<Command>().FirstOrDefault(g => g.GetType().FullName == command.Name && g.Label == command.Detail);
+            if (gizmo != null && !gizmo.Disabled)
+                gizmo.ProcessInput(new Event());
+        }
+    }
+
+    /// <summary>Guest: the host sent this button back: it opens a window or starts aiming, so it runs here.</summary>
+    public static void RunLocally(byte[] data)
+    {
+        CoopCommand command;
+        try
+        {
+            command = CoopCommand.Decode(data);
+        }
+        catch (Exception)
+        {
+            return;
+        }
+        var map = Find.Maps.FirstOrDefault(m => m.uniqueID == command.MapId);
+        IEnumerable<Gizmo> gizmos;
+        if (WorldIds(command).Count > 0)
+        {
+            gizmos = CoopGlobe.WorldObjectsByIds(WorldIds(command)).SelectMany(o => o.GetGizmos());
+        }
+        else if (command.ThingIds.Count == 0 && command.Number >= 0 && map?.zoneManager.AllZones.FirstOrDefault(z => z.ID == command.Number) is { } zone)
+        {
+            gizmos = zone.GetGizmos();
+        }
+        else
+        {
+            var all = Find.Maps.SelectMany(ThingsById).GroupBy(p => p.Key).ToDictionary(g => g.Key, g => g.First().Value);
+            gizmos = command.ThingIds.Select(id => all.TryGetValue(id, out var t) ? t : null).Where(t => t != null).SelectMany(t => t!.GetGizmos());
+        }
+        var gizmo = gizmos.OfType<Command>().FirstOrDefault(g => g.GetType().FullName == command.Name && g.Label == command.Detail);
+        if (gizmo == null)
+            return;
+        Patches.CoopGizmoPatch.RunningLocally = true;
+        try
+        {
+            CoopTargeting.Pressed(gizmo);
+            gizmo.ProcessInput(new Event());
+        }
+        catch (Exception e)
+        {
+            Log.Warning($"[RimMult] Co-op: button '{gizmo.Label}' failed here: {e.Message}");
+        }
+        finally
+        {
+            Patches.CoopGizmoPatch.RunningLocally = false;
         }
     }
 
@@ -311,6 +440,13 @@ internal static class CoopCommands
             }
         }
     }
+
+    /// <summary>The world objects (caravans, settlements) a guest's button was pressed for.</summary>
+    private static List<int> WorldIds(CoopCommand command) =>
+        command.Kind == CoopCommandKind.Gizmo && command.Extra.StartsWith(WorldPrefix, StringComparison.Ordinal)
+            ? command.Extra.Substring(WorldPrefix.Length).Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => int.TryParse(s, out var id) ? id : -1).Where(id => id >= 0).ToList()
+            : new List<int>();
 
     public static Dictionary<int, Thing> ThingsById(Map map)
     {

@@ -172,7 +172,6 @@
   <RimMult.CoopToMainMenu>Main menu</RimMult.CoopToMainMenu>
   <RimMult.CoopKeepCopy>Stay</RimMult.CoopKeepCopy>
   <RimMult.CoopNoSave>In co-op only the host saves the game.</RimMult.CoopNoSave>
-  <RimMult.CoopTargetUnsupported>Targeting commands don't work for co-op guests yet. Use right-click orders instead.</RimMult.CoopTargetUnsupported>
   <!-- Stage 5: diplomacy and PvP raids -->
   <RimMult.AllowPvp>Allow wars between players (PvP)</RimMult.AllowPvp>
   <RimMult.AllowPvpTip>Players can declare war on each other and raid each other's colonies with caravans and drop pods.</RimMult.AllowPvpTip>

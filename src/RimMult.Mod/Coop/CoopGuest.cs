@@ -51,8 +51,9 @@ internal static class CoopGuest
     private static int _positionsTick = -1;
 
     /// <summary>
-    /// Fresh copies of pawns held back while a right-click menu is open: swapping a pawn under an open menu breaks the
-    /// menu (and with it the whole interface). Applied as soon as the menu closes.
+    /// Fresh copies held back while something works on the old object: pawns while a right-click menu is open
+    /// (swapping a pawn under an open menu breaks the menu, and with it the whole interface), a workbench while one of
+    /// its bills is being edited, … Applied as soon as that is over.
     /// </summary>
     private static readonly Dictionary<int, Dictionary<int, XmlNode>> Deferred = new();
     private static readonly HashSet<Thing> Expected = new();
@@ -88,6 +89,7 @@ internal static class CoopGuest
         _positionsTick = -1;
         ScribeMemory.ResetCache();
         CoopVisuals.Reset();
+        CoopEdits.Reset();
         Expected.Clear();
         Strays.Clear();
         _game = null;
@@ -146,6 +148,8 @@ internal static class CoopGuest
                 break;
             case Phase.Active:
                 UpdateSpeed(session);
+                // Settings this guest changed go out before the host's copies replace what was changed.
+                CoopEdits.GuestUpdate(force: Pending.Count > 0);
                 ApplyPending();
                 ApplyPositions();
                 break;
@@ -173,6 +177,9 @@ internal static class CoopGuest
                 break;
             case CoopChannel.Positions when State == Phase.Loading || Active:
                 QueuePositions(data);
+                break;
+            case CoopChannel.RunLocally when Active:
+                CoopCommands.RunLocally(data);
                 break;
         }
     }
@@ -297,6 +304,7 @@ internal static class CoopGuest
         public List<DesignationEntry>? Designations;
         public string? Grids;
         public string? Zones;
+        public string? Areas;
         public readonly List<CoopShot> Shots = new();
     }
 
@@ -375,10 +383,38 @@ internal static class CoopGuest
     }
 
     /// <summary>Merges all batches received since the last frame and applies the result once.</summary>
+    /// <summary>Whether something on the guest's screen works on this object right now (see <see cref="Deferred"/>).</summary>
+    private static bool Busy(Thing thing) => (thing is Pawn && Find.WindowStack.IsOpen<FloatMenu>()) || CoopEdits.IsEditing(thing);
+
+    /// <summary>Held-back copies whose object is free again, by map.</summary>
+    private static Dictionary<int, Dictionary<int, XmlNode>> ReleasedDeferred()
+    {
+        var released = new Dictionary<int, Dictionary<int, XmlNode>>();
+        foreach (var mapPair in Deferred)
+        {
+            var map = Find.Maps.FirstOrDefault(m => m.uniqueID == mapPair.Key);
+            var byId = map != null ? CoopCommands.ThingsById(map) : new Dictionary<int, Thing>();
+            foreach (var pawnPair in mapPair.Value.ToList())
+            {
+                if (byId.TryGetValue(pawnPair.Key, out var thing) && Busy(thing))
+                    continue;
+                if (!released.TryGetValue(mapPair.Key, out var free))
+                    released[mapPair.Key] = free = new Dictionary<int, XmlNode>();
+                free[pawnPair.Key] = pawnPair.Value;
+                mapPair.Value.Remove(pawnPair.Key);
+            }
+        }
+        foreach (var empty in Deferred.Where(p => p.Value.Count == 0).Select(p => p.Key).ToList())
+            Deferred.Remove(empty);
+        return released;
+    }
+
     private static void ApplyPending()
     {
-        var menuOpen = Find.WindowStack.IsOpen<FloatMenu>();
-        if ((Pending.Count == 0 && (Deferred.Count == 0 || menuOpen)) || !ScribeMemory.Idle)
+        if (!ScribeMemory.Idle)
+            return;
+        var released = Deferred.Count > 0 ? ReleasedDeferred() : null;
+        if (Pending.Count == 0 && (released == null || released.Count == 0))
             return;
 
         var merged = new Dictionary<int, MergedDelta>();
@@ -431,15 +467,16 @@ internal static class CoopGuest
                 m.Designations = delta.Designations ?? m.Designations;
                 m.Grids = delta.Grids ?? m.Grids;
                 m.Zones = delta.Zones ?? m.Zones;
+                m.Areas = delta.Areas ?? m.Areas;
                 m.Shots.AddRange(delta.Shots);
             }
         }
         Pending.Clear();
 
-        // Pawn copies held back for a menu: older than anything that just arrived, so they only fill gaps.
-        if (!menuOpen)
+        // Copies held back until now: older than anything that just arrived, so they only fill gaps.
+        if (released != null)
         {
-            foreach (var mapPair in Deferred)
+            foreach (var mapPair in released)
             {
                 if (!merged.TryGetValue(mapPair.Key, out var m))
                     merged[mapPair.Key] = m = new MergedDelta();
@@ -449,7 +486,6 @@ internal static class CoopGuest
                         m.Fragments[pawnPair.Key] = pawnPair.Value;
                 }
             }
-            Deferred.Clear();
         }
 
         Applying = true;
@@ -496,9 +532,8 @@ internal static class CoopGuest
         foreach (var shot in delta.Shots)
             CoopVisuals.OnShot(map, shot);
 
-        if (Find.WindowStack.IsOpen<FloatMenu>())
         {
-            foreach (var id in delta.Fragments.Keys.Where(id => byId.TryGetValue(id, out var t) && t is Pawn).ToList())
+            foreach (var id in delta.Fragments.Keys.Where(id => byId.TryGetValue(id, out var t) && Busy(t)).ToList())
             {
                 if (!Deferred.TryGetValue(map.uniqueID, out var held))
                     Deferred[map.uniqueID] = held = new Dictionary<int, XmlNode>();
@@ -525,6 +560,8 @@ internal static class CoopGuest
             ApplyGrids(map, delta.Grids);
         if (delta.Zones != null)
             ApplyZones(map, delta.Zones);
+        if (delta.Areas != null)
+            CoopEdits.ApplyHostAreas(map, delta.Areas);
     }
 
     private static readonly Dictionary<int, float> ResyncAsked = new();
@@ -579,6 +616,7 @@ internal static class CoopGuest
             if (ScribeMemory.FragmentThingId(li) is not { } id || ScribeMemory.FragmentLoadId(li) is not { } loadId)
                 continue;
 
+            ScribeMemory.StripHostOnlyReferences(li);
             nodes.Add(li);
             replacedIds.Add(loadId);
             // Things inside the fragment (a corpse's pawn, gear, a minified building, what is carried) are loaded
@@ -656,6 +694,7 @@ internal static class CoopGuest
             }
 
             ScribeMemory.Remember(thing);
+            CoopEdits.ForgetThing(thing.thingIDNumber);
             if (designations != null)
                 foreach (var def in designations)
                     map.designationManager.AddDesignation(new Designation(thing, def));
@@ -754,6 +793,7 @@ internal static class CoopGuest
         foreach (var added in fresh.AllZones)
             added.PostRegister();
 
+        CoopEdits.ForgetZones(map.uniqueID);
         if (selected != null && fresh.AllZones.FirstOrDefault(z => z.GetUniqueLoadID() == selected) is { } again)
             Find.Selector.Select(again, playSound: false, forceDesignatorDeselect: false);
         map.mapDrawer.WholeMapChanged(MapMeshFlagDefOf.Zone);

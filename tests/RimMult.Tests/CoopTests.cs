@@ -214,6 +214,7 @@ public class CoopTests
             Number = 1,
             X = 1.5f,
             Z = -2.25f,
+            Queue = true,
         };
 
         var copy = CoopCommand.Decode(command.Encode());
@@ -225,6 +226,71 @@ public class CoopTests
         Assert.Equal(("RimWorld.Designator_Build", "Wall", "WoodLog"), (copy.Name, copy.Detail, copy.Extra));
         Assert.Equal(1, copy.Number);
         Assert.Equal((1.5f, -2.25f), (copy.X, copy.Z));
+        Assert.True(copy.Queue);
+    }
+
+    [Fact]
+    public void EditCarriesItsSavedState()
+    {
+        var xml = "<root><bills><li Class=\"Bill_Production\"><recipe>Make_Stew</recipe></li></bills></root>";
+        var copy = CoopCommand.Decode(new CoopCommand { Kind = CoopCommandKind.Edit, MapId = 1, ThingIds = { 42 }, Name = "bills", Extra = xml }.Encode());
+
+        Assert.Equal(CoopCommandKind.Edit, copy.Kind);
+        Assert.Equal("bills", copy.Name);
+        Assert.Equal(xml, copy.Extra);
+        Assert.False(copy.Queue);
+    }
+
+    [Fact]
+    public void AreasAndPoliciesRoundTrip()
+    {
+        var batch = new CoopBatch
+        {
+            Tick = 3,
+            Maps = { new MapDelta { MapId = 1, Areas = "<root><areas/></root>" } },
+            World = new CoopWorld { Policies = "<root><outfits/></root>" },
+        };
+
+        var copy = CoopBatch.Decode(batch.Encode());
+
+        Assert.Equal("<root><areas/></root>", copy.Maps[0].Areas);
+        Assert.Equal("<root><outfits/></root>", copy.World.Policies);
+        Assert.False(copy.World.IsEmpty);
+        Assert.Null(CoopBatch.Decode(new CoopBatch { Maps = { new MapDelta() } }.Encode()).Maps[0].Areas);
+    }
+
+    [Fact]
+    public void GlobeRoundTrips()
+    {
+        var world = new CoopWorld
+        {
+            WorldObjects = { "<root><li Class=\"Caravan\"><ID>7</ID></li></root>" },
+            RemovedWorldObjects = { 3, 9 },
+        };
+        world.Caravans = new List<CaravanPosition>
+        {
+            new() { Id = 7, Tile = "1234", NextTile = "1235", PreviousTile = "1233", CostLeft = 40.5f, CostTotal = 100f, Moving = true },
+        };
+
+        var copy = CoopBatch.Decode(new CoopBatch { World = world }.Encode()).World;
+
+        var caravan = Assert.Single(copy.Caravans!);
+        Assert.Equal((7, "1234", "1235", "1233"), (caravan.Id, caravan.Tile, caravan.NextTile, caravan.PreviousTile));
+        Assert.Equal((40.5f, 100f, true, false), (caravan.CostLeft, caravan.CostTotal, caravan.Moving, caravan.Paused));
+        Assert.Equal(world.WorldObjects, copy.WorldObjects);
+        Assert.Equal([3, 9], copy.RemovedWorldObjects);
+        Assert.False(copy.IsEmpty);
+        Assert.Null(CoopBatch.Decode(new CoopBatch().Encode()).World.Caravans);
+    }
+
+    [Fact]
+    public void FormCaravanCommandRoundTrips()
+    {
+        var command = new CoopCommand { Kind = CoopCommandKind.FormCaravan, MapId = 1, Cells = { 512, 1, 77, 35 }, Detail = "4021" };
+        var copy = CoopCommand.Decode(command.Encode());
+        Assert.Equal(CoopCommandKind.FormCaravan, copy.Kind);
+        Assert.Equal([512, 1, 77, 35], copy.Cells);
+        Assert.Equal("4021", copy.Detail);
     }
 
     [Fact]

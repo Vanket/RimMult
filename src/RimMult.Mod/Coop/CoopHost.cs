@@ -58,6 +58,7 @@ internal static class CoopHost
     private static readonly Dictionary<int, int> ZoneCheapHash = new();
     private static readonly Dictionary<int, int> ZoneHash = new();
     private static readonly Dictionary<int, int> GridHash = new();
+    private static readonly Dictionary<int, int> AreaHash = new();
     private static float _lastPositions;
     private static float _lastPositionsSent;
     private static byte[] _lastPositionsData = Array.Empty<byte>();
@@ -100,6 +101,7 @@ internal static class CoopHost
         ZoneCheapHash.Clear();
         ZoneHash.Clear();
         GridHash.Clear();
+        AreaHash.Clear();
         _lastPositionsData = Array.Empty<byte>();
     }
 
@@ -137,6 +139,14 @@ internal static class CoopHost
     {
         if (Active && Guests.Count > 0 && thing.Spawned && thing.thingIDNumber >= 0 && thing is not Projectile)
             Queue(thing);
+    }
+
+    /// <summary>A guest changed a zone: the map's zones are compared (and sent) in full with the next batch.</summary>
+    public static void TouchZones(Map map)
+    {
+        ZoneCheapHash.Remove(map.uniqueID);
+        ZoneHash.Remove(map.uniqueID);
+        _lastZoneCheck = float.NegativeInfinity;
     }
 
     public static void Update(ClientSession session)
@@ -192,7 +202,7 @@ internal static class CoopHost
 
     private static bool IsEmpty(MapDelta delta) =>
         delta.Despawned.Count == 0 && delta.Things.Count == 0 && delta.Patches.Count == 0 && delta.Shots.Count == 0
-        && delta.Designations == null && delta.Grids == null && delta.Zones == null;
+        && delta.Designations == null && delta.Grids == null && delta.Zones == null && delta.Areas == null;
 
     /// <summary>Where every pawn stands; sent when something moved (and now and then anyway, the channel may drop).</summary>
     private static void SendPositions(ClientSession session, float now)
@@ -371,6 +381,15 @@ internal static class CoopHost
             {
                 GridHash[map.uniqueID] = gridHash;
                 delta.Grids = gridXml;
+            }
+
+            // Home and allowed areas (painted by anyone, renamed, inverted).
+            var areaXml = ScribeMemory.Save(map.areaManager.ExposeData);
+            var areaHash = Hash(areaXml);
+            if (!AreaHash.TryGetValue(map.uniqueID, out var oldAreas) || oldAreas != areaHash)
+            {
+                AreaHash[map.uniqueID] = areaHash;
+                delta.Areas = areaXml;
             }
         }
 
