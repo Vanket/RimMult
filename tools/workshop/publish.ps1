@@ -55,3 +55,7 @@ if ($Check) {
 
 Step "Upload to Workshop item $item"
 Run $tool @('--item', $item, '--content', $stage, '--preview', (Join-Path $stage 'About\Preview.png'), '--note', $Note)
+
+# Steam may keep the subscribed copy on the old version for hours (even across a game start): fetch it now.
+Step 'Update the subscribed copy on this PC'
+Run $tool @('--download', $item)
