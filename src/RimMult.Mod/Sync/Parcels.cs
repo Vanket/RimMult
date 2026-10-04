@@ -172,6 +172,8 @@ internal static class Parcels
             return ResearchShare.Deliver(parcel, project, points);
 
         ParcelAddress.Parse(parcel.ToTile, out var caravanId, out var tileText);
+        if (ParcelAddress.IsTribute(parcel.ToTile))
+            tileText = ""; // tribute lands at any home colony
         var caravan = caravanId is { } id
             ? Find.WorldObjects.Caravans.FirstOrDefault(c => c.ID == id && !c.Destroyed && c.Faction == Faction.OfPlayer)
             : null;
