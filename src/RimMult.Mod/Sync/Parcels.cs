@@ -162,6 +162,11 @@ internal static class Parcels
             return PlayerRaids.BeginDefense(parcel, raidId, arrival, raidTile, live);
         if (ParcelAddress.TryParseRaidReturn(parcel.ToTile, out raidId, out raidTile, out var survivors, out var captives))
             return PlayerRaids.DeliverReturn(parcel, raidTile, survivors, captives);
+        // An ally's people: coming to help (led by the ally in person), or our own coming back from helping.
+        if (!parcel.Returned && ParcelAddress.TryParseHelp(parcel.ToTile, out var helpId, out var helpArrival))
+            return PlayerVisits.BeginHelp(parcel, helpId, helpArrival);
+        if (ParcelAddress.IsHelpReturn(parcel.ToTile))
+            return PlayerVisits.DeliverHelpReturn(parcel);
 
         ParcelAddress.Parse(parcel.ToTile, out var caravanId, out var tileText);
         var caravan = caravanId is { } id

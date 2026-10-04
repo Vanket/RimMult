@@ -226,6 +226,25 @@ internal static class CoopTargeterStopPatch
     }
 }
 
+/// <summary>
+/// Guest: the targeter confirming a pick for a targeting source of any kind (a verb, a vanilla ability, a mod's own
+/// ability like Vanilla Psycasts Expanded's): the pick is relayed to the host instead of ordered here.
+/// </summary>
+[HarmonyPatch(typeof(Targeter), "OrderVerbForceTarget")]
+internal static class CoopTargeterOrderPatch
+{
+    private static readonly Func<Targeter, bool, LocalTargetInfo> UnderMouse =
+        AccessTools.MethodDelegate<Func<Targeter, bool, LocalTargetInfo>>(AccessTools.Method(typeof(Targeter), "CurrentTargetUnderMouse"));
+
+    private static bool Prefix(Targeter __instance)
+    {
+        if (!CoopGuest.Active || CoopGuest.Applying || CoopGuest.Visiting)
+            return true;
+        var target = UnderMouse(__instance, false);
+        return !target.IsValid || !CoopTargeting.RelayVerbOrder(target);
+    }
+}
+
 /// <summary>Guest: a verb or ability ordered at what the guest picked is relayed to the host instead.</summary>
 [HarmonyPatch]
 internal static class CoopVerbOrderPatch

@@ -54,12 +54,26 @@ internal static class SharedSettlements
     }
 }
 
+/// <summary>
+/// A settlement the player defeated (its map cleared of defenders) is the only kind shared with everyone: NPC
+/// settlements that mods' wars wipe out or move (Rim War, Dynamic Diplomacy, …) stay in that player's world only.
+/// </summary>
+[HarmonyPatch(typeof(SettlementDefeatUtility), nameof(SettlementDefeatUtility.CheckDefeated))]
+internal static class SettlementDefeatPatch
+{
+    public static bool Defeating { get; private set; }
+
+    private static void Prefix() => Defeating = true;
+
+    private static void Finalizer() => Defeating = false;
+}
+
 [HarmonyPatch(typeof(Settlement), nameof(Settlement.PostRemove))]
 internal static class SettlementRemovedPatch
 {
     private static void Postfix(Settlement __instance)
     {
-        if (SharedSettlements.Applying || !WorldSync.InWorld)
+        if (SharedSettlements.Applying || !WorldSync.InWorld || !SettlementDefeatPatch.Defeating)
             return;
         if (__instance.Faction == null || __instance.Faction.IsPlayer)
             return;

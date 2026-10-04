@@ -28,6 +28,9 @@ public sealed class RimMultGameComp : GameComponent
     /// <summary>Other players' raids on this colony that are still going on.</summary>
     public List<RaidRecord> Raids = new();
 
+    /// <summary>Allies' people helping here right now (led by their owner in person).</summary>
+    public List<HelpRecord> Helps = new();
+
     public RimMultGameComp(Game game)
     {
     }
@@ -47,10 +50,15 @@ public sealed class RimMultGameComp : GameComponent
         Outbox ??= new List<ParcelRecord>();
         Inbox ??= new List<ParcelRecord>();
         Scribe_Collections.Look(ref Raids, "playerRaids", LookMode.Deep);
+        Scribe_Collections.Look(ref Helps, "playerHelps", LookMode.Deep);
+        Helps ??= new List<HelpRecord>();
         ReceivedParcels ??= new List<long>();
         Raids ??= new List<RaidRecord>();
         if (Scribe.mode == LoadSaveMode.PostLoadInit)
+        {
             Raids.RemoveAll(r => r == null);
+            Helps.RemoveAll(h => h == null);
+        }
     }
 
     public override void GameComponentTick()

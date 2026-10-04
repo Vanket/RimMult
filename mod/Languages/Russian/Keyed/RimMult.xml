@@ -171,6 +171,7 @@
   <RimMult.CoopConnectionLost>отключено</RimMult.CoopConnectionLost>
   <RimMult.CoopToMainMenu>Главное меню</RimMult.CoopToMainMenu>
   <RimMult.CoopKeepCopy>Остаться</RimMult.CoopKeepCopy>
+  <RimMult.CoopNewMap>Хост открыл новую карту — загружаем игру заново, чтобы она появилась и у вас.</RimMult.CoopNewMap>
   <RimMult.CoopNoSave>В коопе игру сохраняет только хост.</RimMult.CoopNoSave>
   <!-- Этап 5: дипломатия и PvP-рейды -->
   <RimMult.AllowPvp>Разрешить войны между игроками (PvP)</RimMult.AllowPvp>
@@ -228,6 +229,24 @@
   <RimMult.RaidReturnLoot>Добыча: {0}.</RimMult.RaidReturnLoot>
   <RimMult.RaidNobody>никто</RimMult.RaidNobody>
   <RimMult.RaidBouncedLabel>Нападение не состоялось</RimMult.RaidBouncedLabel>
+  <RimMult.HelpGo>Помочь лично: {0}</RimMult.HelpGo>
+  <RimMult.HelpGoReport>Идёт на помощь к {0}.</RimMult.HelpGoReport>
+  <RimMult.HelpPods>Капсулы на помощь к {0} (вести лично)</RimMult.HelpPods>
+  <RimMult.HelpNotAllied>{0} вам не союзник</RimMult.HelpNotAllied>
+  <RimMult.HelpCancelled>Помощь {0} отменена: {1}</RimMult.HelpCancelled>
+  <RimMult.HelpArrivedLabel>Помощь от {0}</RimMult.HelpArrivedLabel>
+  <RimMult.HelpArrivedText>Союзник {0} прислал на помощь: {1}.\n\nОни пока ваши колонисты, но командует ими {0} — лично, из вашей игры. Когда {0} вернётся домой, они уйдут с ним.</RimMult.HelpArrivedText>
+  <RimMult.HelpJoining>{0} пришёл помогать лично — мир на паузе, пока игра загружается.</RimMult.HelpJoining>
+  <RimMult.HelpLeft>Помощники {0} ушли домой.</RimMult.HelpLeft>
+  <RimMult.HelpBackLabel>Возвращение от {0}</RimMult.HelpBackLabel>
+  <RimMult.HelpBackText>Ваши люди вернулись от {0}: {1}.\nПогибли: {2}.</RimMult.HelpBackText>
+  <RimMult.HelpStartedLabel>Вы помогаете союзнику</RimMult.HelpStartedLabel>
+  <RimMult.HelpStartedText>Это колония союзника. Командуйте своими людьми как обычно: призыв, приказы правой кнопкой, Shift, атака по цели, способности. Союзник командует своими сам.\n\nКнопка «Вернуться домой» загрузит вашу колонию, а ваши люди вернутся капсулами.</RimMult.HelpStartedText>
+  <RimMult.HelpGoHomeDesc>Загрузить свою колонию. Ваши люди вернутся домой капсулами.</RimMult.HelpGoHomeDesc>
+  <RimMult.HelpGoHomeConfirm>Вернуться домой вместе со своими людьми?</RimMult.HelpGoHomeConfirm>
+  <RimMult.HelpControlledBy>Этим человеком командует {0}.</RimMult.HelpControlledBy>
+  <RimMult.VisitNotYours>Это не ваш человек — командовать можно только своими.</RimMult.VisitNotYours>
+  <RimMult.OtherMultiplayerMod>Включён мод «Multiplayer» (rwmt.Multiplayer). Он меняет те же части игры, что и RimMult (тики, приказы, сохранения), и вместе они не работают. Отключите один из двух модов.</RimMult.OtherMultiplayerMod>
   <RimMult.RaidBouncedText>Атака не состоялась (заключён мир или противник вышел из игры). Ваши люди вернулись домой: {0}.</RimMult.RaidBouncedText>
   <RimMult.RaidAttackLive>Напасть лично на {0}</RimMult.RaidAttackLive>
   <RimMult.RaidPodsLive>Десант в капсулах на {0} — вести лично</RimMult.RaidPodsLive>

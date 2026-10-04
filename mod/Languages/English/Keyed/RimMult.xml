@@ -171,6 +171,7 @@
   <RimMult.CoopConnectionLost>disconnected</RimMult.CoopConnectionLost>
   <RimMult.CoopToMainMenu>Main menu</RimMult.CoopToMainMenu>
   <RimMult.CoopKeepCopy>Stay</RimMult.CoopKeepCopy>
+  <RimMult.CoopNewMap>The host opened a new map: loading the game again so you have it too.</RimMult.CoopNewMap>
   <RimMult.CoopNoSave>In co-op only the host saves the game.</RimMult.CoopNoSave>
   <!-- Stage 5: diplomacy and PvP raids -->
   <RimMult.AllowPvp>Allow wars between players (PvP)</RimMult.AllowPvp>
@@ -228,6 +229,24 @@
   <RimMult.RaidReturnLoot>Loot: {0}.</RimMult.RaidReturnLoot>
   <RimMult.RaidNobody>nobody</RimMult.RaidNobody>
   <RimMult.RaidBouncedLabel>The raid didn't happen</RimMult.RaidBouncedLabel>
+  <RimMult.HelpGo>Help {0} in person</RimMult.HelpGo>
+  <RimMult.HelpGoReport>Going to help {0}.</RimMult.HelpGoReport>
+  <RimMult.HelpPods>Pods to help {0} (led in person)</RimMult.HelpPods>
+  <RimMult.HelpNotAllied>{0} is not your ally</RimMult.HelpNotAllied>
+  <RimMult.HelpCancelled>Help for {0} cancelled: {1}</RimMult.HelpCancelled>
+  <RimMult.HelpArrivedLabel>Help from {0}</RimMult.HelpArrivedLabel>
+  <RimMult.HelpArrivedText>Your ally {0} sent help: {1}.\n\nThey are your colonists for now, but {0} commands them in person, from your game. When {0} goes home, they leave too.</RimMult.HelpArrivedText>
+  <RimMult.HelpJoining>{0} comes to help in person: the world is paused while their game loads.</RimMult.HelpJoining>
+  <RimMult.HelpLeft>{0}'s helpers went home.</RimMult.HelpLeft>
+  <RimMult.HelpBackLabel>Back from {0}</RimMult.HelpBackLabel>
+  <RimMult.HelpBackText>Your people are back from {0}: {1}.\nDied: {2}.</RimMult.HelpBackText>
+  <RimMult.HelpStartedLabel>You are helping an ally</RimMult.HelpStartedLabel>
+  <RimMult.HelpStartedText>This is your ally's colony. Command your people as usual: draft, right-click orders, Shift, attack target, abilities. Your ally commands theirs.\n\n"Go home" loads your colony again and your people come back by pod.</RimMult.HelpStartedText>
+  <RimMult.HelpGoHomeDesc>Load your colony. Your people come back home by pod.</RimMult.HelpGoHomeDesc>
+  <RimMult.HelpGoHomeConfirm>Go home together with your people?</RimMult.HelpGoHomeConfirm>
+  <RimMult.HelpControlledBy>{0} commands this person.</RimMult.HelpControlledBy>
+  <RimMult.VisitNotYours>Not one of yours: you can only command your own people.</RimMult.VisitNotYours>
+  <RimMult.OtherMultiplayerMod>The "Multiplayer" mod (rwmt.Multiplayer) is active. It changes the same parts of the game as RimMult (ticks, orders, saving) and the two don't work together. Disable one of them.</RimMult.OtherMultiplayerMod>
   <RimMult.RaidBouncedText>The attack could not take place (peace was made, or the enemy left the game). Your people are back home: {0}.</RimMult.RaidBouncedText>
   <RimMult.RaidAttackLive>Attack {0} in person</RimMult.RaidAttackLive>
   <RimMult.RaidPodsLive>Drop pod assault on {0}, led in person</RimMult.RaidPodsLive>
