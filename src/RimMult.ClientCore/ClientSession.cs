@@ -40,6 +40,9 @@ public sealed class ClientSession
 {
     public const int MaxChatLines = 200;
 
+    /// <summary>How the server's own chat lines are signed.</summary>
+    public const string ServerSenderName = "[Server]";
+
     private readonly IClientTransport _transport;
     private readonly ClientHello _hello;
     private readonly List<ChatLine> _chat = new();
@@ -263,7 +266,8 @@ public sealed class ClientSession
                 PlayersChanged?.Invoke();
                 break;
             case ChatMessage chat:
-                AddChat(new ChatLine(chat.SenderId, NameOf(chat.SenderId), chat.Text));
+                // Id -1 is the server itself (announcements, answers to "/commands").
+                AddChat(new ChatLine(chat.SenderId, chat.SenderId < 0 ? ServerSenderName : NameOf(chat.SenderId), chat.Text));
                 break;
             case TickGrant grant:
                 LastGrant = grant;

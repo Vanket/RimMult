@@ -96,6 +96,7 @@
   <RimMult.KickAlreadyConnected>вы подключились заново из другого места.</RimMult.KickAlreadyConnected>
   <RimMult.KickKicked>вас выгнали.</RimMult.KickKicked>
   <RimMult.KickServerShutdown>хост закрыл игру.</RimMult.KickServerShutdown>
+  <RimMult.KickBanned>вас забанили на этом сервере.</RimMult.KickBanned>
   <RimMult.KickBadData>ошибка соединения ({0}).</RimMult.KickBadData>
   <RimMult.PodsSendTo>Отправить в колонию {0}</RimMult.PodsSendTo>
   <RimMult.CaravanGive>Передать груз игроку {0}</RimMult.CaravanGive>

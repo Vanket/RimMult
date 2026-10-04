@@ -181,10 +181,11 @@ mklink /D "C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\RimMult" 
 ## Выделенный сервер
 
 ```sh
+docker compose up -d                                          # Docker: мир, конфиг и бэкапы в ./server-data
+docker attach rimmult                                         # консоль: help, players, kick, ban, say, pvp…
+# или готовая сборка из Releases, или из исходников:
 dotnet run -c Release --project src/RimMult.Server            # создаст server.json с настройками по умолчанию
-# или в Docker
-docker build -f src/RimMult.Server/Dockerfile -t rimmult-server .
-docker run -d -p 26480:26480/udp -v rimmult-data:/data rimmult-server
 ```
 
-Пример конфига с комментариями: [`src/RimMult.Server/server.example.json`](src/RimMult.Server/server.example.json).
+Команды, баны, админы, автобэкапы — в [`docs/SERVER.md`](docs/SERVER.md). Админские команды работают и в чате
+игры у хоста: `/kick`, `/ban`, `/say`, `/pvp off`… Публикация в Steam Workshop — [`docs/WORKSHOP.md`](docs/WORKSHOP.md).

@@ -16,7 +16,7 @@ namespace RimMult.ServerCore;
 /// (planet definition, everyone's colonies, world time).
 /// Single-threaded: the owner calls every method from one thread (the transport's poll loop).
 /// </summary>
-public sealed class GameServer
+public sealed partial class GameServer
 {
     private readonly IServerTransport _transport;
     private readonly Action<string> _log;
@@ -184,6 +184,12 @@ public sealed class GameServer
         {
             Kick(session, KickReason.ProtocolMismatch,
                 $"Server uses protocol {ProtocolInfo.Version}, client uses {hello.ProtocolVersion}. Update RimMult.");
+            return;
+        }
+
+        if (hello.SteamId != 0 && Settings.Banned.Contains(hello.SteamId))
+        {
+            Kick(session, KickReason.Banned, "Banned from this server");
             return;
         }
 
@@ -580,6 +586,16 @@ public sealed class GameServer
             return;
         if (text.Length > ChatMessage.MaxLength)
             text = text.Substring(0, ChatMessage.MaxLength);
+
+        // "/command": answered to the sender only.
+        if (text.StartsWith("/", StringComparison.Ordinal))
+        {
+            var reply = RunCommand(text.Substring(1), sender);
+            var session = _sessions.Values.FirstOrDefault(s => s.Player == sender);
+            if (session != null && reply.Length > 0)
+                Reply(session, reply);
+            return;
+        }
 
         Broadcast(PacketCodec.Encode(new ChatMessage { SenderId = sender.Id, Text = text }), DeliveryMode.ReliableOrdered);
     }

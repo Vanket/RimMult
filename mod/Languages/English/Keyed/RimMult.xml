@@ -96,6 +96,7 @@
   <RimMult.KickAlreadyConnected>you connected again from another place.</RimMult.KickAlreadyConnected>
   <RimMult.KickKicked>you were kicked.</RimMult.KickKicked>
   <RimMult.KickServerShutdown>the host closed the game.</RimMult.KickServerShutdown>
+  <RimMult.KickBanned>you are banned from this server.</RimMult.KickBanned>
   <RimMult.KickBadData>connection error ({0}).</RimMult.KickBadData>
   <RimMult.PodsSendTo>Send to {0}'s colony</RimMult.PodsSendTo>
   <RimMult.CaravanGive>Hand the cargo to {0}</RimMult.CaravanGive>
