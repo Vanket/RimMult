@@ -160,8 +160,9 @@ mklink /D "C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\RimMult" 
    ими рядом с его людьми — вместе проходите квест или отбиваете рейд. Союзник вашими людьми командовать не
    может. «Вернуться домой» — загрузится ваша колония, люди вернутся капсулами.
 9. Напасть можно только на игрока, который сейчас в мире; если он вышел, отряд вернётся домой.
-10. Общими между игроками бывают только поселения, которые разгромил игрок; войны модов (Rim War, Dynamic
-    Diplomacy) меняют глобус только у того, у кого они идут.
+10. Исчезнувшее поселение NPC исчезает у всех. С модами, которые сами воюют на глобусе (Rim War, Dynamic
+    Diplomacy), общими остаются только поселения, разгромленные игроком, — их войны меняют глобус только у того,
+    у кого они идут.
 
 Если что-то не так — пришлите `Player.log`
 (`%USERPROFILE%\AppData\LocalLow\Ludeon Studios\RimWorld by Ludeon Studios\Player.log`), строки с `[RimMult]`.
@@ -171,15 +172,20 @@ mklink /D "C:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\RimMult" 
 Моды должны совпадать у всех (интерфейс, звук, текстуры и переводы можно отметить «только у меня» в
 настройках RimMult). Рассинхронов из-за модов нет — каждая игра симулирует своё сама. Разбор совместимости
 большой сборки (310 модов) и что убрать — в [`docs/MODS.md`](docs/MODS.md). Мод **Multiplayer** (Zetrith)
-с RimMult не работает.
+с RimMult не работает. Авторам модов — [`docs/API.md`](docs/API.md).
+
+В коопе данные модов (сети труб, переключатели и т. п.) хост передаёт гостям сам, а раз в секунду сверяет вещи
+на карте и чинит расхождения. Если у гостя что-то не так — «Загрузить заново» в окне мультиплеера. Для багов —
+кнопка «Отчёт об ошибке»: файл с версиями, модами и ошибками.
 
 ## Выделенный сервер
 
 ```sh
+docker compose up -d                                          # Docker: мир, конфиг и бэкапы в ./server-data
+docker attach rimmult                                         # консоль: help, players, kick, ban, say, pvp…
+# или готовая сборка из Releases, или из исходников:
 dotnet run -c Release --project src/RimMult.Server            # создаст server.json с настройками по умолчанию
-# или в Docker
-docker build -f src/RimMult.Server/Dockerfile -t rimmult-server .
-docker run -d -p 26480:26480/udp -v rimmult-data:/data rimmult-server
 ```
 
-Пример конфига с комментариями: [`src/RimMult.Server/server.example.json`](src/RimMult.Server/server.example.json).
+Команды, баны, админы, автобэкапы — в [`docs/SERVER.md`](docs/SERVER.md). Админские команды работают и в чате
+игры у хоста: `/kick`, `/ban`, `/say`, `/pvp off`… Публикация в Steam Workshop — [`docs/WORKSHOP.md`](docs/WORKSHOP.md).

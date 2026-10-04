@@ -1,0 +1,25 @@
+# RimMult dedicated server (separate colonies).
+#   docker compose up -d          start (builds the image the first time)
+#   docker attach rimmult         console: type help; detach with Ctrl+P Ctrl+Q
+#   docker compose logs -f        the log
+# The world, server.json and backups live in ./server-data.
+services:
+  rimmult:
+    container_name: rimmult
+    build:
+      context: .
+      dockerfile: src/RimMult.Server/Dockerfile
+    image: rimmult-server
+    restart: unless-stopped
+    ports:
+      - "26480:26480/udp"
+    volumes:
+      - ./server-data:/data
+    # Keeps the console open for admin commands.
+    stdin_open: true
+    tty: true
+    environment:
+      RIMMULT_NAME: "RimMult server"
+      # RIMMULT_PASSWORD: "secret"
+      # RIMMULT_MAXPLAYERS: "10"
+      # RIMMULT_PVP: "true"

@@ -61,6 +61,57 @@ public enum CoopChannel : byte
     /// ambush, a gravship's new landing) loads the game again; one the host doesn't have any more is removed.
     /// </summary>
     MapsChanged = 12,
+
+    /// <summary>
+    /// Host → guests: a check of one stretch of a map's things (<see cref="CoopCheck"/>): ids with a short hash of
+    /// their state. A guest re-asks for what differs or is missing and removes what the host doesn't have.
+    /// </summary>
+    Check = 13,
+}
+
+/// <summary>What the host has in one stretch of thing ids on a map (see <see cref="CoopChannel.Check"/>).</summary>
+public sealed class CoopCheck
+{
+    public int MapId { get; set; }
+
+    /// <summary>The stretch checked, inclusive: guests compare everything they have with ids in it.</summary>
+    public int FromId { get; set; }
+    public int ToId { get; set; }
+
+    public List<(int Id, int Hash)> Things { get; set; } = new();
+
+    public byte[] Encode()
+    {
+        var writer = new ByteWriter();
+        writer.WriteVarInt(MapId);
+        writer.WriteVarInt(FromId);
+        writer.WriteVarInt(ToId);
+        writer.WriteVarUInt((ulong)Things.Count);
+        var previous = FromId;
+        foreach (var (id, hash) in Things)
+        {
+            // Ids are sorted: small steps between them keep the frame small.
+            writer.WriteVarInt(id - previous);
+            writer.WriteVarInt(hash);
+            previous = id;
+        }
+        return writer.ToArray();
+    }
+
+    public static CoopCheck Decode(byte[] data)
+    {
+        var reader = new ByteReader(data);
+        var check = new CoopCheck { MapId = (int)reader.ReadVarInt(), FromId = (int)reader.ReadVarInt(), ToId = (int)reader.ReadVarInt() };
+        var count = MapDelta.Count(reader, 100_000);
+        var previous = check.FromId;
+        for (var i = 0; i < count; i++)
+        {
+            previous += (int)reader.ReadVarInt();
+            check.Things.Add((previous, (int)reader.ReadVarInt()));
+        }
+        reader.EnsureFullyRead();
+        return check;
+    }
 }
 
 /// <summary>A pawn aiming at something (the warm-up before a shot): guests draw the aim pie and, when selected, the line.</summary>
@@ -590,6 +641,12 @@ public sealed class CoopWorld
     /// <summary>The colony's quests as Scribe XML, when one appeared or changed state; null otherwise.</summary>
     public string? Quests { get; set; }
 
+    /// <summary>
+    /// Mods' own state that changed (key → data): registered through RimMult's mod API, or mods' game/world/map
+    /// components saved as Scribe XML.
+    /// </summary>
+    public List<(string Key, string Data)> ModStates { get; set; } = new();
+
     /// <summary>The colony's caravans on the globe, when one moved; null otherwise.</summary>
     public List<CaravanPosition>? Caravans { get; set; }
 
@@ -600,7 +657,7 @@ public sealed class CoopWorld
     public List<int> RemovedWorldObjects { get; set; } = new();
 
     public bool IsEmpty => Factions == null && Research == null && CurrentResearch == null && Letters.Count == 0 && Policies == null
-                           && Quests == null && Caravans == null && WorldObjects.Count == 0 && RemovedWorldObjects.Count == 0;
+                           && Quests == null && ModStates.Count == 0 && Caravans == null && WorldObjects.Count == 0 && RemovedWorldObjects.Count == 0;
 
     public void Write(ByteWriter writer)
     {
@@ -631,6 +688,12 @@ public sealed class CoopWorld
             letter.Write(writer);
         writer.WriteString(Policies);
         writer.WriteString(Quests);
+        writer.WriteVarUInt((ulong)ModStates.Count);
+        foreach (var (key, data) in ModStates)
+        {
+            writer.WriteString(key);
+            writer.WriteString(data);
+        }
         writer.WriteBool(Caravans != null);
         if (Caravans != null)
         {
@@ -669,6 +732,9 @@ public sealed class CoopWorld
             world.Letters.Add(CoopLetter.Read(reader));
         world.Policies = reader.ReadString();
         world.Quests = reader.ReadString();
+        var states = MapDelta.Count(reader, 10_000);
+        for (var i = 0; i < states; i++)
+            world.ModStates.Add((reader.ReadRequiredString(), reader.ReadRequiredString()));
         if (reader.ReadBool())
         {
             var count = MapDelta.Count(reader, 10_000);
@@ -760,6 +826,9 @@ public enum CoopCommandKind : byte
 
     /// <summary>A quest accepted from the quests tab (quest id in <see cref="CoopCommand.Number"/>, the accepting pawn if any).</summary>
     QuestAccept = 12,
+
+    /// <summary>Another mod's own command (see RimMult's mod API): its id in <see cref="CoopCommand.Name"/>, data base64 in <see cref="CoopCommand.Extra"/>.</summary>
+    Mod = 13,
 }
 
 /// <summary>An order a co-op guest gave; the host finds the same designator/option/gizmo in its game and runs it.</summary>
@@ -813,7 +882,7 @@ public sealed class CoopCommand
     {
         var reader = new ByteReader(data);
         var command = new CoopCommand { Kind = (CoopCommandKind)reader.ReadByte(), MapId = (int)reader.ReadVarInt() };
-        if (command.Kind < CoopCommandKind.Designate || command.Kind > CoopCommandKind.QuestAccept)
+        if (command.Kind < CoopCommandKind.Designate || command.Kind > CoopCommandKind.Mod)
             throw new ProtocolException($"Unknown co-op command {(byte)command.Kind}");
         var things = MapDelta.Count(reader, 100_000);
         for (var i = 0; i < things; i++)

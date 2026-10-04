@@ -3,6 +3,10 @@
   "Port": 26480,
   // The shared world (planet, colonies, world time) is kept here between restarts.
   "WorldFile": "world.dat",
+  // A dated copy of the world goes into BackupDirectory this often (0: never); the oldest beyond BackupsToKeep go.
+  "BackupIntervalMinutes": 30,
+  "BackupsToKeep": 48,
+  "BackupDirectory": "backups",
   "Server": {
     "Name": "RimMult server",
     "MaxPlayers": 10,
@@ -13,6 +17,9 @@
     "TickGrantIntervalSeconds": 0.05,
     // Players may declare war on each other and raid each other's colonies.
     "AllowPvp": true,
+    // SteamIDs kept out, and SteamIDs allowed to use admin commands in chat ("/help"). Console commands: type help.
+    "Banned": [],
+    "Admins": [],
     "Time": {
       // Lowest | Majority | Host
       "VoteMode": "Lowest",

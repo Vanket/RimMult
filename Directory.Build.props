@@ -5,7 +5,7 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Deterministic>true</Deterministic>
-    <Version>0.1.0</Version>
+    <Version>0.5.0</Version>
     <Authors>Vanket</Authors>
   </PropertyGroup>
 </Project>

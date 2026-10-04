@@ -85,6 +85,9 @@ internal static class CoopGuest
     /// <summary>The visit is to help an ally (the visited colony is a friend), not a raid.</summary>
     public static bool VisitHelp { get; private set; }
 
+    /// <summary>Checks from the host, compared once the batches before them are applied.</summary>
+    private static readonly List<byte[]> Checks = new();
+
     private static int _visitTries;
     private static float _retryAt;
 
@@ -119,6 +122,7 @@ internal static class CoopGuest
         Pending.Clear();
         PendingPositions.Clear();
         Deferred.Clear();
+        Checks.Clear();
         _positionsTick = -1;
         ScribeMemory.ResetCache();
         CoopVisuals.Reset();
@@ -220,6 +224,8 @@ internal static class CoopGuest
                 CoopEdits.GuestUpdate(force: Pending.Count > 0);
                 ApplyPending();
                 ApplyPositions();
+                if (Pending.Count == 0)
+                    ApplyChecks();
                 break;
         }
     }
@@ -273,6 +279,10 @@ internal static class CoopGuest
                 break;
             case CoopChannel.RunLocally when Active:
                 CoopCommands.RunLocally(data);
+                break;
+            case CoopChannel.Check when Active:
+                if (Checks.Count < 50)
+                    Checks.Add(data);
                 break;
             case CoopChannel.MapsChanged when Active:
                 OnMapsChanged(session, data);
@@ -377,6 +387,14 @@ internal static class CoopGuest
         if (ids.All(id => Find.Maps.Any(m => m.uniqueID == id)))
             return;
         Messages.Message("RimMult.CoopNewMap".Translate(), MessageTypeDefOf.NeutralEvent, historical: false);
+        Reload();
+    }
+
+    /// <summary>Gets the whole game from the host again (a new map, or the player asked: something looks wrong).</summary>
+    public static void Reload()
+    {
+        if (!Active)
+            return;
         _returnToMap = Find.CurrentMap?.uniqueID;
         Pending.Clear();
         PendingPositions.Clear();
@@ -713,6 +731,66 @@ internal static class CoopGuest
             ApplyZones(map, delta.Zones);
         if (delta.Areas != null)
             CoopEdits.ApplyHostAreas(map, delta.Areas);
+    }
+
+    /// <summary>
+    /// Compares a stretch of things with the host's: what differs or is missing is asked for again, what the host
+    /// doesn't have any more (a lost removal) is removed. Things in use on screen are left alone.
+    /// </summary>
+    private static void ApplyChecks()
+    {
+        if (Checks.Count == 0)
+            return;
+        var checks = Checks.ToList();
+        Checks.Clear();
+        var resync = new List<int>();
+        Applying = true;
+        try
+        {
+            foreach (var data in checks)
+            {
+                CoopCheck check;
+                try
+                {
+                    check = CoopCheck.Decode(data);
+                }
+                catch (Exception)
+                {
+                    continue;
+                }
+                var map = Find.Maps.FirstOrDefault(m => m.uniqueID == check.MapId);
+                if (map == null)
+                    continue;
+                var mine = new Dictionary<int, Thing>();
+                foreach (var thing in map.listerThings.AllThings)
+                    if (CoopHost.Checked(thing) && thing.thingIDNumber >= check.FromId && thing.thingIDNumber <= check.ToId)
+                        mine[thing.thingIDNumber] = thing;
+
+                foreach (var (id, hash) in check.Things)
+                {
+                    if (!mine.TryGetValue(id, out var thing))
+                        resync.Add(id);
+                    else if (!Busy(thing) && CoopHost.CheckHash(thing) != hash)
+                        resync.Add(id);
+                    mine.Remove(id);
+                }
+                foreach (var extra in mine.Values)
+                {
+                    if (extra.Spawned && !Busy(extra))
+                        extra.DeSpawn(DestroyMode.Vanish);
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Log.WarningOnce($"[RimMult] Co-op: check failed: {e.Message}", 0x434F434B);
+        }
+        finally
+        {
+            Applying = false;
+        }
+        if (resync.Count > 0)
+            RequestResync(resync);
     }
 
     private static readonly Dictionary<int, float> ResyncAsked = new();

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using RimMult.Shared.Time;
 
 namespace RimMult.ServerCore;
@@ -41,4 +42,10 @@ public sealed class ServerSettings
 
     /// <summary>Players may declare war on each other and raid each other's colonies.</summary>
     public bool AllowPvp { get; set; } = true;
+
+    /// <summary>SteamIDs that may not join.</summary>
+    public List<ulong> Banned { get; set; } = new();
+
+    /// <summary>SteamIDs that may use admin commands in chat (the host always may).</summary>
+    public List<ulong> Admins { get; set; } = new();
 }

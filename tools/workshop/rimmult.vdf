@@ -1,0 +1,14 @@
+"workshopitem"
+{
+	// RimWorld's Steam app id.
+	"appid"		"294100"
+	// 0 for the first upload; then the id Steam gave the item (also in mod/About/PublishedFileId.txt).
+	"publishedfileid"		"0"
+	// Absolute path to the packaged mod folder (the unzipped release, or mod/ after a Release build).
+	"contentfolder"		"C:\\path\\to\\RimMult"
+	"previewfile"		"C:\\path\\to\\RimMult\\About\\Preview.png"
+	// 0 public, 1 friends only, 2 hidden.
+	"visibility"		"2"
+	"title"		"RimMult — Multiplayer"
+	"changenote"		"See https://github.com/Vanket/RimMult/releases"
+}

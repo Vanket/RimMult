@@ -43,6 +43,7 @@ internal static class CoopWorldSync
         _policiesHash = null;
         _questsSignature = null;
         CoopGlobe.Forget();
+        ModSync.Forget();
         _sentCurrent = null;
         SentProgress.Clear();
     }
@@ -135,6 +136,8 @@ internal static class CoopWorldSync
             world.Quests = ScribeMemory.Save(Find.QuestManager.ExposeData);
         }
 
+        ModSync.Build(world);
+
         var policies = CoopEdits.SavePolicies();
         var policiesHash = policies.GetHashCode() ^ policies.Length;
         if (policiesHash != _policiesHash)
@@ -172,6 +175,8 @@ internal static class CoopWorldSync
                 CoopEdits.ApplyPolicies(world.Policies);
             if (world.Quests != null)
                 ApplyQuests(world.Quests);
+            if (world.ModStates.Count > 0)
+                ModSync.Apply(world.ModStates);
             CoopGlobe.Apply(world);
         }
         catch (Exception e)

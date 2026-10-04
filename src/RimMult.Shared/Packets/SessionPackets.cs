@@ -94,6 +94,7 @@ public enum KickReason : byte
     Kicked = 7,
     ServerShutdown = 8,
     BadData = 9,
+    Banned = 10,
 }
 
 /// <summary>The last packet before the server drops a connection, so the client can show why.</summary>

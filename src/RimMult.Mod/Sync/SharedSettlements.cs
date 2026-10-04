@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
@@ -55,12 +56,21 @@ internal static class SharedSettlements
 }
 
 /// <summary>
-/// A settlement the player defeated (its map cleared of defenders) is the only kind shared with everyone: NPC
-/// settlements that mods' wars wipe out or move (Rim War, Dynamic Diplomacy, …) stay in that player's world only.
+/// Which vanished NPC settlements are shared with everyone. Normally all of them; but mods that wage wars between
+/// NPC factions on the globe (Rim War, Dynamic Diplomacy) wipe out and found settlements in each player's world on
+/// their own, so with them only the settlements a player defeated (its map cleared of defenders) are shared.
 /// </summary>
 [HarmonyPatch(typeof(SettlementDefeatUtility), nameof(SettlementDefeatUtility.CheckDefeated))]
 internal static class SettlementDefeatPatch
 {
+    private static bool? _warMods;
+
+    /// <summary>A mod that changes NPC settlements by itself is active.</summary>
+    public static bool WarMods => _warMods ??= ModsConfig.ActiveModsInLoadOrder.Any(m =>
+        m.Name.IndexOf("Rim War", StringComparison.OrdinalIgnoreCase) >= 0
+        || m.Name.IndexOf("RimWar", StringComparison.OrdinalIgnoreCase) >= 0
+        || m.Name.IndexOf("Dynamic Diplomacy", StringComparison.OrdinalIgnoreCase) >= 0);
+
     public static bool Defeating { get; private set; }
 
     private static void Prefix() => Defeating = true;
@@ -73,7 +83,7 @@ internal static class SettlementRemovedPatch
 {
     private static void Postfix(Settlement __instance)
     {
-        if (SharedSettlements.Applying || !WorldSync.InWorld || !SettlementDefeatPatch.Defeating)
+        if (SharedSettlements.Applying || !WorldSync.InWorld || (SettlementDefeatPatch.WarMods && !SettlementDefeatPatch.Defeating))
             return;
         if (__instance.Faction == null || __instance.Faction.IsPlayer)
             return;

@@ -480,4 +480,24 @@ public class CoopTests
         Assert.Equal(GameSpeed.Normal, host.Server.Time.ResolveSpeed());
         Assert.Empty(atHost);
     }
+
+    [Fact]
+    public void CheckRoundTrips()
+    {
+        var check = new CoopCheck { MapId = 2, FromId = 100, ToId = 250, Things = { (100, 7), (150, -3), (249, int.MaxValue) } };
+        var copy = CoopCheck.Decode(check.Encode());
+        Assert.Equal((2, 100, 250), (copy.MapId, copy.FromId, copy.ToId));
+        Assert.Equal(check.Things, copy.Things);
+    }
+
+    [Fact]
+    public void ModStatesAndCommandsRoundTrip()
+    {
+        var world = CoopBatch.Decode(new CoopBatch { World = new CoopWorld { ModStates = { ("mod.a:fuel", "42"), ("wc:Foo.Bar", "<root/>") } } }.Encode()).World;
+        Assert.Equal([("mod.a:fuel", "42"), ("wc:Foo.Bar", "<root/>")], world.ModStates);
+        Assert.False(world.IsEmpty);
+
+        var command = CoopCommand.Decode(new CoopCommand { Kind = CoopCommandKind.Mod, Name = "mod.a:fire", Extra = "AQID" }.Encode());
+        Assert.Equal((CoopCommandKind.Mod, "mod.a:fire", "AQID"), (command.Kind, command.Name, command.Extra));
+    }
 }

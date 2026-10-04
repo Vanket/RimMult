@@ -74,7 +74,7 @@ public sealed class RimMultMod : Mod
 
         // Checkbox per mod: client-side mods are not compared with other players.
         var mods = ModList.Running.Where(ModList.CanBeClientOnly).ToList();
-        var outer = list.GetRect(inRect.height - list.CurHeight - 70f);
+        var outer = list.GetRect(inRect.height - list.CurHeight - 100f);
         Widgets.DrawMenuSection(outer);
         var inner = outer.ContractedBy(4f);
         var view = new Rect(0f, 0f, inner.width - 16f, mods.Count * 26f);
@@ -93,6 +93,7 @@ public sealed class RimMultMod : Mod
         Widgets.EndScrollView();
 
         list.Gap(6f);
+        list.CheckboxLabeled("RimMult.SyncModComponents".Translate(), ref Settings.SyncModComponents, "RimMult.SyncModComponentsHint".Translate());
         list.Label("RimMult.ModListHash".Translate(ModList.ComputeHash()));
         list.Label("RimMult.ModListHashHint".Translate());
         list.End();
@@ -109,6 +110,9 @@ public sealed class RimMultSettings : ModSettings
     public Shared.Coop.GameMode HostMode = Shared.Coop.GameMode.SeparateColonies;
     public bool HostAllowPvp = true;
 
+    /// <summary>Co-op host: stream mods' game/world/map components to guests when they change.</summary>
+    public bool SyncModComponents = true;
+
     /// <summary>Lower-case package ids of mods left out of the mod comparison (visual / interface only).</summary>
     public List<string> ClientOnlyMods = ModList.DefaultClientOnly.ToList();
 
@@ -123,6 +127,7 @@ public sealed class RimMultSettings : ModSettings
         Scribe_Values.Look(ref HostPort, "hostPort", ProtocolInfo.DefaultPort);
         Scribe_Values.Look(ref HostMode, "hostMode");
         Scribe_Values.Look(ref HostAllowPvp, "hostAllowPvp", true);
+        Scribe_Values.Look(ref SyncModComponents, "syncModComponents", true);
     }
 }
 

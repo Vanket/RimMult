@@ -1,0 +1,41 @@
+name: version release
+
+# A tag like v0.5.0 publishes a proper release: the mod zip and the dedicated server for Linux and Windows.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet build -c Release
+      - run: dotnet test -c Release --no-build
+      - name: Package mod
+        run: |
+          mkdir -p dist/RimMult
+          cp -r mod/. dist/RimMult/
+          rm -f dist/RimMult/1.6/Assemblies/.gitkeep dist/RimMult/1.6/Assemblies/*.pdb
+          (cd dist && zip -qr RimMult-${GITHUB_REF_NAME}.zip RimMult)
+      - name: Package dedicated server
+        run: |
+          for rid in linux-x64 win-x64; do
+            dotnet publish src/RimMult.Server/RimMult.Server.csproj -c Release -r $rid --self-contained true \
+              -p:PublishSingleFile=true -o dist/server-$rid
+            cp src/RimMult.Server/server.example.json dist/server-$rid/
+            (cd dist && zip -qr RimMult-Server-${GITHUB_REF_NAME}-$rid.zip server-$rid)
+          done
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.zip \
+            --title "RimMult $GITHUB_REF_NAME" \
+            --notes "Mod: unzip RimMult-$GITHUB_REF_NAME.zip into RimWorld/Mods (or subscribe on the Steam Workshop). Dedicated server: see docs/SERVER.md."
