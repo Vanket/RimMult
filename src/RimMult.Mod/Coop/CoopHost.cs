@@ -88,6 +88,9 @@ internal static class CoopHost
         && Current.ProgramState == ProgramState.Playing
         && !LongEventHandler.AnyEventNowOrWaiting;
 
+    /// <summary>Someone is playing (or loading) this game as a guest.</summary>
+    public static bool HasGuests => Guests.Count > 0;
+
     /// <summary>Separate colonies: this game is visited (a live raid), not a co-op host.</summary>
     private static bool Visited(ClientSession session) => session.Mode != GameMode.Coop;
 
@@ -122,6 +125,7 @@ internal static class CoopHost
         PawnCursor.Clear();
         ForgetSentState();
         CoopWorldSync.Reset();
+        CoopCursors.Reset();
     }
 
     /// <summary>Designations, zones and grids go out in full again (a guest just loaded the game).</summary>
@@ -658,6 +662,9 @@ internal static class CoopHost
                 break;
             case CoopChannel.Resync:
                 Resync(data);
+                break;
+            case CoopChannel.Cursors when !visit:
+                CoopCursors.FromGuest(guestId, data);
                 break;
         }
     }

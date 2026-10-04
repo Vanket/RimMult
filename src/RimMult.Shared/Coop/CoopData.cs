@@ -67,6 +67,18 @@ public enum CoopChannel : byte
     /// their state. A guest re-asks for what differs or is missing and removes what the host doesn't have.
     /// </summary>
     Check = 13,
+
+    /// <summary>
+    /// Where players point (<see cref="CursorsFrame"/>), several times a second, unreliably. Guest → host: its own
+    /// cursor; host → guests: everyone's (the host passes guests' cursors on).
+    /// </summary>
+    Cursors = 14,
+}
+
+public static class CoopChannels
+{
+    /// <summary>Channels whose next message replaces a lost one: sent unreliably, so nothing big queues in front of them.</summary>
+    public static bool IsUnreliable(CoopChannel channel) => channel is CoopChannel.Positions or CoopChannel.Cursors;
 }
 
 /// <summary>What the host has in one stretch of thing ids on a map (see <see cref="CoopChannel.Check"/>).</summary>
@@ -925,5 +937,74 @@ public static class CoopIds
             ids.Add((int)reader.ReadVarInt());
         reader.EnsureFullyRead();
         return ids;
+    }
+}
+
+/// <summary>Where one player points on a map, and what they have selected (drawn in their color for the others).</summary>
+public sealed class CursorMark
+{
+    public const int MaxSelected = 20;
+
+    /// <summary>Whose cursor (filled in by the host for its guests' marks).</summary>
+    public int PlayerId { get; set; }
+
+    /// <summary>The map the player looks at, or -1 (main menu, globe).</summary>
+    public int MapId { get; set; } = -1;
+
+    /// <summary>Mouse position on the map, in hundredths of a cell.</summary>
+    public int X { get; set; }
+    public int Z { get; set; }
+
+    /// <summary>Thing ids the player has selected (at most <see cref="MaxSelected"/>).</summary>
+    public List<int> Selected { get; set; } = new();
+
+    public bool SameAs(CursorMark? other, int tolerance) =>
+        other != null && other.MapId == MapId && System.Math.Abs(other.X - X) <= tolerance && System.Math.Abs(other.Z - Z) <= tolerance
+        && other.Selected.Count == Selected.Count && System.Linq.Enumerable.SequenceEqual(other.Selected, Selected);
+
+    public void Write(ByteWriter writer)
+    {
+        writer.WriteVarInt(PlayerId);
+        writer.WriteVarInt(MapId);
+        writer.WriteVarInt(X);
+        writer.WriteVarInt(Z);
+        writer.WriteVarUInt((ulong)Selected.Count);
+        foreach (var id in Selected)
+            writer.WriteVarInt(id);
+    }
+
+    public static CursorMark Read(ByteReader reader)
+    {
+        var mark = new CursorMark { PlayerId = (int)reader.ReadVarInt(), MapId = (int)reader.ReadVarInt(), X = (int)reader.ReadVarInt(), Z = (int)reader.ReadVarInt() };
+        var count = MapDelta.Count(reader, MaxSelected);
+        for (var i = 0; i < count; i++)
+            mark.Selected.Add((int)reader.ReadVarInt());
+        return mark;
+    }
+}
+
+/// <summary>Players' cursors (see <see cref="CoopChannel.Cursors"/>).</summary>
+public sealed class CursorsFrame
+{
+    public List<CursorMark> Marks { get; set; } = new();
+
+    public byte[] Encode()
+    {
+        var writer = new ByteWriter(64);
+        writer.WriteVarUInt((ulong)Marks.Count);
+        foreach (var mark in Marks)
+            mark.Write(writer);
+        return writer.ToArray();
+    }
+
+    public static CursorsFrame Decode(byte[] data)
+    {
+        var reader = new ByteReader(data);
+        var frame = new CursorsFrame();
+        var count = MapDelta.Count(reader, 64);
+        for (var i = 0; i < count; i++)
+            frame.Marks.Add(CursorMark.Read(reader));
+        reader.EnsureFullyRead();
+        return frame;
     }
 }

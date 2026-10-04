@@ -482,6 +482,30 @@ public class CoopTests
     }
 
     [Fact]
+    public void CursorsRoundTrip()
+    {
+        var frame = new CursorsFrame
+        {
+            Marks =
+            {
+                new CursorMark { PlayerId = 3, MapId = 1, X = 4250, Z = -50, Selected = { 12, 99 } },
+                new CursorMark { PlayerId = 4 },
+            },
+        };
+
+        var copy = CursorsFrame.Decode(frame.Encode());
+
+        Assert.Equal(2, copy.Marks.Count);
+        Assert.Equal((3, 1, 4250, -50), (copy.Marks[0].PlayerId, copy.Marks[0].MapId, copy.Marks[0].X, copy.Marks[0].Z));
+        Assert.Equal([12, 99], copy.Marks[0].Selected);
+        Assert.Equal(-1, copy.Marks[1].MapId);
+        Assert.True(copy.Marks[0].SameAs(frame.Marks[0], tolerance: 0));
+        Assert.False(copy.Marks[0].SameAs(new CursorMark { PlayerId = 3, MapId = 1, X = 4300, Z = -50, Selected = { 12, 99 } }, tolerance: 10));
+        Assert.True(CoopChannels.IsUnreliable(CoopChannel.Cursors));
+        Assert.False(CoopChannels.IsUnreliable(CoopChannel.Command));
+    }
+
+    [Fact]
     public void CheckRoundTrips()
     {
         var check = new CoopCheck { MapId = 2, FromId = 100, ToId = 250, Things = { (100, 7), (150, -3), (249, int.MaxValue) } };

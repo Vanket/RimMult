@@ -126,6 +126,7 @@ internal static class CoopGuest
         _positionsTick = -1;
         ScribeMemory.ResetCache();
         CoopVisuals.Reset();
+        CoopCursors.Reset();
         CoopEdits.Reset();
         Expected.Clear();
         Strays.Clear();
@@ -286,6 +287,9 @@ internal static class CoopGuest
                 break;
             case CoopChannel.MapsChanged when Active:
                 OnMapsChanged(session, data);
+                break;
+            case CoopChannel.Cursors when Active && !Visiting:
+                CoopCursors.FromHost(data);
                 break;
         }
     }

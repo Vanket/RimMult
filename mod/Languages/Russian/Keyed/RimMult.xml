@@ -280,4 +280,37 @@
   <RimMult.VisitGoHomeConfirm>Вернуться домой? Рейд продолжится без вас: бойцами будет управлять ИИ.</RimMult.VisitGoHomeConfirm>
   <RimMult.VisitHiddenJob>действует</RimMult.VisitHiddenJob>
   <RimMult.VisitNoDesignate>В чужой колонии можно только командовать своими бойцами.</RimMult.VisitNoDesignate>
+  <!-- Летопись мира и курсоры в коопе -->
+  <RimMult.ShowCursors>Кооп: показывать курсоры и выделение других игроков</RimMult.ShowCursors>
+  <RimMult.ShowCursorsHint>Видно, куда смотрят и что выделили другие игроки (их цветом), а они видят ваш курсор. Выключите — и ваш курсор тоже перестанет отправляться.</RimMult.ShowCursorsHint>
+  <RimMult.ChronicleButton>Летопись мира</RimMult.ChronicleButton>
+  <RimMult.ChronicleTitle>Летопись мира</RimMult.ChronicleTitle>
+  <RimMult.ChronicleTabLog>События</RimMult.ChronicleTabLog>
+  <RimMult.ChronicleTabPlayers>Игроки</RimMult.ChronicleTabPlayers>
+  <RimMult.ChronicleEmpty>Пока ничего не произошло.</RimMult.ChronicleEmpty>
+  <RimMult.ChronicleNews>Летопись: {0}</RimMult.ChronicleNews>
+  <RimMult.ChronicleColPlayer>Игрок</RimMult.ChronicleColPlayer>
+  <RimMult.ChronicleColColonies>Колонии</RimMult.ChronicleColColonies>
+  <RimMult.ChronicleColColonists>Колонисты</RimMult.ChronicleColColonists>
+  <RimMult.ChronicleColWealth>Богатство</RimMult.ChronicleColWealth>
+  <RimMult.ChronicleColRaidsLed>Провёл рейдов</RimMult.ChronicleColRaidsLed>
+  <RimMult.ChronicleColRaidsSuffered>Пережил рейдов</RimMult.ChronicleColRaidsSuffered>
+  <RimMult.ChronicleColHelps>Помогал союзникам</RimMult.ChronicleColHelps>
+  <RimMult.ChronicleColParcels>Отправил посылок</RimMult.ChronicleColParcels>
+  <RimMult.ChronicleColSettlements>Разгромил поселений</RimMult.ChronicleColSettlements>
+  <RimMult.Chronicle.WorldCreated>{0} создал мир (сид «{5}»).</RimMult.Chronicle.WorldCreated>
+  <RimMult.Chronicle.PlayerArrived>{0} пришёл в мир.</RimMult.Chronicle.PlayerArrived>
+  <RimMult.Chronicle.ColonyFounded>{0} основал колонию «{5}».</RimMult.Chronicle.ColonyFounded>
+  <RimMult.Chronicle.ColonyAbandoned>{0} покинул колонию «{5}».</RimMult.Chronicle.ColonyAbandoned>
+  <RimMult.Chronicle.WarDeclared>{0} объявил войну игроку {1}.</RimMult.Chronicle.WarDeclared>
+  <RimMult.Chronicle.PeaceMade>{0} и {1} заключили мир.</RimMult.Chronicle.PeaceMade>
+  <RimMult.Chronicle.AllianceMade>{0} и {1} заключили союз.</RimMult.Chronicle.AllianceMade>
+  <RimMult.Chronicle.AllianceBroken>{0} разорвал союз с {1}.</RimMult.Chronicle.AllianceBroken>
+  <RimMult.Chronicle.RaidLaunched>{0} отправил рейд на {1}: {5}.</RimMult.Chronicle.RaidLaunched>
+  <RimMult.Chronicle.RaidLaunchedLive>{0} лично повёл рейд на {1}: {5}.</RimMult.Chronicle.RaidLaunchedLive>
+  <RimMult.Chronicle.RaidEnded>Рейд {0} на {1} окончен: вернулись {2}, увели пленных {3}, погибли {4}.</RimMult.Chronicle.RaidEnded>
+  <RimMult.Chronicle.HelpSent>{0} пришёл на помощь к {1}: {5}.</RimMult.Chronicle.HelpSent>
+  <RimMult.Chronicle.HelpEnded>Люди {0} вернулись от {1}, погибли {4}.</RimMult.Chronicle.HelpEnded>
+  <RimMult.Chronicle.ParcelSent>{0} отправил игроку {1}: {5}.</RimMult.Chronicle.ParcelSent>
+  <RimMult.Chronicle.SettlementDestroyed>{0} разгромил поселение NPC.</RimMult.Chronicle.SettlementDestroyed>
 </LanguageData>

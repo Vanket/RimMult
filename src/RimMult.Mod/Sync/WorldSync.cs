@@ -17,6 +17,11 @@ internal static class WorldSync
 {
     private const float ColonyReportInterval = 2f;
 
+    /// <summary>Wealth and colonists for the chronicle's table: slow-changing, a report now and then is plenty.</summary>
+    private const float StatsReportInterval = 30f;
+
+    private static float _lastStatsReport = float.NegativeInfinity;
+
     private static bool _entering;
     private static float _lastColonyCheck;
     private static string _lastColoniesKey = "";
@@ -41,6 +46,7 @@ internal static class WorldSync
         _entering = false;
         InWorld = false;
         _lastColoniesKey = "";
+        _lastStatsReport = float.NegativeInfinity;
         NewColonyFlowActive = false;
         WorldCreatePending = false;
         TimeSync.End();
@@ -92,6 +98,7 @@ internal static class WorldSync
         {
             TimeSync.Update(session);
             ReportColonies(session);
+            ReportStats(session);
             Parcels.Update(session);
             SharedSettlements.Apply(session);
         }
@@ -176,6 +183,25 @@ internal static class WorldSync
         _entering = false;
         InWorld = true;
         TimeSync.Begin();
+    }
+
+    /// <summary>How the colonies are doing: the home maps' wealth and the free colonists (the server skips repeats).</summary>
+    private static void ReportStats(ClientSession session)
+    {
+        var now = Time.realtimeSinceStartup;
+        if (now - _lastStatsReport < StatsReportInterval)
+            return;
+        _lastStatsReport = now;
+        try
+        {
+            var wealth = Find.Maps.Where(m => m.IsPlayerHome).Sum(m => m.wealthWatcher.WealthTotal);
+            var colonists = PawnsFinder.AllMapsCaravansAndTravellingTransporters_Alive_FreeColonists.Count;
+            session.ReportColonyStats(wealth, colonists);
+        }
+        catch (Exception e)
+        {
+            Log.WarningOnce($"[RimMult] Could not count the colony for the chronicle: {e.Message}", 0x43485253);
+        }
     }
 
     private static void ReportColonies(ClientSession session)

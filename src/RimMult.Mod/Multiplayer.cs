@@ -221,6 +221,7 @@ internal static class Multiplayer
         if (Session != null)
             CoopHost.Update(Session);
         CoopGuest.Update(Session);
+        CoopCursors.Update(Session);
         PlayerVisit.Update(Session);
     }
 
@@ -290,6 +291,7 @@ internal static class Multiplayer
         DiplomacyUi.Attach(session);
         Trades = new TradeManager(session);
         Trades.Invited += OnTradeInvited;
+        ChronicleUi.Attach(session);
         Session = session;
         session.Start();
     }

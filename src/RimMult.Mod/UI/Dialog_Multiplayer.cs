@@ -235,6 +235,11 @@ internal sealed class Dialog_Multiplayer : Window
             ? session.ServerName
             : (string)"RimMult.StatusConnecting".Translate());
         Text.Font = GameFont.Small;
+        if (session.State == ClientState.Connected
+            && Widgets.ButtonText(new Rect(header.xMax - 200f, header.y, 200f, RowHeight), "RimMult.ChronicleButton".Translate()))
+        {
+            Window_Chronicle.Open();
+        }
 
         var bottom = new Rect(rect.x, rect.yMax - RowHeight - 4f, rect.width, RowHeight + 4f);
         var worldRect = new Rect(rect.x, header.yMax + Gap, rect.width, 76f);

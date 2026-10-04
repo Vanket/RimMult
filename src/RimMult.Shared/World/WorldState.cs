@@ -169,9 +169,9 @@ public sealed class WorldState
 {
     /// <summary>
     /// 1: world, clock, colonies, mods. 2: + parcels in transit. 3: + player colors, destroyed NPC settlements.
-    /// 4: + relations between players.
+    /// 4: + relations between players. 5: + the chronicle and players' stats.
     /// </summary>
-    private const byte FormatVersion = 4;
+    private const byte FormatVersion = 5;
 
     /// <summary>Null until the first player creates the world (picks the planet when starting their colony).</summary>
     public WorldDefinition? Definition { get; set; }
@@ -202,6 +202,12 @@ public sealed class WorldState
     /// <summary>Wars and alliances between players (pairs not listed are neutral).</summary>
     public List<RelationEntry> Relations { get; set; } = new();
 
+    /// <summary>What happened in the world, oldest first (at most <see cref="World.Chronicle.MaxEntries"/>).</summary>
+    public List<ChronicleEntry> Chronicle { get; set; } = new();
+
+    /// <summary>Each player's standing (owner key → stats), for the chronicle's table.</summary>
+    public Dictionary<ulong, PlayerStats> Stats { get; set; } = new();
+
     public void Write(ByteWriter writer)
     {
         writer.WriteBool(Definition != null);
@@ -222,6 +228,8 @@ public sealed class WorldState
         }
         WriteStrings(writer, DestroyedSettlements);
         RelationEntry.WriteList(writer, Relations);
+        ChronicleEntry.WriteList(writer, Chronicle);
+        PlayerStats.WriteList(writer, new List<PlayerStats>(Stats.Values));
     }
 
     public static void WriteStrings(ByteWriter writer, IReadOnlyList<string> values)
@@ -272,6 +280,12 @@ public sealed class WorldState
         }
         if (version >= 4)
             state.Relations = RelationEntry.ReadList(reader);
+        if (version >= 5)
+        {
+            state.Chronicle = ChronicleEntry.ReadList(reader);
+            foreach (var stats in PlayerStats.ReadList(reader))
+                state.Stats[stats.Owner] = stats;
+        }
         return state;
     }
 

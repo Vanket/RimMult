@@ -280,4 +280,37 @@
   <RimMult.VisitGoHomeConfirm>Go home? The raid goes on without you, AI-led.</RimMult.VisitGoHomeConfirm>
   <RimMult.VisitHiddenJob>acting</RimMult.VisitHiddenJob>
   <RimMult.VisitNoDesignate>In another player's colony you can only command your fighters.</RimMult.VisitNoDesignate>
+  <!-- World chronicle and co-op cursors -->
+  <RimMult.ShowCursors>Co-op: show other players' cursors and selection</RimMult.ShowCursors>
+  <RimMult.ShowCursorsHint>See where the other players point and what they have selected (in their color); they see your cursor too. Turn it off and yours isn't sent either.</RimMult.ShowCursorsHint>
+  <RimMult.ChronicleButton>World chronicle</RimMult.ChronicleButton>
+  <RimMult.ChronicleTitle>World chronicle</RimMult.ChronicleTitle>
+  <RimMult.ChronicleTabLog>Events</RimMult.ChronicleTabLog>
+  <RimMult.ChronicleTabPlayers>Players</RimMult.ChronicleTabPlayers>
+  <RimMult.ChronicleEmpty>Nothing has happened yet.</RimMult.ChronicleEmpty>
+  <RimMult.ChronicleNews>Chronicle: {0}</RimMult.ChronicleNews>
+  <RimMult.ChronicleColPlayer>Player</RimMult.ChronicleColPlayer>
+  <RimMult.ChronicleColColonies>Colonies</RimMult.ChronicleColColonies>
+  <RimMult.ChronicleColColonists>Colonists</RimMult.ChronicleColColonists>
+  <RimMult.ChronicleColWealth>Wealth</RimMult.ChronicleColWealth>
+  <RimMult.ChronicleColRaidsLed>Raids led</RimMult.ChronicleColRaidsLed>
+  <RimMult.ChronicleColRaidsSuffered>Raids suffered</RimMult.ChronicleColRaidsSuffered>
+  <RimMult.ChronicleColHelps>Helped allies</RimMult.ChronicleColHelps>
+  <RimMult.ChronicleColParcels>Parcels sent</RimMult.ChronicleColParcels>
+  <RimMult.ChronicleColSettlements>Settlements razed</RimMult.ChronicleColSettlements>
+  <RimMult.Chronicle.WorldCreated>{0} created the world (seed "{5}").</RimMult.Chronicle.WorldCreated>
+  <RimMult.Chronicle.PlayerArrived>{0} came into the world.</RimMult.Chronicle.PlayerArrived>
+  <RimMult.Chronicle.ColonyFounded>{0} founded the colony "{5}".</RimMult.Chronicle.ColonyFounded>
+  <RimMult.Chronicle.ColonyAbandoned>{0} left the colony "{5}".</RimMult.Chronicle.ColonyAbandoned>
+  <RimMult.Chronicle.WarDeclared>{0} declared war on {1}.</RimMult.Chronicle.WarDeclared>
+  <RimMult.Chronicle.PeaceMade>{0} and {1} made peace.</RimMult.Chronicle.PeaceMade>
+  <RimMult.Chronicle.AllianceMade>{0} and {1} became allies.</RimMult.Chronicle.AllianceMade>
+  <RimMult.Chronicle.AllianceBroken>{0} broke the alliance with {1}.</RimMult.Chronicle.AllianceBroken>
+  <RimMult.Chronicle.RaidLaunched>{0} sent a raid on {1}: {5}.</RimMult.Chronicle.RaidLaunched>
+  <RimMult.Chronicle.RaidLaunchedLive>{0} leads a raid on {1} in person: {5}.</RimMult.Chronicle.RaidLaunchedLive>
+  <RimMult.Chronicle.RaidEnded>{0}'s raid on {1} is over: {2} came back, {3} captives taken, {4} died.</RimMult.Chronicle.RaidEnded>
+  <RimMult.Chronicle.HelpSent>{0} came to help {1}: {5}.</RimMult.Chronicle.HelpSent>
+  <RimMult.Chronicle.HelpEnded>{0}'s people came back from {1}; {4} died.</RimMult.Chronicle.HelpEnded>
+  <RimMult.Chronicle.ParcelSent>{0} sent {1}: {5}.</RimMult.Chronicle.ParcelSent>
+  <RimMult.Chronicle.SettlementDestroyed>{0} razed an NPC settlement.</RimMult.Chronicle.SettlementDestroyed>
 </LanguageData>

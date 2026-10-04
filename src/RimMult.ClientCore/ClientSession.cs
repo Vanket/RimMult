@@ -46,6 +46,7 @@ public sealed class ClientSession
     private readonly IClientTransport _transport;
     private readonly ClientHello _hello;
     private readonly List<ChatLine> _chat = new();
+    private readonly List<ChronicleEntry> _chronicle = new();
     private List<PlayerInfo> _players = new();
 
     public ClientSession(IClientTransport transport, ClientHello hello)
@@ -96,6 +97,18 @@ public sealed class ClientSession
 
     /// <summary>This player's relation with another player (by owner key).</summary>
     public PlayerRelation RelationWith(ulong owner) => RelationEntry.Between(Relations, MyOwnerKey, owner);
+
+    /// <summary>The world's chronicle, oldest first.</summary>
+    public IReadOnlyList<ChronicleEntry> Chronicle => _chronicle;
+
+    /// <summary>Every player's standing in the world.</summary>
+    public IReadOnlyList<PlayerStats> Stats { get; private set; } = Array.Empty<PlayerStats>();
+
+    /// <summary>The chronicle or the stats changed (anything: a full update too).</summary>
+    public event Action? ChronicleChanged;
+
+    /// <summary>New lines in the chronicle (not the full one received on joining).</summary>
+    public event Action<IReadOnlyList<ChronicleEntry>>? ChronicleAdded;
 
     /// <summary>Co-op traffic: (sender id, channel, data).</summary>
     public event Action<int, Shared.Coop.CoopChannel, byte[]>? CoopReceived;
@@ -189,8 +202,15 @@ public sealed class ClientSession
         if (State != ClientState.Connected)
             return;
         // Positions go unreliably: the next frame replaces a lost one, and nothing big queues in front of them.
-        var mode = channel == Shared.Coop.CoopChannel.Positions ? DeliveryMode.UnreliableSequenced : DeliveryMode.ReliableOrdered;
+        var mode = Shared.Coop.CoopChannels.IsUnreliable(channel) ? DeliveryMode.UnreliableSequenced : DeliveryMode.ReliableOrdered;
         _transport.Send(PacketCodec.Encode(new CoopMessage { PlayerId = playerId, Channel = channel, Data = data }), mode);
+    }
+
+    /// <summary>How this player's colonies are doing (for the chronicle's table); only counts while in the world.</summary>
+    public void ReportColonyStats(float wealth, int colonists)
+    {
+        if (State == ClientState.Connected)
+            Send(new ColonyStatsReport { Wealth = wealth, Colonists = colonists });
     }
 
     public void SendDiplomacy(ulong target, DiplomacyAction action)
@@ -293,6 +313,17 @@ public sealed class ClientSession
                 break;
             case CoopMessage coop:
                 CoopReceived?.Invoke(coop.PlayerId, coop.Channel, coop.Data);
+                break;
+            case ChronicleUpdate chronicle:
+                if (chronicle.Full)
+                    _chronicle.Clear();
+                _chronicle.AddRange(chronicle.Entries);
+                if (_chronicle.Count > Shared.World.Chronicle.MaxEntries)
+                    _chronicle.RemoveRange(0, _chronicle.Count - Shared.World.Chronicle.MaxEntries);
+                Stats = chronicle.Stats;
+                ChronicleChanged?.Invoke();
+                if (!chronicle.Full && chronicle.Entries.Count > 0)
+                    ChronicleAdded?.Invoke(chronicle.Entries);
                 break;
             case Kick kick:
                 KickReason = kick.Reason;
