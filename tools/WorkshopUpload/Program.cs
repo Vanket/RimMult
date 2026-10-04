@@ -2,12 +2,16 @@ using System.Diagnostics;
 using Steamworks;
 
 // Steam Workshop items of RimWorld, through the running Steam client:
-//   WorkshopUpload --item <id> --content <folder> [--preview <png>] [--note <change note>]   update the item
+//   WorkshopUpload --item <id> [--content <folder>] [--preview <png>] [--description <file>] [--note <change note>]
+//                                    update the item: files and/or its page's description (BBCode)
 //   WorkshopUpload --download <id>   make Steam fetch the item's latest version now (it may sit on an old one for hours)
 //   WorkshopUpload --check           only connect to Steam and show the account
 // Exit codes: 0 done, 1 bad arguments, 2 Steam not available, 3 upload/download failed.
 
 const uint RimWorldAppId = 294100;
+
+// Steam's limit for an item's description (k_cchPublishedDocumentDescriptionMax), counted in UTF-8 bytes.
+const int MaxDescriptionBytes = 8000;
 
 var check = args.Contains("--check");
 var options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -18,15 +22,21 @@ for (var i = 0; i + 1 < rest.Length; i += 2)
 var downloadId = 0UL;
 var download = options.TryGetValue("download", out var downloadText) && ulong.TryParse(downloadText, out downloadId);
 var itemId = 0UL;
-var content = "";
+var content = options.TryGetValue("content", out var contentPath) && Directory.Exists(contentPath) ? Path.GetFullPath(contentPath) : null;
+var description = options.TryGetValue("description", out var descriptionPath) && File.Exists(descriptionPath)
+    ? File.ReadAllText(descriptionPath).Replace("\r\n", "\n").Trim()
+    : null;
 if (!check && !download && (!options.TryGetValue("item", out var itemText) || !ulong.TryParse(itemText, out itemId)
-                            || !options.TryGetValue("content", out content!) || !Directory.Exists(content)))
+                            || (content == null && description == null)))
 {
-    Console.Error.WriteLine("Usage: WorkshopUpload --item <id> --content <folder> [--preview <png>] [--note <text>] | --download <id> | --check");
+    Console.Error.WriteLine("Usage: WorkshopUpload --item <id> [--content <folder>] [--preview <png>] [--description <file>] [--note <text>] | --download <id> | --check");
     return 1;
 }
-if (!check && !download)
-    content = Path.GetFullPath(content);
+if (description != null && System.Text.Encoding.UTF8.GetByteCount(description) > MaxDescriptionBytes)
+{
+    Console.Error.WriteLine($"The description is {System.Text.Encoding.UTF8.GetByteCount(description)} bytes; Steam takes at most {MaxDescriptionBytes}.");
+    return 1;
+}
 var preview = options.TryGetValue("preview", out var previewPath) && File.Exists(previewPath) ? Path.GetFullPath(previewPath) : null;
 var note = options.TryGetValue("note", out var noteText) ? noteText : "";
 
@@ -58,15 +68,20 @@ finally
 
 int Upload()
 {
-    Console.WriteLine($"Uploading {content} to Workshop item {itemId}…");
+    Console.WriteLine($"Updating Workshop item {itemId}: {(content != null ? "files from " + content : "")}{(content != null && description != null ? " + " : "")}{(description != null ? "description" : "")}…");
     var handle = SteamUGC.StartItemUpdate(new AppId_t(RimWorldAppId), new PublishedFileId_t(itemId));
-    if (!SteamUGC.SetItemContent(handle, content))
+    if (content != null && !SteamUGC.SetItemContent(handle, content))
     {
         Console.Error.WriteLine("Steam refused the content folder.");
         return 3;
     }
-    if (preview != null && !SteamUGC.SetItemPreview(handle, preview))
+    if (content != null && preview != null && !SteamUGC.SetItemPreview(handle, preview))
         Console.Error.WriteLine("Steam refused the preview image; uploading without it.");
+    if (description != null && !SteamUGC.SetItemDescription(handle, description))
+    {
+        Console.Error.WriteLine("Steam refused the description.");
+        return 3;
+    }
 
     SubmitItemUpdateResult_t? result = null;
     var ioFailure = false;
