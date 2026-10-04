@@ -409,6 +409,7 @@ internal sealed class RimMultRunner : MonoBehaviour
 {
     private void Update()
     {
+        SteamKeepAlive.MainThreadAlive();
         try
         {
             Multiplayer.Update();
