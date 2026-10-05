@@ -30,6 +30,11 @@ internal static class PawnTransfer
             reason = "RimMult.PawnDead".Translate();
             return false;
         }
+        if (VehicleCompat.IsVehicle(pawn))
+        {
+            reason = "RimMult.PawnVehicle".Translate(pawn.LabelShortCap);
+            return false;
+        }
         if (prisoners && pawn.IsPrisonerOfColony && pawn.RaceProps.Humanlike)
             return true;
         if (pawn.Faction != Faction.OfPlayer || pawn.IsPrisoner || pawn.IsSlave)
