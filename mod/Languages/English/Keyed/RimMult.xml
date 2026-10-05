@@ -524,4 +524,12 @@ If these are Workshop mods, the host probably has a newer version than the Works
   <RimMult.MarketGoodwill>Relations with {0}: +{1}.</RimMult.MarketGoodwill>
   <RimMult.Chronicle.MarketNewsUp>Market news: {0} is getting dearer, +{1} %.</RimMult.Chronicle.MarketNewsUp>
   <RimMult.Chronicle.MarketNewsDown>Market news: {0} is getting cheaper, −{1} %.</RimMult.Chronicle.MarketNewsDown>
+  <RimMult.PawnVehicle>{0} is a vehicle: vehicles can't go to another player's game</RimMult.PawnVehicle>
+  <RimMult.RaidVehiclesWait>The crew went to attack {0}; the vehicles wait by the colony. Survivors will get back in.</RimMult.RaidVehiclesWait>
+  <RimMult.PlayerActions>Kick or ban {0}</RimMult.PlayerActions>
+  <RimMult.Kick>Kick {0}</RimMult.Kick>
+  <RimMult.KickConfirm>Disconnect {0}? They can join again.</RimMult.KickConfirm>
+  <RimMult.Ban>Ban {0}</RimMult.Ban>
+  <RimMult.BanConfirm>Ban {0}? They are disconnected and can't join this server again ("/unban &lt;SteamID&gt;" in chat lifts it).</RimMult.BanConfirm>
+  <RimMult.BanNoSteam>no SteamID: kick only</RimMult.BanNoSteam>
 </LanguageData>

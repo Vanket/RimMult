@@ -326,7 +326,20 @@ internal static class PlayerRaids
         LookTargets? look = null;
         if (goingHome.Count > 0)
         {
-            if (PlanetTile.TryParse(tileText, out var tile) && tile.Valid)
+            if (PlanetTile.TryParse(tileText, out var tile) && tile.Valid && VehicleCompat.WaitingAt(tile) is { } waiting)
+            {
+                // Their vehicles waited by the colony: the survivors (and what they took) get back in.
+                foreach (var pawn in goingHome)
+                {
+                    if (!Find.WorldPawns.Contains(pawn))
+                        Find.WorldPawns.PassToWorld(pawn);
+                    waiting.AddPawn(pawn, addCarriedPawnToWorldPawnsIfAny: true);
+                }
+                foreach (var item in loot)
+                    waiting.AddPawnOrItem(item, addCarriedPawnToWorldPawnsIfAny: true);
+                look = new LookTargets(waiting);
+            }
+            else if (PlanetTile.TryParse(tileText, out tile) && tile.Valid)
             {
                 var caravan = CaravanMaker.MakeCaravan(goingHome, Faction.OfPlayer, tile, addToWorldPawnsIfNotAlready: true);
                 foreach (var item in loot)
@@ -404,14 +417,15 @@ public sealed class CaravanArrivalAction_RaidPlayer : CaravanArrivalAction
 
     public override string ReportString => "RimMult.RaidAttackReport".Translate(_target.OwnerName);
 
+    /// <summary>A caravan with vehicles attacks with its crew; the vehicles stay by the colony and wait for them.</summary>
     public static FloatMenuAcceptanceReport CanAttack(Caravan caravan, RemoteColony colony)
     {
         var allowed = PlayerRaids.CanAttack(colony);
-        return !allowed.Accepted ? allowed : PlayerRaids.CanSendRaiders(caravan.PawnsListForReading);
+        return !allowed.Accepted ? allowed : PlayerRaids.CanSendRaiders(VehicleCompat.Crew(caravan));
     }
 
     public override FloatMenuAcceptanceReport StillValid(Caravan caravan, PlanetTile destinationTile) =>
-        PlayerRaids.CanSendRaiders(caravan.PawnsListForReading);
+        PlayerRaids.CanSendRaiders(VehicleCompat.Crew(caravan));
 
     public override void Arrived(Caravan caravan)
     {
@@ -424,15 +438,22 @@ public sealed class CaravanArrivalAction_RaidPlayer : CaravanArrivalAction
         }
 
         // Everything a caravan carries sits in its members' inventories, so packing the pawns takes it all along.
-        var pawns = caravan.PawnsListForReading.ToList();
+        // Vehicles never leave this game: their crew gets out and attacks, the vehicles (and their cargo) wait here.
+        var pawns = VehicleCompat.Crew(caravan);
+        var vehicles = VehicleCompat.HasVehicles(caravan);
         if (!PlayerRaids.Launch(_target, ParcelAddress.RaidArrival.WalkIn, pawns, _live))
             return;
         foreach (var pawn in pawns)
         {
-            caravan.RemovePawn(pawn);
+            VehicleCompat.TakeOut(caravan, pawn);
             if (Find.WorldPawns.Contains(pawn))
                 Find.WorldPawns.RemovePawn(pawn);
             pawn.Destroy(DestroyMode.Vanish);
+        }
+        if (vehicles && !caravan.Destroyed && caravan.PawnsListForReading.Count > 0)
+        {
+            Messages.Message("RimMult.RaidVehiclesWait".Translate(_target.OwnerName), caravan, MessageTypeDefOf.NeutralEvent, historical: false);
+            return;
         }
         if (!caravan.Destroyed)
             caravan.Destroy();

@@ -404,9 +404,11 @@ internal sealed class Dialog_Multiplayer : Window
 
         // Each player, with their colonies underneath; colonies of players who are offline at the end.
         var rows = new List<string>();
+        var rowPlayers = new Dictionary<int, PlayerInfo>();
         var online = new HashSet<ulong>();
         foreach (var player in session.Players)
         {
+            rowPlayers[rows.Count] = player;
             var label = PlayerPalette.Colorize("■ " + player.Name, player.ColorIndex);
             if (player.IsHost)
                 label += " " + "RimMult.HostMark".Translate();
@@ -431,8 +433,35 @@ internal sealed class Dialog_Multiplayer : Window
         var view = new Rect(0f, 0f, inner.width - 16f, Mathf.Max(rows.Count * 24f, inner.height));
         Widgets.BeginScrollView(inner, ref _playersScroll, view);
         for (var i = 0; i < rows.Count; i++)
-            Widgets.Label(new Rect(0f, i * 24f, view.width, 24f), rows[i]);
+        {
+            var row = new Rect(0f, i * 24f, view.width, 24f);
+            // The host can kick or ban anyone else (the same as "/kick" and "/ban" in chat).
+            if (session.IsHost && rowPlayers.TryGetValue(i, out var other) && other.Id != session.PlayerId)
+            {
+                var menu = new Rect(row.xMax - 24f, row.y, 24f, 24f);
+                if (Widgets.ButtonText(menu, "⋮"))
+                    Find.WindowStack.Add(new FloatMenu(HostOptions(session, other)));
+                TooltipHandler.TipRegion(menu, "RimMult.PlayerActions".Translate(other.Name));
+                row.width -= 26f;
+            }
+            Widgets.Label(row, rows[i]);
+        }
         Widgets.EndScrollView();
+    }
+
+    /// <summary>What the host can do to another player: kick, or ban (by SteamID, so they stay out).</summary>
+    private static List<FloatMenuOption> HostOptions(ClientSession session, PlayerInfo player)
+    {
+        var options = new List<FloatMenuOption>
+        {
+            new("RimMult.Kick".Translate(player.Name), () => Find.WindowStack.Add(Dialog_MessageBox.CreateConfirmation(
+                "RimMult.KickConfirm".Translate(player.Name), () => session.SendChat($"/kick #{player.Id}"), destructive: true))),
+        };
+        options.Add(player.SteamId != 0
+            ? new FloatMenuOption("RimMult.Ban".Translate(player.Name), () => Find.WindowStack.Add(Dialog_MessageBox.CreateConfirmation(
+                "RimMult.BanConfirm".Translate(player.Name), () => session.SendChat($"/ban #{player.Id}"), destructive: true)))
+            : new FloatMenuOption("RimMult.Ban".Translate(player.Name) + " (" + "RimMult.BanNoSteam".Translate() + ")", null));
+        return options;
     }
 
     private void DrawEnded(Rect rect, ClientSession session)

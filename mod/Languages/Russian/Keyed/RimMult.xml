@@ -524,4 +524,12 @@
   <RimMult.MarketGoodwill>Отношения с {0}: +{1}.</RimMult.MarketGoodwill>
   <RimMult.Chronicle.MarketNewsUp>Новости рынка: {0} дорожает, +{1} %.</RimMult.Chronicle.MarketNewsUp>
   <RimMult.Chronicle.MarketNewsDown>Новости рынка: {0} дешевеет, −{1} %.</RimMult.Chronicle.MarketNewsDown>
+  <RimMult.PawnVehicle>{0} — техника: технику нельзя отправить в игру другого игрока</RimMult.PawnVehicle>
+  <RimMult.RaidVehiclesWait>Экипаж ушёл в атаку на {0}, техника ждёт у колонии. Выжившие вернутся в неё.</RimMult.RaidVehiclesWait>
+  <RimMult.PlayerActions>Кикнуть или забанить {0}</RimMult.PlayerActions>
+  <RimMult.Kick>Кикнуть {0}</RimMult.Kick>
+  <RimMult.KickConfirm>Отключить {0}? Он сможет зайти снова.</RimMult.KickConfirm>
+  <RimMult.Ban>Забанить {0}</RimMult.Ban>
+  <RimMult.BanConfirm>Забанить {0}? Его отключит, и на этот сервер он больше не зайдёт (снять бан — «/unban SteamID» в чате).</RimMult.BanConfirm>
+  <RimMult.BanNoSteam>нет SteamID — только кик</RimMult.BanNoSteam>
 </LanguageData>
