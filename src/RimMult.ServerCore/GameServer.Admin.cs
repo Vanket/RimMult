@@ -144,6 +144,7 @@ public sealed partial class GameServer
             if (!Settings.Admins.Contains(steamId))
                 Settings.Admins.Add(steamId);
             SettingsChanged?.Invoke();
+            BroadcastPlayerList(); // the admin panel shows up for them
             return $"{steamId} is an admin.";
         }),
         ["unadmin"] = new("unadmin <player|steamid>", "take admin away", (args, _) =>
@@ -151,6 +152,7 @@ public sealed partial class GameServer
             var steamId = SteamIdOf(args);
             Settings.Admins.Remove(steamId);
             SettingsChanged?.Invoke();
+            BroadcastPlayerList();
             return $"{steamId} is no longer an admin.";
         }),
         ["say"] = new("say <text>", "announce to everyone", (args, _) =>

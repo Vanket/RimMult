@@ -162,6 +162,9 @@ public sealed class ClientSession
 
     public bool IsHost => _players.Any(p => p.Id == PlayerId && p.IsHost);
 
+    /// <summary>This player may use the admin panel (the host, or an admin named with "/admin").</summary>
+    public bool IsAdmin => _players.Any(p => p.Id == PlayerId && (p.IsHost || p.IsAdmin));
+
     public IReadOnlyList<PlayerInfo> Players => _players;
     public IReadOnlyList<ChatLine> Chat => _chat;
 
@@ -267,6 +270,12 @@ public sealed class ClientSession
     {
         if (State == ClientState.Connected)
             Send(new ColonyStatsReport { Wealth = wealth, Colonists = colonists });
+    }
+
+    public void SendAdmin(AdminAction action)
+    {
+        if (State == ClientState.Connected)
+            Send(action);
     }
 
     public void SendMarket(MarketAction action)

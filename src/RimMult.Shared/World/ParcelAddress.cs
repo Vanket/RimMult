@@ -180,6 +180,21 @@ public static class ParcelAddress
 
     /// <param name="npcFaction">A deal with an NPC faction (its def and which one of that def): the recipient's game
     /// changes its goodwill with that faction.</param>
+    private const string AdminGiftAddress = "admin:gift";
+    private const string AdminResearchAddress = "admin:research";
+
+    /// <summary>Items from an admin (made by the server only, never accepted from a player's parcel).</summary>
+    public static string ForAdminGift() => AdminGiftAddress;
+
+    /// <summary>Research projects an admin finished for the recipient (def names in the payload, one per line).</summary>
+    public static string ForAdminResearch() => AdminResearchAddress;
+
+    public static bool IsAdminGift(string address) => address == AdminGiftAddress;
+
+    public static bool IsAdminResearch(string address) => address == AdminResearchAddress;
+
+    public static bool IsAdmin(string address) => address.StartsWith("admin:");
+
     public static string ForMarket(MarketKind kind, string npcFaction = "", int npcIndex = 0) =>
         npcFaction.Length == 0 ? MarketPrefix + kind : $"{MarketPrefix}{kind}|{npcFaction}|{npcIndex}";
 

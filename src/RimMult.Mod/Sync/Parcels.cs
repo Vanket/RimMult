@@ -167,13 +167,16 @@ internal static class Parcels
             return PlayerVisits.BeginHelp(parcel, helpId, helpArrival);
         if (ParcelAddress.IsHelpReturn(parcel.ToTile))
             return PlayerVisits.DeliverHelpReturn(parcel);
+        // Research an admin finished for this colony.
+        if (ParcelAddress.IsAdminResearch(parcel.ToTile))
+            return UI.AdminGifts.DeliverResearch(parcel);
         // An ally's research notes: no goods, just progress.
         if (!parcel.Returned && ParcelAddress.TryParseResearch(parcel.ToTile, out var project, out var points))
             return ResearchShare.Deliver(parcel, project, points);
 
         ParcelAddress.Parse(parcel.ToTile, out var caravanId, out var tileText);
-        if (ParcelAddress.IsTribute(parcel.ToTile) || ParcelAddress.IsMarket(parcel.ToTile))
-            tileText = ""; // tribute and market deals land at any home colony
+        if (ParcelAddress.IsTribute(parcel.ToTile) || ParcelAddress.IsMarket(parcel.ToTile) || ParcelAddress.IsAdminGift(parcel.ToTile))
+            tileText = ""; // tribute, market deals and admins' gifts land at any home colony
         var caravan = caravanId is { } id
             ? Find.WorldObjects.Caravans.FirstOrDefault(c => c.ID == id && !c.Destroyed && c.Faction == Faction.OfPlayer)
             : null;
@@ -228,6 +231,11 @@ internal static class Parcels
                 if (faction.TryAffectGoodwillWith(Faction.OfPlayer, goodwill, canSendMessage: false, canSendHostilityLetter: false))
                     text += "\n\n" + "RimMult.MarketGoodwill".Translate(faction.Name, goodwill);
             }
+        }
+        else if (ParcelAddress.IsAdminGift(parcel.ToTile))
+        {
+            label = "RimMult.AdminGiftLabel".Translate(parcel.FromName);
+            text = "RimMult.AdminGiftText".Translate(parcel.FromName, ThingPackage.Summarize(things));
         }
         else if (ParcelAddress.IsTribute(parcel.ToTile))
         {

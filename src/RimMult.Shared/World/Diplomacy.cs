@@ -428,6 +428,16 @@ public sealed class DiplomacyBook
         return declined ? DiplomacyEvent.ProposalDeclined : null;
     }
 
+    /// <summary>An admin's decision: the two are now <paramref name="relation"/>, whatever they agreed (treaties and proposals end).</summary>
+    public void Force(ulong x, ulong y, PlayerRelation relation)
+    {
+        if (x != y)
+            Set(x, y, relation);
+    }
+
+    /// <summary>An admin's decision: every treaty between the two ends. False if there was none.</summary>
+    public bool EndTreaties(ulong x, ulong y) => _treaties.RemoveAll(t => t.Is(x, y)) > 0;
+
     /// <summary>Treaties that ran their course by <paramref name="now"/>; they are removed.</summary>
     public List<Treaty> Expire(long now)
     {

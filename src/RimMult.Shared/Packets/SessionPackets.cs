@@ -138,6 +138,9 @@ public sealed class PlayerInfo
     /// <summary>The player's color (index into the player palette), the same on everyone's screen.</summary>
     public byte ColorIndex { get; set; }
 
+    /// <summary>May use admin commands and the admin panel (the host always may); filled in by the server.</summary>
+    public bool IsAdmin { get; set; }
+
     public void Write(ByteWriter writer)
     {
         writer.WriteVarInt(Id);
@@ -146,6 +149,7 @@ public sealed class PlayerInfo
         writer.WriteBool(IsHost);
         writer.WriteBool(InWorld);
         writer.WriteByte(ColorIndex);
+        writer.WriteBool(IsAdmin);
     }
 
     public static PlayerInfo Read(ByteReader reader) => new()
@@ -156,6 +160,7 @@ public sealed class PlayerInfo
         IsHost = reader.ReadBool(),
         InWorld = reader.ReadBool(),
         ColorIndex = reader.ReadByte(),
+        IsAdmin = reader.ReadBool(),
     };
 }
 

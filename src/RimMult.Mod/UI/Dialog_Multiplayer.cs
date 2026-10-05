@@ -253,6 +253,11 @@ internal sealed class Dialog_Multiplayer : Window
         {
             Window_Market.Open();
         }
+        if (session.State == ClientState.Connected && session.IsAdmin
+            && Widgets.ButtonText(new Rect(header.xMax - 620f, header.y, 200f, RowHeight), "RimMult.AdminButton".Translate()))
+        {
+            Window_Admin.Open();
+        }
 
         var bottom = new Rect(rect.x, rect.yMax - RowHeight - 4f, rect.width, RowHeight + 4f);
         var worldRect = new Rect(rect.x, header.yMax + Gap, rect.width, 76f);
