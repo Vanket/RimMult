@@ -535,4 +535,35 @@ If these are Workshop mods, the host probably has a newer version than the Works
   <RimMult.RaidVehicles>Raid {0} on vehicles (AI-led)</RimMult.RaidVehicles>
   <RimMult.RaidVehiclesLive>Raid {0} on vehicles in person (the vehicles under AI)</RimMult.RaidVehiclesLive>
   <RimMult.RaidCrewOnly>crew only, the vehicles wait</RimMult.RaidCrewOnly>
+  <RimMult.AdminButton>Admin panel</RimMult.AdminButton>
+  <RimMult.AdminTitle>Admin panel</RimMult.AdminTitle>
+  <RimMult.AdminGifts>Give</RimMult.AdminGifts>
+  <RimMult.AdminPlayer>Player:</RimMult.AdminPlayer>
+  <RimMult.AdminChoose>choose…</RimMult.AdminChoose>
+  <RimMult.AdminItems>Items…</RimMult.AdminItems>
+  <RimMult.AdminResearch>Research…</RimMult.AdminResearch>
+  <RimMult.AdminSilver>Silver:</RimMult.AdminSilver>
+  <RimMult.AdminGive>Give</RimMult.AdminGive>
+  <RimMult.AdminRelations>Relations between players</RimMult.AdminRelations>
+  <RimMult.AdminBreakTreaties>End their treaties</RimMult.AdminBreakTreaties>
+  <RimMult.AdminWorld>World</RimMult.AdminWorld>
+  <RimMult.AdminPause>Pause for everyone</RimMult.AdminPause>
+  <RimMult.AdminResume>Lift the pause</RimMult.AdminResume>
+  <RimMult.AdminResetPrices>Prices back to normal</RimMult.AdminResetPrices>
+  <RimMult.AdminNews>Market news now</RimMult.AdminNews>
+  <RimMult.AdminMarket>Market: lots and orders</RimMult.AdminMarket>
+  <RimMult.AdminRemove>Remove</RimMult.AdminRemove>
+  <RimMult.AdminMarketEmpty>The market is empty.</RimMult.AdminMarketEmpty>
+  <RimMult.AdminDone>Done.</RimMult.AdminDone>
+  <RimMult.AdminGiven>Sent: {0}.</RimMult.AdminGiven>
+  <RimMult.AdminResearchGiven>{0} research projects sent.</RimMult.AdminResearchGiven>
+  <RimMult.AdminItemsTitle>Items for {0}</RimMult.AdminItemsTitle>
+  <RimMult.AdminResearchTitle>Research for {0}</RimMult.AdminResearchTitle>
+  <RimMult.AdminUpTo>Everything up to:</RimMult.AdminUpTo>
+  <RimMult.AdminClear>Clear</RimMult.AdminClear>
+  <RimMult.AdminFinishResearch>Finish ({0})</RimMult.AdminFinishResearch>
+  <RimMult.AdminGiftLabel>Gift from {0}</RimMult.AdminGiftLabel>
+  <RimMult.AdminGiftText>The admin {0} sent you: {1}.</RimMult.AdminGiftText>
+  <RimMult.AdminResearchLabel>Research from {0}</RimMult.AdminResearchLabel>
+  <RimMult.AdminResearchText>The admin {0} finished {1} research projects for you: {2}.</RimMult.AdminResearchText>
 </LanguageData>

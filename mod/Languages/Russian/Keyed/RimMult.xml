@@ -535,4 +535,35 @@
   <RimMult.RaidVehicles>Рейд на {0} на технике (ведёт ИИ)</RimMult.RaidVehicles>
   <RimMult.RaidVehiclesLive>Рейд на {0} на технике лично (техникой правит ИИ)</RimMult.RaidVehiclesLive>
   <RimMult.RaidCrewOnly>только экипаж, техника ждёт</RimMult.RaidCrewOnly>
+  <RimMult.AdminButton>Админ-панель</RimMult.AdminButton>
+  <RimMult.AdminTitle>Админ-панель</RimMult.AdminTitle>
+  <RimMult.AdminGifts>Выдать</RimMult.AdminGifts>
+  <RimMult.AdminPlayer>Игрок:</RimMult.AdminPlayer>
+  <RimMult.AdminChoose>выбрать…</RimMult.AdminChoose>
+  <RimMult.AdminItems>Предметы…</RimMult.AdminItems>
+  <RimMult.AdminResearch>Исследования…</RimMult.AdminResearch>
+  <RimMult.AdminSilver>Серебро:</RimMult.AdminSilver>
+  <RimMult.AdminGive>Выдать</RimMult.AdminGive>
+  <RimMult.AdminRelations>Отношения между игроками</RimMult.AdminRelations>
+  <RimMult.AdminBreakTreaties>Разорвать их договоры</RimMult.AdminBreakTreaties>
+  <RimMult.AdminWorld>Мир</RimMult.AdminWorld>
+  <RimMult.AdminPause>Пауза для всех</RimMult.AdminPause>
+  <RimMult.AdminResume>Снять паузу</RimMult.AdminResume>
+  <RimMult.AdminResetPrices>Сбросить цены</RimMult.AdminResetPrices>
+  <RimMult.AdminNews>Новость рынка сейчас</RimMult.AdminNews>
+  <RimMult.AdminMarket>Рынок: лоты и заказы</RimMult.AdminMarket>
+  <RimMult.AdminRemove>Убрать</RimMult.AdminRemove>
+  <RimMult.AdminMarketEmpty>На рынке пусто.</RimMult.AdminMarketEmpty>
+  <RimMult.AdminDone>Готово.</RimMult.AdminDone>
+  <RimMult.AdminGiven>Отправлено: {0}.</RimMult.AdminGiven>
+  <RimMult.AdminResearchGiven>Отправлено исследований: {0}.</RimMult.AdminResearchGiven>
+  <RimMult.AdminItemsTitle>Предметы для {0}</RimMult.AdminItemsTitle>
+  <RimMult.AdminResearchTitle>Исследования для {0}</RimMult.AdminResearchTitle>
+  <RimMult.AdminUpTo>Всё до уровня:</RimMult.AdminUpTo>
+  <RimMult.AdminClear>Снять всё</RimMult.AdminClear>
+  <RimMult.AdminFinishResearch>Завершить ({0})</RimMult.AdminFinishResearch>
+  <RimMult.AdminGiftLabel>Подарок от {0}</RimMult.AdminGiftLabel>
+  <RimMult.AdminGiftText>Администратор {0} прислал вам: {1}.</RimMult.AdminGiftText>
+  <RimMult.AdminResearchLabel>Исследования от {0}</RimMult.AdminResearchLabel>
+  <RimMult.AdminResearchText>Администратор {0} завершил для вас исследований: {1} — {2}.</RimMult.AdminResearchText>
 </LanguageData>

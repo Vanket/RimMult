@@ -49,6 +49,7 @@ public static class PacketCodec
             PacketType.ServerModList => ServerModList.Read(reader),
             PacketType.MarketAction => MarketAction.Read(reader),
             PacketType.MarketState => MarketState.Read(reader),
+            PacketType.AdminAction => AdminAction.Read(reader),
             _ => throw new ProtocolException($"Unknown packet type {(ushort)type}"),
         };
         reader.EnsureFullyRead();

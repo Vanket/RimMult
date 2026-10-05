@@ -170,6 +170,9 @@ public sealed partial class GameServer
             case MarketAction market:
                 HandleMarket(player, market);
                 break;
+            case AdminAction admin:
+                HandleAdmin(player, admin);
+                break;
             default:
                 Kick(session, KickReason.BadData, $"Unexpected packet {packet.Type}");
                 break;
@@ -351,6 +354,11 @@ public sealed partial class GameServer
         }
 
         var from = OwnerKey(player);
+        if (ParcelAddress.IsAdmin(parcel.ToTile))
+        {
+            _log($"{player.Name} sent a parcel addressed like an admin's; dropped");
+            return;
+        }
         if (ParcelAddress.IsResearch(parcel.ToTile) && Diplomacy.Get(from, parcel.ToOwner) != PlayerRelation.Allied)
         {
             _log($"Research from {player.Name} to a non-ally dropped");
@@ -726,6 +734,8 @@ public sealed partial class GameServer
 
     private void BroadcastPlayerList()
     {
+        foreach (var player in Players)
+            player.IsAdmin = IsAdmin(player);
         var list = new PlayerList { Players = Players.OrderBy(p => p.Id).ToList() };
         Broadcast(PacketCodec.Encode(list), DeliveryMode.ReliableOrdered);
         // Who plays the NPC factions on the market may have changed with it.
