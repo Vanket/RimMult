@@ -88,7 +88,8 @@ internal static class TimeSync
     public static void Update(ClientSession session)
     {
         var tickManager = Find.TickManager;
-        if (!Active || tickManager == null)
+        // Between scenes (going to the menu, loading) the world's interface is gone and asking "paused?" throws.
+        if (!Active || tickManager == null || Current.ProgramState != ProgramState.Playing || Find.World?.UI == null)
             return;
 
         var grant = session.LastGrant;

@@ -164,14 +164,15 @@ internal static class PlayerVisits
             Messages.Message("RimMult.WatchJoining".Translate(visit.Watcher), MessageTypeDefOf.NeutralEvent, historical: false);
             return;
         }
-        foreach (var pawn in visit.Pawns.Where(p => p != null))
+        // Vehicles keep fighting under VF's AI; the visitor commands everyone on foot.
+        foreach (var pawn in visit.Pawns.Where(p => p != null && !VehicleCompat.IsVehicle(p)))
         {
             pawn.GetLord()?.RemovePawn(pawn);
             if (pawn.Spawned && !pawn.Dead)
                 pawn.jobs?.EndCurrentJob(JobCondition.InterruptForced);
         }
         var info = new List<int> { visit.Help != null ? HelpVisit : RaidVisit };
-        info.AddRange(visit.Pawns.Where(p => p != null).Select(p => p.thingIDNumber));
+        info.AddRange(visit.Pawns.Where(p => p != null && !VehicleCompat.IsVehicle(p)).Select(p => p.thingIDNumber));
         session.SendCoop(CoopChannel.VisitInfo, CoopIds.Encode(info), playerId);
         Messages.Message((visit.Help != null ? "RimMult.HelpJoining" : "RimMult.VisitJoining").Translate(visit.Leader), MessageTypeDefOf.NeutralEvent, historical: false);
     }
@@ -232,7 +233,7 @@ internal static class PlayerVisits
                 session.SendCoop(CoopChannel.VisitEnd, Array.Empty<byte>(), pair.Key);
                 continue;
             }
-            foreach (var pawn in pair.Value.Pawns)
+            foreach (var pawn in pair.Value.Pawns.Where(p => !VehicleCompat.IsVehicle(p)))
             {
                 if (pawn is not { Spawned: true, Dead: false, Downed: false } || pawn.InMentalState || pawn.jobs == null)
                     continue;

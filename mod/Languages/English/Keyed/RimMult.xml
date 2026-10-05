@@ -532,4 +532,7 @@ If these are Workshop mods, the host probably has a newer version than the Works
   <RimMult.Ban>Ban {0}</RimMult.Ban>
   <RimMult.BanConfirm>Ban {0}? They are disconnected and can't join this server again ("/unban &lt;SteamID&gt;" in chat lifts it).</RimMult.BanConfirm>
   <RimMult.BanNoSteam>no SteamID: kick only</RimMult.BanNoSteam>
+  <RimMult.RaidVehicles>Raid {0} on vehicles (AI-led)</RimMult.RaidVehicles>
+  <RimMult.RaidVehiclesLive>Raid {0} on vehicles in person (the vehicles under AI)</RimMult.RaidVehiclesLive>
+  <RimMult.RaidCrewOnly>crew only, the vehicles wait</RimMult.RaidCrewOnly>
 </LanguageData>

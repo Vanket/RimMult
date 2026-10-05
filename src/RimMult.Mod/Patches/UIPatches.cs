@@ -50,11 +50,15 @@ internal static class MainMenuButtonPatch
 [HarmonyPatch(typeof(UIRoot_Entry), nameof(UIRoot_Entry.UIRootOnGUI))]
 internal static class EntryOverlayPatch
 {
+    private static void Prefix() => StatusOverlay.HandleClicks();
+
     private static void Postfix() => StatusOverlay.OnGUI();
 }
 
 [HarmonyPatch(typeof(UIRoot_Play), nameof(UIRoot_Play.UIRootOnGUI))]
 internal static class PlayOverlayPatch
 {
+    private static void Prefix() => StatusOverlay.HandleClicks();
+
     private static void Postfix() => StatusOverlay.OnGUI();
 }

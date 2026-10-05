@@ -37,7 +37,8 @@ internal static class ThingPackage
     /// <summary>Packs things that are leaving this game for good (pawns among them are prepared for the move).</summary>
     public static byte[] Pack(List<Thing> things)
     {
-        foreach (var pawn in things.OfType<Pawn>())
+        // A vehicle's passengers ride inside it (saved with it): they leave too.
+        foreach (var pawn in VehicleCompat.WithPassengers(things.OfType<Pawn>()))
             PawnTransfer.PrepareToLeave(pawn);
 
         var path = TempPath();
@@ -88,7 +89,10 @@ internal static class ThingPackage
         {
             GiveNewIds(thing);
             if (welcome && thing is Pawn pawn)
-                PawnTransfer.WelcomeArrived(pawn);
+            {
+                foreach (var member in VehicleCompat.WithPassengers(new[] { pawn }))
+                    PawnTransfer.WelcomeArrived(member);
+            }
         }
         return result;
     }
@@ -123,6 +127,8 @@ internal static class ThingPackage
                 GiveNewIds(gear);
             foreach (var hediff in pawn.health?.hediffSet?.hediffs ?? new List<Hediff>())
                 hediff.loadID = Find.UniqueIDsManager.GetNextHediffID();
+            foreach (var passenger in VehicleCompat.Passengers(pawn))
+                GiveNewIds(passenger);
         }
     }
 

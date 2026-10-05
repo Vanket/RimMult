@@ -84,15 +84,19 @@ internal static class PlayerRaids
         return true;
     }
 
-    /// <summary>Raiders must be free colonists or colony animals (the same rule as moving to another colony), at least one a fighter.</summary>
+    /// <summary>
+    /// Raiders must be free colonists or colony animals (the same rule as moving to another colony), at least one a
+    /// fighter; vehicles may go too (their passengers, inside, must pass the same rule).
+    /// </summary>
     public static FloatMenuAcceptanceReport CanSendRaiders(IReadOnlyCollection<Pawn> pawns)
     {
-        foreach (var pawn in pawns)
+        var everyone = VehicleCompat.WithPassengers(pawns).ToList();
+        foreach (var pawn in everyone.Where(p => !VehicleCompat.IsVehicle(p)))
         {
             if (!PawnTransfer.CanSend(pawn, out var reason))
                 return FloatMenuAcceptanceReport.WithFailReasonAndMessage(reason, reason);
         }
-        if (!pawns.Any(p => p.RaceProps.Humanlike && !p.Downed))
+        if (!everyone.Any(p => p.RaceProps.Humanlike && !p.Downed && !VehicleCompat.IsVehicle(p)))
             return FloatMenuAcceptanceReport.WithFailReason("RimMult.RaidNoFighters".Translate());
         return true;
     }
@@ -140,22 +144,27 @@ internal static class PlayerRaids
         if (raiders.Count == 0)
             return true;
         var faction = RaidFaction();
-        foreach (var raider in raiders)
+        foreach (var raider in VehicleCompat.WithPassengers(raiders))
             MakeRaider(raider, faction);
         // Anything that isn't a pawn rides in the first raider's pack.
         var packer = raiders.FirstOrDefault(p => p.RaceProps.Humanlike && p.inventory != null);
         foreach (var item in things.Where(t => t is not Pawn))
             packer?.inventory.innerContainer.TryAdd(item);
 
+        // Vehicles never come by pod: they drive in from the edge with the rest (VF's AI leads them in the assault).
+        var vehicles = raiders.Where(VehicleCompat.IsVehicle).ToList();
+        if (!RCellFinder.TryFindRandomPawnEntryCell(out var entry, map, CellFinder.EdgeRoadChance_Hostile))
+            entry = CellFinder.RandomEdgeCell(map);
+        foreach (var vehicle in vehicles)
+            GenSpawn.Spawn(vehicle, VehicleCompat.SpawnCellNear(vehicle, entry, map, 12), map);
+        var onFoot = raiders.Except(vehicles).ToList();
         if (arrival == ParcelAddress.RaidArrival.DropPods)
         {
-            DropPodUtility.DropThingsNear(DropCellFinder.FindRaidDropCenterDistant(map), map, raiders.Cast<Thing>(), forbid: false);
+            DropPodUtility.DropThingsNear(DropCellFinder.FindRaidDropCenterDistant(map), map, onFoot.Cast<Thing>(), forbid: false);
         }
         else
         {
-            if (!RCellFinder.TryFindRandomPawnEntryCell(out var entry, map, CellFinder.EdgeRoadChance_Hostile))
-                entry = CellFinder.RandomEdgeCell(map);
-            foreach (var raider in raiders)
+            foreach (var raider in onFoot)
                 GenSpawn.Spawn(raider, CellFinder.RandomClosewalkCellNear(entry, map, 8), map);
         }
 
@@ -226,8 +235,9 @@ internal static class PlayerRaids
             raid.Raiders.RemoveAll(p => p == null);
             if (Find.TickManager.TicksGame - raid.StartedTick < MinRaidTicks)
                 continue;
-            // Still in a falling pod counts as on the map.
-            var stillFighting = raid.Raiders.Any(p => p.SpawnedOrAnyParentSpawned && !p.Dead && !p.Downed && !p.IsPrisoner && p.Faction != Faction.OfPlayer);
+            // Still in a falling pod counts as on the map; a vehicle fights while someone in it can.
+            var stillFighting = raid.Raiders.Any(p => p.SpawnedOrAnyParentSpawned && !p.Dead && !p.Downed && !p.IsPrisoner && p.Faction != Faction.OfPlayer
+                                                      && (!VehicleCompat.IsVehicle(p) || VehicleCompat.Passengers(p).Any(c => !c.Dead && !c.Downed)));
             if (stillFighting)
                 continue;
             comp.Raids.Remove(raid);
@@ -317,7 +327,7 @@ internal static class PlayerRaids
         var survivors = pawns.Take(survivorCount).ToList();
         var captives = pawns.Skip(survivorCount).Take(captiveCount).ToList();
         var loot = things.Where(t => t is not Pawn).ToList();
-        foreach (var survivor in survivors)
+        foreach (var survivor in VehicleCompat.WithPassengers(survivors))
             PawnTransfer.WelcomeArrived(survivor);
         foreach (var captive in captives)
             MakeCaptive(captive);
@@ -403,29 +413,47 @@ public sealed class CaravanArrivalAction_RaidPlayer : CaravanArrivalAction
     /// <summary>Lead the raid in person (join the defender's game) instead of leaving it to the defender's AI.</summary>
     private bool _live;
 
+    /// <summary>The caravan's vehicles drive into the fight (crew inside); otherwise only the crew goes and they wait.</summary>
+    private bool _vehicles;
+
     public CaravanArrivalAction_RaidPlayer()
     {
     }
 
-    public CaravanArrivalAction_RaidPlayer(RemoteColony colony, bool live)
+    public CaravanArrivalAction_RaidPlayer(RemoteColony colony, bool live, bool vehicles = false)
     {
         _target = new ParcelTarget(colony);
         _live = live;
+        _vehicles = vehicles;
     }
 
-    public override string Label => (_live ? "RimMult.RaidAttackLive" : "RimMult.RaidAttack").Translate(_target.OwnerName);
+    public override string Label => LabelFor(_target.OwnerName, _live, _vehicles, crewOnly: false);
+
+    /// <summary>The menu entry: with vehicles, or (for a caravan that has some) the crew alone.</summary>
+    public static string LabelFor(string owner, bool live, bool vehicles, bool crewOnly)
+    {
+        if (vehicles)
+            return (live ? "RimMult.RaidVehiclesLive" : "RimMult.RaidVehicles").Translate(owner);
+        var label = (live ? "RimMult.RaidAttackLive" : "RimMult.RaidAttack").Translate(owner).ToString();
+        return crewOnly ? label + " — " + "RimMult.RaidCrewOnly".Translate() : label;
+    }
 
     public override string ReportString => "RimMult.RaidAttackReport".Translate(_target.OwnerName);
 
-    /// <summary>A caravan with vehicles attacks with its crew; the vehicles stay by the colony and wait for them.</summary>
-    public static FloatMenuAcceptanceReport CanAttack(Caravan caravan, RemoteColony colony)
+    /// <summary>
+    /// Who goes: with vehicles, the caravan's own members (vehicles with their crew inside, and whoever walks); without,
+    /// the crew alone (the vehicles stay by the colony and wait for them).
+    /// </summary>
+    private static List<Pawn> Raiders(Caravan caravan, bool vehicles) => vehicles ? VehicleCompat.Members(caravan) : VehicleCompat.Crew(caravan);
+
+    public static FloatMenuAcceptanceReport CanAttack(Caravan caravan, RemoteColony colony, bool vehicles = false)
     {
         var allowed = PlayerRaids.CanAttack(colony);
-        return !allowed.Accepted ? allowed : PlayerRaids.CanSendRaiders(VehicleCompat.Crew(caravan));
+        return !allowed.Accepted ? allowed : PlayerRaids.CanSendRaiders(Raiders(caravan, vehicles));
     }
 
     public override FloatMenuAcceptanceReport StillValid(Caravan caravan, PlanetTile destinationTile) =>
-        PlayerRaids.CanSendRaiders(VehicleCompat.Crew(caravan));
+        PlayerRaids.CanSendRaiders(Raiders(caravan, _vehicles));
 
     public override void Arrived(Caravan caravan)
     {
@@ -438,14 +466,19 @@ public sealed class CaravanArrivalAction_RaidPlayer : CaravanArrivalAction
         }
 
         // Everything a caravan carries sits in its members' inventories, so packing the pawns takes it all along.
-        // Vehicles never leave this game: their crew gets out and attacks, the vehicles (and their cargo) wait here.
-        var pawns = VehicleCompat.Crew(caravan);
+        // Crew only: they get out of the vehicles and attack, the vehicles (and their cargo) wait here.
+        var pawns = Raiders(caravan, _vehicles);
         var vehicles = VehicleCompat.HasVehicles(caravan);
         if (!PlayerRaids.Launch(_target, ParcelAddress.RaidArrival.WalkIn, pawns, _live))
             return;
         foreach (var pawn in pawns)
         {
             VehicleCompat.TakeOut(caravan, pawn);
+            if (VehicleCompat.IsVehicle(pawn))
+            {
+                VehicleCompat.Vanish(pawn);
+                continue;
+            }
             if (Find.WorldPawns.Contains(pawn))
                 Find.WorldPawns.RemovePawn(pawn);
             pawn.Destroy(DestroyMode.Vanish);
@@ -464,6 +497,7 @@ public sealed class CaravanArrivalAction_RaidPlayer : CaravanArrivalAction
         base.ExposeData();
         Scribe_Deep.Look(ref _target, "target");
         Scribe_Values.Look(ref _live, "live");
+        Scribe_Values.Look(ref _vehicles, "vehicles");
         _target ??= new ParcelTarget();
     }
 }
