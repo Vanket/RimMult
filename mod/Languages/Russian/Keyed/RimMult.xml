@@ -515,4 +515,13 @@
   <RimMult.WatchJoining>{0} заходит посмотреть вашу колонию.</RimMult.WatchJoining>
   <RimMult.WatchJoined>{0} смотрит вашу колонию.</RimMult.WatchJoined>
   <RimMult.WatchLeft>{0} больше не смотрит вашу колонию.</RimMult.WatchLeft>
+  <RimMult.MarketTabPrices>Цены и новости</RimMult.MarketTabPrices>
+  <RimMult.MarketPricesNormal>Цены везде обычные. Покупки у фракций поднимают цену, продажи им — снижают; новости время от времени двигают целые категории.</RimMult.MarketPricesNormal>
+  <RimMult.MarketPricesHint>Цены мира, одни для всех: покупки у NPC-фракций делают предмет дороже, продажи им — дешевле, со временем цены возвращаются к обычным. По ним считаются лоты и заказы NPC.</RimMult.MarketPricesHint>
+  <RimMult.MarketNewsDays>(ещё {0} дн.)</RimMult.MarketNewsDays>
+  <RimMult.MarketNpc>{0} (фракция)</RimMult.MarketNpc>
+  <RimMult.MarketFee>комиссия {0} серебра (первые {1} лота и заказа бесплатно)</RimMult.MarketFee>
+  <RimMult.MarketGoodwill>Отношения с {0}: +{1}.</RimMult.MarketGoodwill>
+  <RimMult.Chronicle.MarketNewsUp>Новости рынка: {0} дорожает, +{1} %.</RimMult.Chronicle.MarketNewsUp>
+  <RimMult.Chronicle.MarketNewsDown>Новости рынка: {0} дешевеет, −{1} %.</RimMult.Chronicle.MarketNewsDown>
 </LanguageData>

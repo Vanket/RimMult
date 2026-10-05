@@ -20,6 +20,14 @@
     // SteamIDs kept out, and SteamIDs allowed to use admin commands in chat ("/help"). Console commands: type help.
     "Banned": [],
     "Admins": [],
+    // World market: NPC factions trading there too, their limits, and the fee for listings beyond the free ones.
+    "Market": {
+      "NpcTraders": true,
+      "NpcMaxLots": 12,
+      "NpcMaxOrders": 8,
+      "FreeListings": 3,
+      "FeePercent": 5
+    },
     "Time": {
       // Lowest | Majority | Host
       "VoteMode": "Lowest",

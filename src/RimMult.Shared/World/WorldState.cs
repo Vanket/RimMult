@@ -170,9 +170,9 @@ public sealed class WorldState
     /// <summary>
     /// 1: world, clock, colonies, mods. 2: + parcels in transit. 3: + player colors, destroyed NPC settlements.
     /// 4: + relations between players. 5: + the chronicle and players' stats. 6: + the NPC settlements and the creator.
-    /// 7: + treaties, players' reputation. 8: + the market (lots and orders).
+    /// 7: + treaties, players' reputation. 8: + the market (lots and orders). 9: + NPC deals on the market, the world's prices.
     /// </summary>
-    private const byte FormatVersion = 8;
+    private const byte FormatVersion = 9;
 
     /// <summary>Null until the first player creates the world (picks the planet when starting their colony).</summary>
     public WorldDefinition? Definition { get; set; }
@@ -228,6 +228,9 @@ public sealed class WorldState
 
     public long NextMarketId { get; set; } = 1;
 
+    /// <summary>The world's prices (moved by deals with NPC factions and by news).</summary>
+    public MarketPrices Prices { get; set; } = new();
+
     public void Write(ByteWriter writer)
     {
         writer.WriteBool(Definition != null);
@@ -257,6 +260,7 @@ public sealed class WorldState
         MarketLot.WriteList(writer, MarketLots, withPayload: true);
         MarketOrder.WriteList(writer, MarketOrders, withPayload: true);
         writer.WriteVarInt(NextMarketId);
+        Prices.Write(writer);
     }
 
     public static void WriteStrings(ByteWriter writer, IReadOnlyList<string> values)
@@ -325,10 +329,12 @@ public sealed class WorldState
         }
         if (version >= 8)
         {
-            state.MarketLots = MarketLot.ReadList(reader, withPayload: true);
-            state.MarketOrders = MarketOrder.ReadList(reader, withPayload: true);
+            state.MarketLots = MarketLot.ReadList(reader, withPayload: true, extended: version >= 9);
+            state.MarketOrders = MarketOrder.ReadList(reader, withPayload: true, extended: version >= 9);
             state.NextMarketId = reader.ReadVarInt();
         }
+        if (version >= 9)
+            state.Prices = MarketPrices.Read(reader);
         return state;
     }
 

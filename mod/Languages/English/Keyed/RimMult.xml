@@ -515,4 +515,13 @@ If these are Workshop mods, the host probably has a newer version than the Works
   <RimMult.WatchJoining>{0} is coming to watch your colony.</RimMult.WatchJoining>
   <RimMult.WatchJoined>{0} is watching your colony.</RimMult.WatchJoined>
   <RimMult.WatchLeft>{0} stopped watching your colony.</RimMult.WatchLeft>
+  <RimMult.MarketTabPrices>Prices & news</RimMult.MarketTabPrices>
+  <RimMult.MarketPricesNormal>Prices are normal everywhere. Buying from the factions makes things dearer, selling to them cheaper; news moves whole categories now and then.</RimMult.MarketPricesNormal>
+  <RimMult.MarketPricesHint>The world's prices, the same for everyone: buying from the NPC factions makes an item dearer, selling to them cheaper, and prices drift back to normal day by day. NPC lots and orders follow them.</RimMult.MarketPricesHint>
+  <RimMult.MarketNewsDays>({0} more days)</RimMult.MarketNewsDays>
+  <RimMult.MarketNpc>{0} (faction)</RimMult.MarketNpc>
+  <RimMult.MarketFee>fee {0} silver (the first {1} lots and orders are free)</RimMult.MarketFee>
+  <RimMult.MarketGoodwill>Relations with {0}: +{1}.</RimMult.MarketGoodwill>
+  <RimMult.Chronicle.MarketNewsUp>Market news: {0} is getting dearer, +{1} %.</RimMult.Chronicle.MarketNewsUp>
+  <RimMult.Chronicle.MarketNewsDown>Market news: {0} is getting cheaper, −{1} %.</RimMult.Chronicle.MarketNewsDown>
 </LanguageData>

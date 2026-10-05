@@ -64,6 +64,7 @@ internal static class WorldSync
         RemoteColonies.Clear();
         SharedSettlements.Reset();
         Tribute.Reset();
+        MarketBroker.Reset();
     }
 
     /// <summary>Whether the loaded save belongs to the server's world.</summary>
@@ -126,6 +127,7 @@ internal static class WorldSync
             ReportStats(session);
             Parcels.Update(session);
             Tribute.Update(session);
+            MarketBroker.Update(session);
             SharedSettlements.Apply(session);
         }
 

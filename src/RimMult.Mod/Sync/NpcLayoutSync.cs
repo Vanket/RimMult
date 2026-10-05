@@ -108,6 +108,14 @@ internal static class NpcLayoutSync
         return entry.FactionIndex < same.Count ? same[entry.FactionIndex] : same[0];
     }
 
+    /// <summary>An NPC faction by def and which one of that def (the same faction in every game of the world), or null.</summary>
+    public static Faction? FactionOf(string def, int index) =>
+        FactionsByDef().TryGetValue(def, out var same) && index >= 0 && index < same.Count ? same[index] : null;
+
+    /// <summary>How the other games find this faction: its def, and which one of that def.</summary>
+    public static (string Def, int Index) KeyOf(Faction faction) =>
+        (faction.def.defName, Math.Max(0, FactionsByDef().TryGetValue(faction.def.defName, out var same) ? same.IndexOf(faction) : 0));
+
     /// <summary>NPC factions by def, in creation order (the same order in every game made from the same world).</summary>
     private static Dictionary<string, List<Faction>> FactionsByDef() =>
         Find.FactionManager.AllFactionsListForReading

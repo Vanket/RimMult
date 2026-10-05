@@ -215,11 +215,19 @@ internal static class Parcels
             label = "RimMult.ParcelReturnedLabel".Translate();
             text = "RimMult.ParcelReturnedText".Translate(parcel.Summary);
         }
-        else if (ParcelAddress.TryParseMarket(parcel.ToTile, out var market))
+        else if (ParcelAddress.TryParseMarket(parcel.ToTile, out var market, out var npcFaction, out var npcIndex))
         {
             label = ("RimMult.Market." + market + "Label").Translate(parcel.FromName);
             // What arrived, in this game's words (the server's own summaries are plain English).
             text = ("RimMult.Market." + market + "Text").Translate(parcel.FromName, ThingPackage.Summarize(things));
+            // A deal with an NPC faction counts like trading with it here: its goodwill rises.
+            if (npcFaction.Length > 0 && NpcLayoutSync.FactionOf(npcFaction, npcIndex) is { } faction && !faction.HostileTo(Faction.OfPlayer))
+            {
+                var worth = things.Sum(t => t.MarketValue * t.stackCount);
+                var goodwill = Mathf.Clamp(Mathf.RoundToInt(worth / 400f), 1, 5);
+                if (faction.TryAffectGoodwillWith(Faction.OfPlayer, goodwill, canSendMessage: false, canSendHostilityLetter: false))
+                    text += "\n\n" + "RimMult.MarketGoodwill".Translate(faction.Name, goodwill);
+            }
         }
         else if (ParcelAddress.IsTribute(parcel.ToTile))
         {

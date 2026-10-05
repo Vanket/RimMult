@@ -69,6 +69,9 @@ public enum ChronicleKind : byte
 
     /// <summary>Actor delivered target's order. <see cref="ChronicleEntry.A"/>: reward; <see cref="ChronicleEntry.Text"/>: the goods.</summary>
     OrderDelivered = 23,
+
+    /// <summary>Market news: <see cref="ChronicleEntry.Text"/> the item category, <see cref="ChronicleEntry.A"/> the change in percent.</summary>
+    MarketNews = 24,
 }
 
 /// <summary>One line of the world's chronicle. Names are kept as they were, so the line reads the same later.</summary>

@@ -19,6 +19,8 @@ internal static class ChronicleUi
         var colors = session.Stats.ToDictionary(s => s.Owner, s => s.ColorIndex);
         string Name(ulong owner, string name) => PlayerPalette.Colorize(name, colors.TryGetValue(owner, out var color) ? color : (byte)0);
 
+        if (entry.Kind == ChronicleKind.MarketNews)
+            return MarketNews(entry.Text, entry.A);
         var key = "RimMult.Chronicle." + entry.Kind + (entry.Kind == ChronicleKind.RaidLaunched && entry.A == 1 ? "Live" : "");
         if (!key.CanTranslate())
             return $"{entry.Kind}: {entry.ActorName} {entry.TargetName} {entry.Text}";
@@ -29,6 +31,13 @@ internal static class ChronicleUi
         return key.Translate(
             Name(entry.Actor, entry.ActorName), Name(entry.Target, entry.TargetName),
             entry.A, entry.B, entry.C, text);
+    }
+
+    /// <summary>"Medicine is getting dearer: +30 %" — a category's label in this game's language.</summary>
+    public static string MarketNews(string category, int percent)
+    {
+        var label = DefDatabase<ThingCategoryDef>.GetNamedSilentFail(category)?.LabelCap.ToString() ?? category;
+        return (percent >= 0 ? "RimMult.Chronicle.MarketNewsUp" : "RimMult.Chronicle.MarketNewsDown").Translate(label, Mathf.Abs(percent));
     }
 
     /// <summary>The game date of an entry (world time).</summary>
