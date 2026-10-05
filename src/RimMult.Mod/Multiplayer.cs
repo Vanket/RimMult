@@ -235,6 +235,7 @@ internal static class Multiplayer
     /// <summary>Called every frame.</summary>
     public static void Update()
     {
+        KeepRunningInBackground();
         ModListSync.Update();
         if (_hostAfterLoad != null && !LongEventHandler.AnyEventNowOrWaiting)
         {
@@ -263,6 +264,18 @@ internal static class Multiplayer
         CoopGuest.Update(Session);
         CoopCursors.Update(Session);
         PlayerVisit.Update(Session);
+    }
+
+    /// <summary>
+    /// A minimized (or unfocused) game stops entirely unless "Run in background" is on, and it is off by default: the
+    /// colony stops, the connection isn't served, everyone else waits at the shared horizon. While in a multiplayer
+    /// session the game keeps running in the background whatever the setting; afterwards the setting applies again.
+    /// </summary>
+    private static void KeepRunningInBackground()
+    {
+        var wanted = Session != null || _server != null || Prefs.RunInBackground;
+        if (Application.runInBackground != wanted)
+            Application.runInBackground = wanted;
     }
 
     public static void OpenDialog()
