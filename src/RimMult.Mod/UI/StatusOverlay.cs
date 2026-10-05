@@ -10,11 +10,55 @@ namespace RimMult.UI;
 /// <summary>
 /// Small connection indicator at the top of the screen (main menu and in game); click it to open the multiplayer
 /// dialog. Also handles the chat hotkey, since it is drawn every GUI pass.
+/// <para>
+/// It is drawn after the rest of the interface (to be on top), but by then a click over the map has already been
+/// taken by the game (selecting, the drag box): clicks are handled before the interface instead (<see cref="HandleClicks"/>).
+/// </para>
 /// </summary>
 internal static class StatusOverlay
 {
     private const float MinWidth = 300f;
     private const float Height = 24f;
+
+    /// <summary>Where the status line and the "go home" button are (the button only while watching an ally).</summary>
+    private static (Rect Status, Rect? Home, string Text) Layout(ClientSession session)
+    {
+        var font = Text.Font;
+        Text.Font = GameFont.Small;
+        // Sized to the text, so a long status stays on one line.
+        var text = Describe(session);
+        var width = Mathf.Max(MinWidth, Text.CalcSize(text).x + 24f);
+        Text.Font = font;
+        var status = new Rect((Verse.UI.screenWidth - width) / 2f, 2f, width, Height);
+        // Watching an ally: no pawns of one's own to carry a "go home" button, so it sits under the status.
+        Rect? home = CoopGuest.Visiting && CoopGuest.VisitWatch && CoopGuest.Active
+            ? new Rect((Verse.UI.screenWidth - 220f) / 2f, status.yMax + 4f, 220f, 28f)
+            : null;
+        return (status, home, text);
+    }
+
+    /// <summary>Before the game's interface: a click on the status line or the "go home" button is ours.</summary>
+    public static void HandleClicks()
+    {
+        var session = Multiplayer.Session;
+        var e = Event.current;
+        if (session == null || e.button != 0 || e.type is not (EventType.MouseDown or EventType.MouseUp))
+            return;
+        var (status, home, _) = Layout(session);
+        var mouse = e.mousePosition;
+        if (home is { } button && button.Contains(mouse))
+        {
+            if (e.type == EventType.MouseUp)
+                PlayerVisit.ReturnHome(null);
+            e.Use();
+        }
+        else if (status.Contains(mouse))
+        {
+            if (e.type == EventType.MouseUp)
+                Multiplayer.OpenDialog();
+            e.Use();
+        }
+    }
 
     public static void OnGUI()
     {
@@ -24,31 +68,20 @@ internal static class StatusOverlay
 
         HandleChatKey(session);
 
+        var (rect, home, text) = Layout(session);
         var font = Text.Font;
         var anchor = Text.Anchor;
         Text.Font = GameFont.Small;
         Text.Anchor = TextAnchor.MiddleCenter;
-
-        // Sized to the text, so a long status stays on one line.
-        var text = Describe(session);
-        var width = Mathf.Max(MinWidth, Text.CalcSize(text).x + 24f);
-        var rect = new Rect((Verse.UI.screenWidth - width) / 2f, 2f, width, Height);
         Widgets.DrawBoxSolid(rect, new Color(0f, 0f, 0f, 0.45f));
         Widgets.DrawHighlightIfMouseover(rect);
         Widgets.Label(rect, text);
         Text.Anchor = anchor;
         Text.Font = font;
 
-        if (Widgets.ButtonInvisible(rect))
-            Multiplayer.OpenDialog();
-
-        // Watching an ally: no pawns of one's own to carry a "go home" button, so it sits under the status.
-        if (CoopGuest.Visiting && CoopGuest.VisitWatch && CoopGuest.Active)
-        {
-            var home = new Rect((Verse.UI.screenWidth - 220f) / 2f, rect.yMax + 4f, 220f, 28f);
-            if (Widgets.ButtonText(home, "RimMult.WatchGoHome".Translate()))
-                PlayerVisit.ReturnHome(null);
-        }
+        // Drawn only: the click was handled before the interface.
+        if (home is { } button)
+            Widgets.ButtonText(button, "RimMult.WatchGoHome".Translate());
     }
 
     private static string Describe(ClientSession session)

@@ -532,4 +532,7 @@
   <RimMult.Ban>Забанить {0}</RimMult.Ban>
   <RimMult.BanConfirm>Забанить {0}? Его отключит, и на этот сервер он больше не зайдёт (снять бан — «/unban SteamID» в чате).</RimMult.BanConfirm>
   <RimMult.BanNoSteam>нет SteamID — только кик</RimMult.BanNoSteam>
+  <RimMult.RaidVehicles>Рейд на {0} на технике (ведёт ИИ)</RimMult.RaidVehicles>
+  <RimMult.RaidVehiclesLive>Рейд на {0} на технике лично (техникой правит ИИ)</RimMult.RaidVehiclesLive>
+  <RimMult.RaidCrewOnly>только экипаж, техника ждёт</RimMult.RaidCrewOnly>
 </LanguageData>

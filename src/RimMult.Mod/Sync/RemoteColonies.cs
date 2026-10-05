@@ -156,16 +156,21 @@ public sealed class RemoteColony : WorldObject
             yield return option;
         if (Multiplayer.Session is { AllowPvp: true } session && session.RelationWith(OwnerSteamId) == Shared.World.PlayerRelation.Hostile)
         {
-            foreach (var live in new[] { true, false })
+            // A caravan with vehicles: attack on them (they drive in, crew inside), or with the crew alone.
+            var vehicles = VehicleCompat.HasVehicles(caravan);
+            foreach (var withVehicles in vehicles ? new[] { true, false } : new[] { false })
             {
-                foreach (var option in CaravanArrivalActionUtility.GetFloatMenuOptions(
-                             () => CaravanArrivalAction_RaidPlayer.CanAttack(caravan, this),
-                             () => new CaravanArrivalAction_RaidPlayer(this, live),
-                             (live ? "RimMult.RaidAttackLive" : "RimMult.RaidAttack").Translate(OwnerName),
-                             caravan,
-                             Tile,
-                             this))
-                    yield return option;
+                foreach (var live in new[] { true, false })
+                {
+                    foreach (var option in CaravanArrivalActionUtility.GetFloatMenuOptions(
+                                 () => CaravanArrivalAction_RaidPlayer.CanAttack(caravan, this, withVehicles),
+                                 () => new CaravanArrivalAction_RaidPlayer(this, live, withVehicles),
+                                 CaravanArrivalAction_RaidPlayer.LabelFor(OwnerName, live, withVehicles, crewOnly: vehicles && !withVehicles),
+                                 caravan,
+                                 Tile,
+                                 this))
+                        yield return option;
+                }
             }
             // No trading, gifts or moving in with an enemy.
             yield break;
