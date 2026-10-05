@@ -138,6 +138,16 @@ public sealed class ClientSession
     /// <summary>Open orders on the world's market.</summary>
     public IReadOnlyList<MarketOrder> MarketOrders { get; private set; } = Array.Empty<MarketOrder>();
 
+    /// <summary>The market's rules and the world's prices, as the server last said.</summary>
+    public MarketState Market { get; private set; } = new();
+
+    /// <summary>This game plays the NPC factions on the market (it makes their lots and orders).</summary>
+    public bool IsMarketBroker => Market.BrokerPlayerId >= 0 && Market.BrokerPlayerId == PlayerId;
+
+    /// <summary>The fee for one more lot or order at <paramref name="price"/> (0 while this player still has free ones).</summary>
+    public int MarketFeeFor(int price) => MarketState.FeeFor(price,
+        MarketLots.Count(l => l.Seller == MyOwnerKey) + MarketOrders.Count(o => o.Buyer == MyOwnerKey), Market.FreeListings, Market.FeePercent);
+
     public event Action? MarketChanged;
 
     /// <summary>The chronicle or the stats changed (anything: a full update too).</summary>
@@ -394,6 +404,7 @@ public sealed class ClientSession
                 DisconnectReason ??= "Mod list received";
                 break;
             case MarketState market:
+                Market = market;
                 MarketLots = market.Lots;
                 MarketOrders = market.Orders;
                 MarketChanged?.Invoke();

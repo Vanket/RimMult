@@ -15,7 +15,9 @@ namespace RimMult.ServerCore;
 public sealed partial class GameServer
 {
     /// <summary>Records something that happened and tells everyone.</summary>
-    private void Record(ChronicleKind kind, ulong actor, ulong target = 0, int a = 0, int b = 0, int c = 0, string text = "")
+    /// <param name="actorName">The actor's name when it isn't a player (an NPC faction on the market; "" for nobody).</param>
+    private void Record(ChronicleKind kind, ulong actor, ulong target = 0, int a = 0, int b = 0, int c = 0, string text = "",
+        string? actorName = null, string? targetName = null)
     {
         var entry = new ChronicleEntry
         {
@@ -23,9 +25,9 @@ public sealed partial class GameServer
             UnixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             Kind = kind,
             Actor = actor,
-            ActorName = NameOfOwner(actor),
+            ActorName = actorName ?? NameOfOwner(actor),
             Target = target,
-            TargetName = target != 0 ? NameOfOwner(target) : "",
+            TargetName = targetName ?? (target != 0 ? NameOfOwner(target) : ""),
             A = a,
             B = b,
             C = c,

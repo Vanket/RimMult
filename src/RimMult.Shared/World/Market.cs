@@ -28,6 +28,18 @@ public sealed class MarketLot
 
     public long PostedTick { get; set; }
 
+    /// <summary>The main item (the most valuable stack's def name): what the world's prices count it as.</summary>
+    public string DefName { get; set; } = "";
+
+    /// <summary>When the lot leaves the market by itself (NPC lots), or 0 for never.</summary>
+    public long ExpiresTick { get; set; }
+
+    /// <summary>An NPC faction's lot: its def and which one of that def (see <see cref="NpcTrader"/>); "" for a player's.</summary>
+    public string NpcFaction { get; set; } = "";
+    public int NpcFactionIndex { get; set; }
+
+    public bool IsNpc => NpcFaction.Length > 0;
+
     /// <summary>The goods (server and world file only; not sent with the market's listing).</summary>
     public byte[] Payload { get; set; } = Array.Empty<byte>();
 
@@ -40,21 +52,37 @@ public sealed class MarketLot
         writer.WriteFloat(Value);
         writer.WriteVarInt(Price);
         writer.WriteVarInt(PostedTick);
+        writer.WriteString(DefName);
+        writer.WriteVarInt(ExpiresTick);
+        writer.WriteString(NpcFaction);
+        writer.WriteVarInt(NpcFactionIndex);
         if (withPayload)
             writer.WriteBytes(Payload);
     }
 
-    public static MarketLot Read(ByteReader reader, bool withPayload) => new()
+    /// <param name="extended">False for world files older than format 9 (no item, expiry or NPC fields).</param>
+    public static MarketLot Read(ByteReader reader, bool withPayload, bool extended = true)
     {
-        Id = reader.ReadVarInt(),
-        Seller = reader.ReadUInt64(),
-        SellerName = reader.ReadRequiredString(),
-        Summary = reader.ReadRequiredString(),
-        Value = reader.ReadFloat(),
-        Price = (int)reader.ReadVarInt(),
-        PostedTick = reader.ReadVarInt(),
-        Payload = withPayload ? reader.ReadBytes() : Array.Empty<byte>(),
-    };
+        var lot = new MarketLot
+        {
+            Id = reader.ReadVarInt(),
+            Seller = reader.ReadUInt64(),
+            SellerName = reader.ReadRequiredString(),
+            Summary = reader.ReadRequiredString(),
+            Value = reader.ReadFloat(),
+            Price = (int)reader.ReadVarInt(),
+            PostedTick = reader.ReadVarInt(),
+        };
+        if (extended)
+        {
+            lot.DefName = reader.ReadRequiredString();
+            lot.ExpiresTick = reader.ReadVarInt();
+            lot.NpcFaction = reader.ReadRequiredString();
+            lot.NpcFactionIndex = (int)reader.ReadVarInt();
+        }
+        lot.Payload = withPayload ? reader.ReadBytes() : Array.Empty<byte>();
+        return lot;
+    }
 
     public static void WriteList(ByteWriter writer, IReadOnlyList<MarketLot> lots, bool withPayload)
     {
@@ -63,14 +91,14 @@ public sealed class MarketLot
             lot.Write(writer, withPayload);
     }
 
-    public static List<MarketLot> ReadList(ByteReader reader, bool withPayload)
+    public static List<MarketLot> ReadList(ByteReader reader, bool withPayload, bool extended = true)
     {
         var count = reader.ReadVarUInt();
         if (count > 100_000)
             throw new ProtocolException($"Too many lots: {count}");
         var lots = new List<MarketLot>((int)count);
         for (var i = 0UL; i < count; i++)
-            lots.Add(Read(reader, withPayload));
+            lots.Add(Read(reader, withPayload, extended));
         return lots;
     }
 }
@@ -101,6 +129,12 @@ public sealed class MarketOrder
     /// <summary>World tick by which it must be delivered.</summary>
     public long DeadlineTick { get; set; }
 
+    /// <summary>An NPC faction's order: its def and which one of that def; "" for a player's.</summary>
+    public string NpcFaction { get; set; } = "";
+    public int NpcFactionIndex { get; set; }
+
+    public bool IsNpc => NpcFaction.Length > 0;
+
     /// <summary>The reward's silver (server and world file only).</summary>
     public byte[] Payload { get; set; } = Array.Empty<byte>();
 
@@ -115,23 +149,35 @@ public sealed class MarketOrder
         writer.WriteVarInt(Reward);
         writer.WriteVarInt(PostedTick);
         writer.WriteVarInt(DeadlineTick);
+        writer.WriteString(NpcFaction);
+        writer.WriteVarInt(NpcFactionIndex);
         if (withPayload)
             writer.WriteBytes(Payload);
     }
 
-    public static MarketOrder Read(ByteReader reader, bool withPayload) => new()
+    /// <param name="extended">False for world files older than format 9 (no NPC fields).</param>
+    public static MarketOrder Read(ByteReader reader, bool withPayload, bool extended = true)
     {
-        Id = reader.ReadVarInt(),
-        Buyer = reader.ReadUInt64(),
-        BuyerName = reader.ReadRequiredString(),
-        DefName = reader.ReadRequiredString(),
-        Label = reader.ReadRequiredString(),
-        Count = (int)reader.ReadVarInt(),
-        Reward = (int)reader.ReadVarInt(),
-        PostedTick = reader.ReadVarInt(),
-        DeadlineTick = reader.ReadVarInt(),
-        Payload = withPayload ? reader.ReadBytes() : Array.Empty<byte>(),
-    };
+        var order = new MarketOrder
+        {
+            Id = reader.ReadVarInt(),
+            Buyer = reader.ReadUInt64(),
+            BuyerName = reader.ReadRequiredString(),
+            DefName = reader.ReadRequiredString(),
+            Label = reader.ReadRequiredString(),
+            Count = (int)reader.ReadVarInt(),
+            Reward = (int)reader.ReadVarInt(),
+            PostedTick = reader.ReadVarInt(),
+            DeadlineTick = reader.ReadVarInt(),
+        };
+        if (extended)
+        {
+            order.NpcFaction = reader.ReadRequiredString();
+            order.NpcFactionIndex = (int)reader.ReadVarInt();
+        }
+        order.Payload = withPayload ? reader.ReadBytes() : Array.Empty<byte>();
+        return order;
+    }
 
     public static void WriteList(ByteWriter writer, IReadOnlyList<MarketOrder> orders, bool withPayload)
     {
@@ -140,14 +186,38 @@ public sealed class MarketOrder
             order.Write(writer, withPayload);
     }
 
-    public static List<MarketOrder> ReadList(ByteReader reader, bool withPayload)
+    public static List<MarketOrder> ReadList(ByteReader reader, bool withPayload, bool extended = true)
     {
         var count = reader.ReadVarUInt();
         if (count > 100_000)
             throw new ProtocolException($"Too many orders: {count}");
         var orders = new List<MarketOrder>((int)count);
         for (var i = 0UL; i < count; i++)
-            orders.Add(Read(reader, withPayload));
+            orders.Add(Read(reader, withPayload, extended));
         return orders;
     }
+}
+
+/// <summary>
+/// NPC factions on the world market. Each colony has its own relations with them, but the factions themselves (by def,
+/// and which one of that def) are the same in every game of the world, so a deal names the faction that way and each
+/// game finds it among its own. A faction's "owner key" on the market has the top bit set: never a SteamID.
+/// </summary>
+public static class NpcTrader
+{
+    private const ulong NpcBit = 0x8000_0000_0000_0000UL;
+
+    public static ulong OwnerKey(string factionDef, int index)
+    {
+        // FNV-1a: the same key in every process and every run.
+        var hash = 14695981039346656037UL;
+        foreach (var ch in factionDef + "#" + index)
+        {
+            hash ^= ch;
+            hash *= 1099511628211UL;
+        }
+        return NpcBit | (hash & ~NpcBit);
+    }
+
+    public static bool IsNpc(ulong owner) => (owner & NpcBit) != 0;
 }

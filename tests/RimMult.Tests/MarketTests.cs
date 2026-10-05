@@ -252,4 +252,171 @@ public class MarketTests
         Flush();
         Assert.Equal(100, b.MyRequests["0"]);
     }
+
+    [Fact]
+    public void ListingsBeyondTheFreeOnesCostAFee()
+    {
+        var (host, world, a, b, inboxA, _) = Two();
+        for (var i = 0; i < 3; i++)
+            a.SendMarket(new MarketAction { Kind = MarketActionKind.PostLot, Price = 100, Summary = "x", Payload = [1] });
+        host.Pump(a, b);
+        Assert.Equal(3, world.MarketLots.Count);
+        Assert.Equal(10, a.MarketFeeFor(200)); // 5 % from the fourth on
+
+        // Unpaid: the goods come back.
+        a.SendMarket(new MarketAction { Kind = MarketActionKind.PostLot, Price = 200, Summary = "x", Payload = [1] });
+        host.Pump(a, b);
+        Assert.Equal(3, world.MarketLots.Count);
+        Assert.Equal(ParcelAddress.MarketKind.LotReturned, KindOf(Assert.Single(inboxA)));
+
+        a.SendMarket(new MarketAction { Kind = MarketActionKind.PostLot, Price = 200, Fee = 10, Summary = "x", Payload = [1] });
+        host.Pump(a, b);
+        Assert.Equal(4, world.MarketLots.Count);
+        Assert.Equal(0, b.MarketFeeFor(200)); // the other player still has all theirs
+    }
+
+    [Fact]
+    public void TheBrokerIsTheHostOrTheLongestInTheWorld()
+    {
+        var (host, _, a, b, _, _) = Two();
+        Assert.Equal(a.PlayerId, b.Market.BrokerPlayerId);
+        Assert.True(a.IsMarketBroker);
+        Assert.False(b.IsMarketBroker);
+
+        // Only the broker plays the NPCs.
+        b.SendMarket(new MarketAction { Kind = MarketActionKind.NpcPostLot, NpcFaction = "OutlanderCivil", NpcName = "Union", Price = 50, Days = 5, Payload = [1] });
+        host.Pump(a, b);
+        Assert.Empty(a.MarketLots);
+
+        a.LeaveWorld();
+        host.Pump(a, b);
+        Assert.True(b.IsMarketBroker);
+        b.SendMarket(new MarketAction { Kind = MarketActionKind.NpcPostLot, NpcFaction = "OutlanderCivil", NpcName = "Union", Price = 50, Days = 5, Payload = [1] });
+        host.Pump(a, b);
+        Assert.Single(b.MarketLots);
+    }
+
+    [Fact]
+    public void NpcLotSellsToAPlayerRunsOutAndMovesThePrice()
+    {
+        var (host, world, a, b, _, inboxB) = Two();
+        a.SendMarket(new MarketAction
+        {
+            Kind = MarketActionKind.NpcPostLot, NpcFaction = "OutlanderCivil", NpcFactionIndex = 1, NpcName = "Union",
+            DefName = "ComponentIndustrial", Summary = "component x20", Value = 640, Price = 800, Days = 10, Payload = [3],
+        });
+        a.SendMarket(new MarketAction { Kind = MarketActionKind.NpcPostLot, NpcFaction = "Pirate", NpcName = "Raiders", Price = 90, Days = 2, Payload = [4] });
+        host.Pump(a, b);
+        var lot = b.MarketLots.Single(l => l.SellerName == "Union");
+        Assert.True(lot.IsNpc && NpcTrader.IsNpc(lot.Seller));
+        Assert.Equal(1000 + 10L * Treaty.TicksPerDay, lot.ExpiresTick);
+
+        b.SendMarket(new MarketAction { Kind = MarketActionKind.BuyLot, Id = lot.Id, Price = 800, Payload = [8] });
+        host.Pump(a, b);
+        var bought = Assert.Single(inboxB);
+        Assert.True(ParcelAddress.TryParseMarket(bought.ToTile, out var kind, out var faction, out var index));
+        Assert.Equal((ParcelAddress.MarketKind.Bought, "OutlanderCivil", 1), (kind, faction, index));
+        Assert.True(world.Prices.ItemFactor("ComponentIndustrial") > 1f);
+        // The NPC's silver goes nowhere.
+        Assert.DoesNotContain(world.Mail, m => NpcTrader.IsNpc(m.ToOwner));
+
+        // The other one runs out unsold.
+        world.Tick += 3L * Treaty.TicksPerDay;
+        host.Pump(a, b);
+        Assert.Empty(b.MarketLots);
+    }
+
+    [Fact]
+    public void NpcsBuyPlayersLotsAndDeliverTheirOrders()
+    {
+        var (host, world, a, b, inboxA, inboxB) = Two();
+        b.SendMarket(new MarketAction { Kind = MarketActionKind.PostLot, DefName = "Steel", Price = 100, Value = 190, Summary = "steel x100", Payload = [1] });
+        b.SendMarket(new MarketAction { Kind = MarketActionKind.PostOrder, DefName = "MedicineIndustrial", Label = "medicine", Count = 5, Price = 300, Days = 10, Payload = [2] });
+        host.Pump(a, b);
+
+        a.SendMarket(new MarketAction
+        {
+            Kind = MarketActionKind.NpcBuyLot, Id = b.MarketLots.Single().Id, Price = 100, NpcFaction = "OutlanderCivil", NpcName = "Union", Payload = [9],
+        });
+        a.SendMarket(new MarketAction
+        {
+            Kind = MarketActionKind.NpcFulfillOrder, Id = b.MarketOrders.Single().Id, NpcFaction = "Empire", NpcName = "Empire", Summary = "medicine x5", Payload = [7],
+        });
+        host.Pump(a, b);
+
+        Assert.Empty(b.MarketLots);
+        Assert.Empty(b.MarketOrders);
+        Assert.Contains(inboxB, m => KindOf(m) == ParcelAddress.MarketKind.Sold && m.Payload.SequenceEqual(new byte[] { 9 }) && m.FromName == "Union");
+        Assert.Contains(inboxB, m => KindOf(m) == ParcelAddress.MarketKind.OrderDelivered && m.Payload.SequenceEqual(new byte[] { 7 }));
+        Assert.True(world.Prices.ItemFactor("Steel") < 1f);
+        Assert.True(world.Prices.ItemFactor("MedicineIndustrial") > 1f);
+        Assert.Contains(world.Chronicle, e => e.Kind == ChronicleKind.MarketSale && e.ActorName == "Union");
+        Assert.Empty(inboxA);
+    }
+
+    [Fact]
+    public void PlayerDeliversAnNpcOrder()
+    {
+        var (host, world, a, b, _, inboxB) = Two();
+        a.SendMarket(new MarketAction
+        {
+            Kind = MarketActionKind.NpcPostOrder, NpcFaction = "OutlanderCivil", NpcName = "Union", DefName = "Steel", Label = "steel",
+            Count = 100, Price = 260, Days = 15, Payload = [5],
+        });
+        host.Pump(a, b);
+        var order = b.MarketOrders.Single();
+        Assert.True(order.IsNpc);
+
+        b.SendMarket(new MarketAction { Kind = MarketActionKind.FulfillOrder, Id = order.Id, Summary = "steel x100", Payload = [6] });
+        host.Pump(a, b);
+        var reward = Assert.Single(inboxB);
+        Assert.True(ParcelAddress.TryParseMarket(reward.ToTile, out var kind, out var faction, out _));
+        Assert.Equal((ParcelAddress.MarketKind.Reward, "OutlanderCivil"), (kind, faction));
+        Assert.Equal(new byte[] { 5 }, reward.Payload);
+        Assert.True(world.Prices.ItemFactor("Steel") < 1f);
+        Assert.DoesNotContain(world.Mail, m => NpcTrader.IsNpc(m.ToOwner));
+    }
+
+    [Fact]
+    public void PricesDriftBackAndNewsComes()
+    {
+        var prices = new MarketPrices();
+        prices.Bought("Gold", 3000);
+        Assert.Equal(1f + MarketPrices.MaxStepPerDeal, prices.ItemFactor("Gold"), 3);
+        for (var i = 0; i < 30; i++)
+            prices.Bought("Gold", 100_000);
+        Assert.Equal(MarketPrices.MaxFactor, prices.ItemFactor("Gold"));
+
+        prices.Drift(1000);
+        Assert.False(prices.Drift(1000 + 30_000)); // less than a day
+        Assert.True(prices.Drift(1000 + 10L * 60_000));
+        Assert.True(prices.ItemFactor("Gold") < MarketPrices.MaxFactor);
+        prices.Drift(1000 + 200L * 60_000);
+        Assert.Equal(1f, prices.ItemFactor("Gold")); // back to normal and forgotten
+        Assert.Empty(prices.Items);
+
+        var random = new Random(7);
+        Assert.Null(prices.MaybeNews(0, random)); // plans the first one
+        var news = prices.MaybeNews(prices.NextNewsTick, random);
+        Assert.NotNull(news);
+        Assert.Contains(news!.Category, MarketPrices.NewsCategories);
+        Assert.NotEqual(1f, prices.NewsFactor([news.Category], news.StartTick));
+        Assert.Equal(1f, prices.NewsFactor(["Something"], news.StartTick));
+        Assert.Equal(1f, prices.NewsFactor([news.Category], news.EndTick));
+
+        var copy = Assert.IsType<MarketState>(PacketCodec.Decode(PacketCodec.Encode(new MarketState { Prices = prices, BrokerPlayerId = 3, FeePercent = 5 })));
+        Assert.Equal((3, 5, news.Category), (copy.BrokerPlayerId, copy.FeePercent, copy.Prices.News.Single().Category));
+    }
+
+    [Fact]
+    public void Version8WorldFilesLoad()
+    {
+        var bytes = World().Serialize();
+        // Format 8 is the current one without the world's prices at the end (two empty lists and two zero ticks).
+        var old = bytes.Take(bytes.Length - 4).ToArray();
+        old[0] = 8;
+        var state = WorldState.Deserialize(old);
+        Assert.Equal(2, state.Colonies.Count);
+        Assert.Empty(state.Prices.Items);
+    }
 }

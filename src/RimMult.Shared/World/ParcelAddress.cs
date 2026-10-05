@@ -178,14 +178,28 @@ public static class ParcelAddress
         OrderExpired,
     }
 
-    public static string ForMarket(MarketKind kind) => MarketPrefix + kind;
+    /// <param name="npcFaction">A deal with an NPC faction (its def and which one of that def): the recipient's game
+    /// changes its goodwill with that faction.</param>
+    public static string ForMarket(MarketKind kind, string npcFaction = "", int npcIndex = 0) =>
+        npcFaction.Length == 0 ? MarketPrefix + kind : $"{MarketPrefix}{kind}|{npcFaction}|{npcIndex}";
 
     public static bool IsMarket(string address) => address.StartsWith(MarketPrefix);
 
-    public static bool TryParseMarket(string address, out MarketKind kind)
+    public static bool TryParseMarket(string address, out MarketKind kind) => TryParseMarket(address, out kind, out _, out _);
+
+    public static bool TryParseMarket(string address, out MarketKind kind, out string npcFaction, out int npcIndex)
     {
         kind = MarketKind.Bought;
-        return IsMarket(address) && System.Enum.TryParse(address.Substring(MarketPrefix.Length), out kind);
+        npcFaction = "";
+        npcIndex = 0;
+        if (!IsMarket(address))
+            return false;
+        var parts = address.Substring(MarketPrefix.Length).Split('|');
+        if (!System.Enum.TryParse(parts[0], out kind))
+            return false;
+        if (parts.Length == 3 && int.TryParse(parts[2], out npcIndex))
+            npcFaction = parts[1];
+        return true;
     }
 
     public static bool TryParseTribute(string address, out long treatyId, out int amount)

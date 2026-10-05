@@ -43,9 +43,26 @@ public sealed class ServerSettings
     /// <summary>Players may declare war on each other and raid each other's colonies.</summary>
     public bool AllowPvp { get; set; } = true;
 
+    /// <summary>The world market's rules.</summary>
+    public MarketSettings Market { get; set; } = new();
+
     /// <summary>SteamIDs that may not join.</summary>
     public List<ulong> Banned { get; set; } = new();
 
     /// <summary>SteamIDs that may use admin commands in chat (the host always may).</summary>
     public List<ulong> Admins { get; set; } = new();
+}
+
+public sealed class MarketSettings
+{
+    /// <summary>NPC factions put up lots and orders, deliver stale orders and buy cheap lots (separate colonies only).</summary>
+    public bool NpcTraders { get; set; } = true;
+
+    /// <summary>At most this many NPC lots and orders on the market at once.</summary>
+    public int NpcMaxLots { get; set; } = 12;
+    public int NpcMaxOrders { get; set; } = 8;
+
+    /// <summary>Lots and orders a player may have open for free; each one beyond costs <see cref="FeePercent"/> of its price.</summary>
+    public int FreeListings { get; set; } = 3;
+    public int FeePercent { get; set; } = 5;
 }

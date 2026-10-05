@@ -728,6 +728,8 @@ public sealed partial class GameServer
     {
         var list = new PlayerList { Players = Players.OrderBy(p => p.Id).ToList() };
         Broadcast(PacketCodec.Encode(list), DeliveryMode.ReliableOrdered);
+        // Who plays the NPC factions on the market may have changed with it.
+        BroadcastMarket();
     }
 
     private void Broadcast(byte[] data, DeliveryMode mode)

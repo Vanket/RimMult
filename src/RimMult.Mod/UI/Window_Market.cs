@@ -29,22 +29,43 @@ internal static class MarketDeals
         return true;
     }
 
+    /// <summary>
+    /// Pays the market's fee for one more listing (silver burnt here; the server checks the sum). False, with a message,
+    /// when there isn't enough silver for it and <paramref name="also"/> on top.
+    /// </summary>
+    private static bool PayFee(ClientSession session, int price, int also, out int fee)
+    {
+        fee = session.MarketFeeFor(price);
+        if (Goods.SilverAvailable() < fee + also)
+        {
+            Messages.Message("RimMult.TributeNotEnough".Translate(fee + also, Goods.SilverAvailable()), MessageTypeDefOf.RejectInput, historical: false);
+            return false;
+        }
+        if (fee > 0 && Goods.TakeSilver(fee) is { } silver)
+            Goods.Gone(silver);
+        return true;
+    }
+
     public static void PostLot(List<TransferableOneWay> chosen, int price)
     {
         var session = Multiplayer.Session;
-        if (session == null || price <= 0)
+        if (session == null || price <= 0 || !PayFee(session, price, 0, out var fee))
             return;
         var things = Goods.Take(chosen);
         if (things.Count == 0)
             return;
         var value = things.Sum(t => t.MarketValue * t.stackCount);
+        var main = things.OrderByDescending(t => t.MarketValue * t.stackCount).First().def.defName;
         var summary = ThingPackage.Summarize(things);
         if (Goods.Pack(things) is not { } payload)
         {
             Goods.PutBack(things);
             return;
         }
-        session.SendMarket(new MarketAction { Kind = MarketActionKind.PostLot, Price = price, Value = value, Summary = summary, Payload = payload });
+        session.SendMarket(new MarketAction
+        {
+            Kind = MarketActionKind.PostLot, Price = price, Value = value, DefName = main, Fee = fee, Summary = summary, Payload = payload,
+        });
         Goods.Gone(things);
         Messages.Message("RimMult.MarketLotPosted".Translate(summary, price), MessageTypeDefOf.NeutralEvent, historical: false);
     }
@@ -75,7 +96,7 @@ internal static class MarketDeals
     public static void PostOrder(ThingDef def, int count, int reward, int days)
     {
         var session = Multiplayer.Session;
-        if (session == null || count <= 0 || reward <= 0)
+        if (session == null || count <= 0 || reward <= 0 || !PayFee(session, reward, reward, out var fee))
             return;
         if (Goods.TakeSilver(reward) is not { } silver)
         {
@@ -89,7 +110,7 @@ internal static class MarketDeals
         }
         session.SendMarket(new MarketAction
         {
-            Kind = MarketActionKind.PostOrder, DefName = def.defName, Label = def.label, Count = count, Price = reward, Days = days,
+            Kind = MarketActionKind.PostOrder, DefName = def.defName, Label = def.label, Count = count, Price = reward, Days = days, Fee = fee,
             Summary = ThingPackage.Summarize(silver), Payload = payload,
         });
         Goods.Gone(silver);
@@ -120,6 +141,10 @@ internal static class MarketDeals
 
     public static void Cancel(MarketActionKind kind, long id) =>
         Multiplayer.Session?.SendMarket(new MarketAction { Kind = kind, Id = id });
+
+    /// <summary>An NPC faction this colony is at war with: no deals.</summary>
+    public static Faction? HostileNpc(string npcFaction, int index) =>
+        npcFaction.Length > 0 && NpcLayoutSync.FactionOf(npcFaction, index) is { } faction && faction.HostileTo(Faction.OfPlayer) ? faction : null;
 }
 
 /// <summary>The world's market: lots for sale and open orders, with buttons to deal.</summary>
@@ -127,7 +152,14 @@ internal sealed class Window_Market : Window
 {
     private const float RowHeight = 32f;
 
-    private bool _orders;
+    private enum Tab
+    {
+        Lots,
+        Orders,
+        Prices,
+    }
+
+    private Tab _tab;
     private Vector2 _scroll;
 
     private Window_Market()
@@ -162,24 +194,27 @@ internal sealed class Window_Market : Window
 
         Text.Font = GameFont.Small;
         var top = new Rect(inRect.x, inRect.y, inRect.width, 30f);
-        if (Widgets.ButtonText(top.LeftPartPixels(200f), "RimMult.MarketTabLots".Translate(session.MarketLots.Count), active: _orders))
-            _orders = false;
-        if (Widgets.ButtonText(new Rect(top.x + 210f, top.y, 200f, top.height), "RimMult.MarketTabOrders".Translate(session.MarketOrders.Count), active: !_orders))
-            _orders = true;
+        if (Widgets.ButtonText(top.LeftPartPixels(160f), "RimMult.MarketTabLots".Translate(session.MarketLots.Count), active: _tab != Tab.Lots))
+            _tab = Tab.Lots;
+        if (Widgets.ButtonText(new Rect(top.x + 166f, top.y, 160f, top.height), "RimMult.MarketTabOrders".Translate(session.MarketOrders.Count), active: _tab != Tab.Orders))
+            _tab = Tab.Orders;
+        if (Widgets.ButtonText(new Rect(top.x + 332f, top.y, 160f, top.height), "RimMult.MarketTabPrices".Translate(), active: _tab != Tab.Prices))
+            _tab = Tab.Prices;
 
         var canDeal = MarketDeals.CanDeal(out var why);
-        var post = new Rect(top.xMax - 240f, top.y, 240f, top.height);
-        if (Widgets.ButtonText(post, (_orders ? "RimMult.MarketPostOrder" : "RimMult.MarketPostLot").Translate(), active: canDeal) && canDeal)
+        var post = new Rect(top.xMax - 220f, top.y, 220f, top.height);
+        if (_tab != Tab.Prices
+            && Widgets.ButtonText(post, (_tab == Tab.Orders ? "RimMult.MarketPostOrder" : "RimMult.MarketPostLot").Translate(), active: canDeal) && canDeal)
         {
-            if (_orders)
+            if (_tab == Tab.Orders)
                 Find.WindowStack.Add(new Dialog_PostOrder());
             else
                 Find.WindowStack.Add(new Dialog_PostLot());
         }
-        if (!canDeal)
+        if (!canDeal && _tab != Tab.Prices)
             TooltipHandler.TipRegion(post, why);
 
-        var silver = new Rect(post.x - 260f, top.y, 250f, top.height);
+        var silver = new Rect(post.x - 230f, top.y, 220f, top.height);
         if (WorldSync.InWorld)
         {
             Text.Anchor = TextAnchor.MiddleRight;
@@ -189,11 +224,70 @@ internal sealed class Window_Market : Window
 
         var body = new Rect(inRect.x, top.yMax + 8f, inRect.width, inRect.height - top.height - 8f);
         Widgets.DrawMenuSection(body);
-        if (_orders)
-            DrawOrders(body.ContractedBy(6f), session, canDeal);
-        else
-            DrawLots(body.ContractedBy(6f), session, canDeal);
+        switch (_tab)
+        {
+            case Tab.Orders:
+                DrawOrders(body.ContractedBy(6f), session, canDeal);
+                break;
+            case Tab.Prices:
+                DrawPrices(body.ContractedBy(6f), session);
+                break;
+            default:
+                DrawLots(body.ContractedBy(6f), session, canDeal);
+                break;
+        }
     }
+
+    /// <summary>The world's prices: running news first, then the items whose price moved most.</summary>
+    private void DrawPrices(Rect rect, ClientSession session)
+    {
+        var prices = session.Market.Prices;
+        var now = DiplomacyUi.Now(session);
+        var lines = new List<string>();
+        foreach (var news in prices.News.Where(n => n.StartTick <= now && now < n.EndTick))
+        {
+            var days = Mathf.Max(1, Mathf.CeilToInt((news.EndTick - now) / (float)Treaty.TicksPerDay));
+            lines.Add(Arrow(news.Factor) + ChronicleUi.MarketNews(news.Category, Mathf.RoundToInt((news.Factor - 1f) * 100f))
+                      + " " + "RimMult.MarketNewsDays".Translate(days));
+        }
+        var moved = prices.Items
+            .Select(p => (Def: DefDatabase<ThingDef>.GetNamedSilentFail(p.Key), Factor: p.Value))
+            .Where(p => p.Def != null)
+            .OrderByDescending(p => Mathf.Abs(p.Factor - 1f))
+            .Take(40)
+            .ToList();
+        if (lines.Count == 0 && moved.Count == 0)
+        {
+            Empty(rect, "RimMult.MarketPricesNormal");
+            return;
+        }
+        var hint = "RimMult.MarketPricesHint".Translate().ToString();
+        var hintHeight = Text.CalcHeight(hint, rect.width);
+        GUI.color = Color.gray;
+        Widgets.Label(new Rect(rect.x, rect.y, rect.width, hintHeight), hint);
+        GUI.color = Color.white;
+        var list = new Rect(rect.x, rect.y + hintHeight + 6f, rect.width, rect.height - hintHeight - 6f);
+        var view = new Rect(0f, 0f, list.width - 16f, (lines.Count + moved.Count + 1) * 28f);
+        Widgets.BeginScrollView(list, ref _scroll, view);
+        var y = 0f;
+        foreach (var line in lines)
+        {
+            Widgets.Label(new Rect(0f, y, view.width, 28f), line);
+            y += 28f;
+        }
+        if (lines.Count > 0)
+            y += 28f;
+        foreach (var (def, factor) in moved)
+        {
+            Widgets.ThingIcon(new Rect(0f, y + 2f, 24f, 24f), def);
+            Widgets.Label(new Rect(30f, y + 2f, view.width - 30f, 28f),
+                $"{Arrow(factor)}{def!.LabelCap}: {(factor >= 1f ? "+" : "−")}{Mathf.RoundToInt(Mathf.Abs(factor - 1f) * 100f)} %");
+            y += 28f;
+        }
+        Widgets.EndScrollView();
+    }
+
+    private static string Arrow(float factor) => factor >= 1f ? "<color=#E07050>▲</color> " : "<color=#60C060>▼</color> ";
 
     private void DrawLots(Rect rect, ClientSession session, bool canDeal)
     {
@@ -229,7 +323,8 @@ internal sealed class Window_Market : Window
             }
             else
             {
-                var atWar = session.RelationWith(lot.Seller) == PlayerRelation.Hostile;
+                var atWar = lot.IsNpc ? MarketDeals.HostileNpc(lot.NpcFaction, lot.NpcFactionIndex) != null
+                    : session.RelationWith(lot.Seller) == PlayerRelation.Hostile;
                 var can = canDeal && !atWar && silver >= lot.Price;
                 if (Widgets.ButtonText(button, "RimMult.MarketBuy".Translate(), active: can) && can)
                     Find.WindowStack.Add(Dialog_MessageBox.CreateConfirmation(
@@ -281,7 +376,8 @@ internal sealed class Window_Market : Window
                 continue;
             }
             var have = canDeal && def != null ? Goods.CountOf(def) : 0;
-            var atWar = session.RelationWith(order.Buyer) == PlayerRelation.Hostile;
+            var atWar = order.IsNpc ? MarketDeals.HostileNpc(order.NpcFaction, order.NpcFactionIndex) != null
+                : session.RelationWith(order.Buyer) == PlayerRelation.Hostile;
             var can = canDeal && def != null && !atWar && have >= order.Count;
             if (Widgets.ButtonText(button, "RimMult.MarketFulfill".Translate(), active: can) && can)
                 Find.WindowStack.Add(Dialog_MessageBox.CreateConfirmation(
@@ -294,8 +390,11 @@ internal sealed class Window_Market : Window
         Widgets.EndScrollView();
     }
 
+    /// <summary>A player in their color; an NPC faction in grey, marked as one.</summary>
     private static string PlayerName(ClientSession session, ulong owner, string name)
     {
+        if (NpcTrader.IsNpc(owner))
+            return $"<color=#A0A0A0>{"RimMult.MarketNpc".Translate(name)}</color>";
         var color = session.Stats.FirstOrDefault(s => s.Owner == owner)?.ColorIndex ?? 0;
         return PlayerPalette.Colorize(name, color);
     }
@@ -359,7 +458,10 @@ internal sealed class Dialog_PostLot : Window
 
         var chosen = _stock.Where(t => t.CountToTransfer > 0).ToList();
         var value = chosen.Sum(t => t.AnyThing.MarketValue * t.CountToTransfer);
-        Widgets.Label(new Rect(bottom.x, bottom.y, bottom.width, 30f), "RimMult.MarketLotValue".Translate(value.ToStringMoney()));
+        var line = "RimMult.MarketLotValue".Translate(value.ToStringMoney()).ToString();
+        if (Multiplayer.Session is { } session && session.MarketFeeFor(Mathf.Max(1, _price)) is var fee && fee > 0)
+            line += " · " + "RimMult.MarketFee".Translate(fee, session.Market.FreeListings);
+        Widgets.Label(new Rect(bottom.x, bottom.y, bottom.width, 30f), line);
         var priceLabel = new Rect(bottom.x, bottom.y + 38f, 180f, 30f);
         Widgets.Label(priceLabel, "RimMult.MarketPriceLabel".Translate());
         Widgets.TextFieldNumeric(new Rect(priceLabel.xMax, priceLabel.y, 140f, 30f), ref _price, ref _priceBuffer, 0, MarketLot.MaxPrice);
@@ -436,9 +538,12 @@ internal sealed class Dialog_PostOrder : Window
         }
         Widgets.EndScrollView();
 
-        Widgets.Label(new Rect(bottom.x, bottom.y, bottom.width, 26f), _def != null
-            ? "RimMult.MarketOrderWhat".Translate(_def.LabelCap, (_def.BaseMarketValue * _count).ToStringMoney())
-            : "RimMult.MarketOrderPick".Translate());
+        var what = _def != null
+            ? "RimMult.MarketOrderWhat".Translate(_def.LabelCap, (_def.BaseMarketValue * WorldPrices.FactorOf(_def) * _count).ToStringMoney()).ToString()
+            : "RimMult.MarketOrderPick".Translate().ToString();
+        if (Multiplayer.Session is { } session && session.MarketFeeFor(_reward) is var fee && fee > 0)
+            what += " · " + "RimMult.MarketFee".Translate(fee, session.Market.FreeListings);
+        Widgets.Label(new Rect(bottom.x, bottom.y, bottom.width, 26f), what);
         var y = bottom.y + 30f;
         Widgets.Label(new Rect(bottom.x, y, 110f, 28f), "RimMult.MarketCountLabel".Translate());
         Widgets.TextFieldNumeric(new Rect(bottom.x + 110f, y, 100f, 28f), ref _count, ref _countBuffer, 1, MarketOrder.MaxCount);
