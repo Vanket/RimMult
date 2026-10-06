@@ -130,3 +130,16 @@ internal static class WindowsForcePausePatch
             __result = false;
     }
 }
+
+/// <summary>
+/// The game asks to name the colony (and the faction) every 1000 ticks until it's done, and the new window replaces
+/// the open one. With time running behind windows (see <see cref="WindowsForcePausePatch"/>) that happened every few
+/// seconds and wiped what was being typed: the name could only be given with the game paused. While a naming window is
+/// open, the game doesn't open another.
+/// </summary>
+[HarmonyPatch(typeof(WindowStack), nameof(WindowStack.Add))]
+internal static class NamingDialogOncePatch
+{
+    private static bool Prefix(WindowStack __instance, Window window) =>
+        !(window is Dialog_GiveName && (TimeSync.Active || Coop.CoopGuest.Active) && System.Linq.Enumerable.Any(__instance.Windows, w => w is Dialog_GiveName));
+}
