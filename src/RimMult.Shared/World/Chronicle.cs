@@ -72,6 +72,9 @@ public enum ChronicleKind : byte
 
     /// <summary>Market news: <see cref="ChronicleEntry.Text"/> the item category, <see cref="ChronicleEntry.A"/> the change in percent.</summary>
     MarketNews = 24,
+
+    /// <summary>Actor's missile struck target's colony. <see cref="ChronicleEntry.Text"/>: the missile.</summary>
+    MissileStrike = 25,
 }
 
 /// <summary>One line of the world's chronicle. Names are kept as they were, so the line reads the same later.</summary>

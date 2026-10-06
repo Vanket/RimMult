@@ -566,4 +566,11 @@
   <RimMult.AdminGiftText>Администратор {0} прислал вам: {1}.</RimMult.AdminGiftText>
   <RimMult.AdminResearchLabel>Исследования от {0}</RimMult.AdminResearchLabel>
   <RimMult.AdminResearchText>Администратор {0} завершил для вас исследований: {1} — {2}.</RimMult.AdminResearchText>
+  <RimMult.MissileSent>{0} долетела до колонии {1}: удар приходится в его игре.</RimMult.MissileSent>
+  <RimMult.MissileNotAllowed>Нельзя по {0}: {1}</RimMult.MissileNotAllowed>
+  <RimMult.MissileLostLabel>Ракета ушла в пустоту</RimMult.MissileLostLabel>
+  <RimMult.MissileLostText>{0} никого не нашла: цель уже не в мире, или вы больше не воюете.</RimMult.MissileLostText>
+  <RimMult.MissileIncomingLabel>Ракета от {0}!</RimMult.MissileIncomingLabel>
+  <RimMult.MissileIncomingText>{0} запустил ракету по вашей колонии: {1}. Она уже летит — ПВО может её сбить.</RimMult.MissileIncomingText>
+  <RimMult.Chronicle.MissileStrike>{0} нанёс ракетный удар по {1}: {5}.</RimMult.Chronicle.MissileStrike>
 </LanguageData>
