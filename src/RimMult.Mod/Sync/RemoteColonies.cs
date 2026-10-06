@@ -117,6 +117,9 @@ public sealed class RemoteColony : WorldObject
 
         yield return DiplomacyUi.Gizmo(OwnerSteamId, OwnerName);
 
+        if (OrbitalStrikes.Gizmo(this) is { } strike)
+            yield return strike;
+
         if (session?.RelationWith(OwnerSteamId) == Shared.World.PlayerRelation.Allied)
         {
             var watch = new Command_Action
@@ -178,7 +181,7 @@ public sealed class RemoteColony : WorldObject
         if (Multiplayer.Session?.RelationWith(OwnerSteamId) == Shared.World.PlayerRelation.Allied)
         {
             foreach (var option in CaravanArrivalActionUtility.GetFloatMenuOptions(
-                         () => PlayerVisits.CanHelp(this, caravan.PawnsListForReading),
+                         () => PlayerVisits.CanHelp(this, VehicleCompat.Crew(caravan)),
                          () => new CaravanArrivalAction_HelpPlayer(this),
                          "RimMult.HelpGo".Translate(OwnerName),
                          caravan,

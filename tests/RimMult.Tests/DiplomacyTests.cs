@@ -509,6 +509,35 @@ public class DiplomacyTests
     }
 
     [Fact]
+    public void OrbitalStrikesFollowTheSameRules()
+    {
+        var world = World();
+        var host = new Host(world);
+        var a = host.Join("A", 1);
+        var b = host.Join("B", 2);
+        host.Pump(a, b);
+        a.EnterWorld("w");
+        b.EnterWorld("w");
+        host.Pump(a, b);
+        var inboxA = Inbox(a);
+        var inboxB = Inbox(b);
+        var address = ParcelAddress.ForOrbitalStrike("CallOrbitalSalvo");
+        Assert.True(ParcelAddress.TryParseOrbitalStrike(address, out var permit) && permit == "CallOrbitalSalvo");
+        Assert.True(ParcelAddress.IsStrike(address));
+
+        a.SendParcel(2, address, "salvo", []);
+        host.Pump(a, b);
+        Assert.True(Assert.Single(inboxA).Returned);
+
+        a.SendDiplomacy(2, DiplomacyAction.DeclareWar);
+        host.Pump(a, b);
+        a.SendParcel(2, address, "salvo", []);
+        host.Pump(a, b);
+        Assert.False(Assert.Single(inboxB).Returned);
+        Assert.Contains(world.Chronicle, e => e.Kind == ChronicleKind.OrbitalStrike && e.Text == "salvo");
+    }
+
+    [Fact]
     public void LiveRaidAddressSaysSo()
     {
         var live = ParcelAddress.ForRaid("r2", ParcelAddress.RaidArrival.WalkIn, "31", live: true);

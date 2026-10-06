@@ -75,6 +75,9 @@ public enum ChronicleKind : byte
 
     /// <summary>Actor's missile struck target's colony. <see cref="ChronicleEntry.Text"/>: the missile.</summary>
     MissileStrike = 25,
+
+    /// <summary>Actor called an orbital strike on target's colony. <see cref="ChronicleEntry.Text"/>: the strike.</summary>
+    OrbitalStrike = 26,
 }
 
 /// <summary>One line of the world's chronicle. Names are kept as they were, so the line reads the same later.</summary>

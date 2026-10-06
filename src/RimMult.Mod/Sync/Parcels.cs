@@ -170,6 +170,8 @@ internal static class Parcels
         // An enemy's missile (or ours, that found nobody to hit).
         if (ParcelAddress.TryParseMissile(parcel.ToTile, out var body, out var warhead, out var launchTile))
             return MissileStrikes.Deliver(parcel, body, warhead, launchTile);
+        if (ParcelAddress.TryParseOrbitalStrike(parcel.ToTile, out var permit))
+            return OrbitalStrikes.Deliver(parcel, permit);
         // Research an admin finished for this colony.
         if (ParcelAddress.IsAdminResearch(parcel.ToTile))
             return UI.AdminGifts.DeliverResearch(parcel);

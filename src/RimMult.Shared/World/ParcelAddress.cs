@@ -204,6 +204,22 @@ public static class ParcelAddress
         return true;
     }
 
+    private const string OrbitalPrefix = "orbital:";
+
+    /// <summary>A Royalty orbital strike (the permit's def name) called on an enemy player's colony (no items inside).</summary>
+    public static string ForOrbitalStrike(string permitDef) => OrbitalPrefix + permitDef;
+
+    public static bool IsOrbitalStrike(string address) => address.StartsWith(OrbitalPrefix);
+
+    public static bool TryParseOrbitalStrike(string address, out string permitDef)
+    {
+        permitDef = IsOrbitalStrike(address) ? address.Substring(OrbitalPrefix.Length) : "";
+        return permitDef.Length > 0;
+    }
+
+    /// <summary>Strikes that reach only an enemy playing now (like raids): missiles and orbital strikes.</summary>
+    public static bool IsStrike(string address) => IsMissile(address) || IsOrbitalStrike(address);
+
     private const string AdminGiftAddress = "admin:gift";
     private const string AdminResearchAddress = "admin:research";
 

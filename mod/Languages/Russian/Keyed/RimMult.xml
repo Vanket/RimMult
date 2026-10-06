@@ -573,4 +573,19 @@
   <RimMult.MissileIncomingLabel>Ракета от {0}!</RimMult.MissileIncomingLabel>
   <RimMult.MissileIncomingText>{0} запустил ракету по вашей колонии: {1}. Она уже летит — ПВО может её сбить.</RimMult.MissileIncomingText>
   <RimMult.Chronicle.MissileStrike>{0} нанёс ракетный удар по {1}: {5}.</RimMult.Chronicle.MissileStrike>
+  <RimMult.OrbitalStrike>Орбитальный удар</RimMult.OrbitalStrike>
+  <RimMult.OrbitalStrikeDesc>Вызвать орбитальный удар (королевское разрешение вашего колониста с титулом) по колонии {0}. Он падает на его базу в его игре.</RimMult.OrbitalStrikeDesc>
+  <RimMult.OrbitalStrikeNone>Ни у кого из колонистов нет разрешения на удар (удар аэродрона или залп).</RimMult.OrbitalStrikeNone>
+  <RimMult.OrbitalStrikeNoFavor>нужно {0} благосклонности</RimMult.OrbitalStrikeNoFavor>
+  <RimMult.OrbitalStrikeFree>бесплатно</RimMult.OrbitalStrikeFree>
+  <RimMult.OrbitalStrikeCost>{0} благосклонности</RimMult.OrbitalStrikeCost>
+  <RimMult.OrbitalStrikeSent>{0} вызван по колонии {1}.</RimMult.OrbitalStrikeSent>
+  <RimMult.OrbitalStrikeLostLabel>Удар отменён</RimMult.OrbitalStrikeLostLabel>
+  <RimMult.OrbitalStrikeLostText>{0}: цель уже не в мире, или вы больше не воюете.</RimMult.OrbitalStrikeLostText>
+  <RimMult.OrbitalStrikeIncomingLabel>Орбитальный удар от {0}!</RimMult.OrbitalStrikeIncomingLabel>
+  <RimMult.OrbitalStrikeIncomingText>{0} вызвал орбитальный удар по вашей колонии: {1}. Уводите людей под толстую крышу!</RimMult.OrbitalStrikeIncomingText>
+  <RimMult.Chronicle.OrbitalStrike>{0} вызвал орбитальный удар по {1}: {5}.</RimMult.Chronicle.OrbitalStrike>
+  <RimMult.ShuttleBackHome>Шаттл высадил пассажиров и вернулся домой.</RimMult.ShuttleBackHome>
+  <RimMult.HelpVehiclesWait>Экипаж ушёл помогать {0}, техника ждёт у колонии. Люди сядут обратно, когда выйдут.</RimMult.HelpVehiclesWait>
+  <RimMult.HelpBackVehiclesText>Ваши люди вернулись от {0} и сели в свою технику у его колонии: {1}.</RimMult.HelpBackVehiclesText>
 </LanguageData>
