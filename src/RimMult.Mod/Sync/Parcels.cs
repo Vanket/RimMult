@@ -167,6 +167,9 @@ internal static class Parcels
             return PlayerVisits.BeginHelp(parcel, helpId, helpArrival);
         if (ParcelAddress.IsHelpReturn(parcel.ToTile))
             return PlayerVisits.DeliverHelpReturn(parcel);
+        // An enemy's missile (or ours, that found nobody to hit).
+        if (ParcelAddress.TryParseMissile(parcel.ToTile, out var body, out var warhead, out var launchTile))
+            return MissileStrikes.Deliver(parcel, body, warhead, launchTile);
         // Research an admin finished for this colony.
         if (ParcelAddress.IsAdminResearch(parcel.ToTile))
             return UI.AdminGifts.DeliverResearch(parcel);

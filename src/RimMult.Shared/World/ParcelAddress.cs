@@ -180,6 +180,30 @@ public static class ParcelAddress
 
     /// <param name="npcFaction">A deal with an NPC faction (its def and which one of that def): the recipient's game
     /// changes its goodwill with that faction.</param>
+    private const string MissilePrefix = "missile:";
+
+    /// <summary>
+    /// A missile (InterRim Ballistic Missile) that reached an enemy player's colony on the attacker's globe: the
+    /// defender's game launches the same body and warhead at itself from <paramref name="launchTile"/> (no items inside).
+    /// </summary>
+    public static string ForMissile(string bodyDef, string warheadDef, string launchTile) => $"{MissilePrefix}{bodyDef}|{warheadDef}|{launchTile}";
+
+    public static bool IsMissile(string address) => address.StartsWith(MissilePrefix);
+
+    public static bool TryParseMissile(string address, out string bodyDef, out string warheadDef, out string launchTile)
+    {
+        bodyDef = warheadDef = launchTile = "";
+        if (!IsMissile(address))
+            return false;
+        var parts = address.Substring(MissilePrefix.Length).Split('|');
+        if (parts.Length != 3 || parts[0].Length == 0 || parts[1].Length == 0)
+            return false;
+        bodyDef = parts[0];
+        warheadDef = parts[1];
+        launchTile = parts[2];
+        return true;
+    }
+
     private const string AdminGiftAddress = "admin:gift";
     private const string AdminResearchAddress = "admin:research";
 

@@ -140,6 +140,11 @@ public sealed partial class GameServer
         {
             Record(ChronicleKind.ResearchShared, item.FromOwner, item.ToOwner, a: points, text: item.Summary);
         }
+        else if (ParcelAddress.IsMissile(address))
+        {
+            if (!item.Returned)
+                Record(ChronicleKind.MissileStrike, item.FromOwner, item.ToOwner, text: item.Summary);
+        }
         else if (ParcelAddress.IsTribute(address))
         {
             // Recorded as a payment (see NoteTribute).

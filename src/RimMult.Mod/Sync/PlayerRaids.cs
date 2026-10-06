@@ -193,7 +193,7 @@ internal static class PlayerRaids
     }
 
     /// <summary>The hidden hostile faction the raiders fight for in this game (they keep their own names and gear).</summary>
-    private static Faction RaidFaction() =>
+    internal static Faction RaidFaction() =>
         Faction.OfAncientsHostile
         ?? Find.FactionManager.RandomEnemyFaction(allowHidden: true, allowDefeated: true)
         ?? Faction.OfPirates;

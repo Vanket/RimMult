@@ -477,6 +477,38 @@ public class DiplomacyTests
     }
 
     [Fact]
+    public void MissilesReachOnlyAnEnemyInTheWorld()
+    {
+        var world = World();
+        var host = new Host(world);
+        var a = host.Join("A", 1);
+        var b = host.Join("B", 2);
+        host.Pump(a, b);
+        a.EnterWorld("w");
+        b.EnterWorld("w");
+        host.Pump(a, b);
+        var inboxA = Inbox(a);
+        var inboxB = Inbox(b);
+        var address = ParcelAddress.ForMissile("IRBM_Body", "IRBM_Warhead", "12");
+        Assert.True(ParcelAddress.TryParseMissile(address, out var body, out var warhead, out var from));
+        Assert.Equal(("IRBM_Body", "IRBM_Warhead", "12"), (body, warhead, from));
+
+        // Not at war: it comes back to its sender as news that it hit nothing.
+        a.SendParcel(2, address, "missile", []);
+        host.Pump(a, b);
+        Assert.True(Assert.Single(inboxA).Returned);
+        Assert.Empty(inboxB);
+
+        a.SendDiplomacy(2, DiplomacyAction.DeclareWar);
+        host.Pump(a, b);
+        a.SendParcel(2, address, "missile", []);
+        host.Pump(a, b);
+        Assert.False(Assert.Single(inboxB).Returned);
+        Assert.Contains(world.Chronicle, e => e.Kind == ChronicleKind.MissileStrike && e.Actor == 1 && e.Target == 2);
+        Assert.DoesNotContain(world.Chronicle, e => e.Kind == ChronicleKind.ParcelSent);
+    }
+
+    [Fact]
     public void LiveRaidAddressSaysSo()
     {
         var live = ParcelAddress.ForRaid("r2", ParcelAddress.RaidArrival.WalkIn, "31", live: true);

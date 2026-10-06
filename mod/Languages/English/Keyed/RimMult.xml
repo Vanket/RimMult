@@ -566,4 +566,11 @@ If these are Workshop mods, the host probably has a newer version than the Works
   <RimMult.AdminGiftText>The admin {0} sent you: {1}.</RimMult.AdminGiftText>
   <RimMult.AdminResearchLabel>Research from {0}</RimMult.AdminResearchLabel>
   <RimMult.AdminResearchText>The admin {0} finished {1} research projects for you: {2}.</RimMult.AdminResearchText>
+  <RimMult.MissileSent>{0} reached {1}'s colony: the strike lands in their game.</RimMult.MissileSent>
+  <RimMult.MissileNotAllowed>Not at {0}: {1}</RimMult.MissileNotAllowed>
+  <RimMult.MissileLostLabel>Missile lost</RimMult.MissileLostLabel>
+  <RimMult.MissileLostText>{0} found nobody to hit: the target is no longer in the world, or you're not at war anymore.</RimMult.MissileLostText>
+  <RimMult.MissileIncomingLabel>Missile from {0}!</RimMult.MissileIncomingLabel>
+  <RimMult.MissileIncomingText>{0} launched a missile at your colony: {1}. It is on its way — your air defence may shoot it down.</RimMult.MissileIncomingText>
+  <RimMult.Chronicle.MissileStrike>{0} launched a missile at {1}: {5}.</RimMult.Chronicle.MissileStrike>
 </LanguageData>
