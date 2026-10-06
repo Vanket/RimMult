@@ -534,6 +534,20 @@ public sealed class TransportersArrivalAction_RaidPlayer : TransportersArrivalAc
 
     public override void Arrived(List<ActiveTransporterInfo> transporters, PlanetTile tile)
     {
+        // A shuttle brings the raiders and flies back home empty.
+        var shuttles = Shuttles.TakeOut(transporters);
+        try
+        {
+            Land(transporters);
+        }
+        finally
+        {
+            Shuttles.SendHome(shuttles);
+        }
+    }
+
+    private void Land(List<ActiveTransporterInfo> transporters)
+    {
         var contents = transporters.SelectMany(t => t.innerContainer).ToList();
         var pawns = contents.OfType<Pawn>().ToList();
         var colony = Find.WorldObjects.AllWorldObjects.OfType<RemoteColony>().FirstOrDefault(c => c.OwnerSteamId == _target.OwnerSteamId);

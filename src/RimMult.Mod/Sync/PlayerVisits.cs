@@ -427,11 +427,28 @@ internal static class PlayerVisits
         }
         foreach (var pawn in things.OfType<Pawn>())
             PawnTransfer.WelcomeArrived(pawn);
+
+        var none = "RimMult.RaidNobody".Translate().ToString();
+        // Their vehicles waited by the ally's colony: they get back in there.
+        if (WaitingVehicles(parcel.FromOwner) is { } waiting)
+        {
+            foreach (var thing in things)
+            {
+                if (thing is Pawn pawn && !Find.WorldPawns.Contains(pawn))
+                    Find.WorldPawns.PassToWorld(pawn);
+                waiting.AddPawnOrItem(thing, addCarriedPawnToWorldPawnsIfAny: true);
+            }
+            Find.LetterStack.ReceiveLetter(
+                "RimMult.HelpBackLabel".Translate(parcel.FromName),
+                "RimMult.HelpBackVehiclesText".Translate(parcel.FromName, string.Join(", ", things.OfType<Pawn>().Select(p => p.LabelShortCap))),
+                LetterDefOf.NeutralEvent,
+                new LookTargets(waiting));
+            return true;
+        }
         var spot = DropCellFinder.TradeDropSpot(home);
         if (things.Count > 0)
             DropPodUtility.DropThingsNear(spot, home, things, forbid: false);
 
-        var none = "RimMult.RaidNobody".Translate().ToString();
         var back = things.OfType<Pawn>().Select(p => p.LabelShortCap).ToList();
         var dead = parcel.Summary.Split('\n').Where(l => l.StartsWith("D:")).Select(l => l.Substring(2)).ToList();
         Find.LetterStack.ReceiveLetter(
@@ -440,6 +457,17 @@ internal static class PlayerVisits
             LetterDefOf.NeutralEvent,
             new LookTargets(new TargetInfo(spot, home)));
         return true;
+    }
+
+    /// <summary>A caravan of ours with vehicles waiting by one of that player's colonies.</summary>
+    private static Caravan? WaitingVehicles(ulong owner)
+    {
+        foreach (var colony in Multiplayer.Session?.Colonies ?? new List<ColonyInfo>())
+        {
+            if (colony.OwnerSteamId == owner && PlanetTile.TryParse(colony.Tile, out var tile) && tile.Valid && VehicleCompat.WaitingAt(tile) is { } waiting)
+                return waiting;
+        }
+        return null;
     }
 
     /// <summary>Whether this colony's people can go and help that ally now.</summary>
@@ -844,7 +872,7 @@ public sealed class CaravanArrivalAction_HelpPlayer : CaravanArrivalAction
     public override string ReportString => "RimMult.HelpGoReport".Translate(_target.OwnerName);
 
     public override FloatMenuAcceptanceReport StillValid(Caravan caravan, PlanetTile destinationTile) =>
-        Colony() is { } colony ? PlayerVisits.CanHelp(colony, caravan.PawnsListForReading) : false;
+        Colony() is { } colony ? PlayerVisits.CanHelp(colony, VehicleCompat.Crew(caravan)) : false;
 
     private RemoteColony? Colony() =>
         Find.WorldObjects.AllWorldObjects.OfType<RemoteColony>().FirstOrDefault(c => c.OwnerSteamId == _target.OwnerSteamId);
@@ -852,21 +880,28 @@ public sealed class CaravanArrivalAction_HelpPlayer : CaravanArrivalAction
     public override void Arrived(Caravan caravan)
     {
         var colony = Colony();
-        var allowed = colony != null ? PlayerVisits.CanHelp(colony, caravan.PawnsListForReading) : FloatMenuAcceptanceReport.WithFailReason("RimMult.RaidOwnerAway".Translate(_target.OwnerName));
+        var allowed = colony != null ? PlayerVisits.CanHelp(colony, VehicleCompat.Crew(caravan)) : FloatMenuAcceptanceReport.WithFailReason("RimMult.RaidOwnerAway".Translate(_target.OwnerName));
         if (!allowed.Accepted)
         {
             Messages.Message("RimMult.HelpCancelled".Translate(_target.OwnerName, allowed.FailReason), caravan, MessageTypeDefOf.RejectInput, historical: false);
             return;
         }
-        var pawns = caravan.PawnsListForReading.ToList();
+        // Vehicles stay by the ally's colony and wait: their crew goes in, and gets back in when it comes out.
+        var pawns = VehicleCompat.Crew(caravan);
+        var vehicles = VehicleCompat.HasVehicles(caravan);
         if (!PlayerVisits.LaunchHelp(_target, ParcelAddress.RaidArrival.WalkIn, pawns))
             return;
         foreach (var pawn in pawns)
         {
-            caravan.RemovePawn(pawn);
+            VehicleCompat.TakeOut(caravan, pawn);
             if (Find.WorldPawns.Contains(pawn))
                 Find.WorldPawns.RemovePawn(pawn);
             pawn.Destroy(DestroyMode.Vanish);
+        }
+        if (vehicles && !caravan.Destroyed && caravan.PawnsListForReading.Count > 0)
+        {
+            Messages.Message("RimMult.HelpVehiclesWait".Translate(_target.OwnerName), caravan, MessageTypeDefOf.NeutralEvent, historical: false);
+            return;
         }
         if (!caravan.Destroyed)
             caravan.Destroy();
@@ -903,6 +938,20 @@ public sealed class TransportersArrivalAction_HelpPlayer : TransportersArrivalAc
     }
 
     public override void Arrived(List<ActiveTransporterInfo> transporters, PlanetTile tile)
+    {
+        // A shuttle brings the helpers and flies back home empty.
+        var shuttles = Shuttles.TakeOut(transporters);
+        try
+        {
+            Land(transporters);
+        }
+        finally
+        {
+            Shuttles.SendHome(shuttles);
+        }
+    }
+
+    private void Land(List<ActiveTransporterInfo> transporters)
     {
         var contents = transporters.SelectMany(t => t.innerContainer).ToList();
         var pawns = contents.OfType<Pawn>().ToList();

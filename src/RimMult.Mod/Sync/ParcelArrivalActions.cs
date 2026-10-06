@@ -67,6 +67,19 @@ public sealed class TransportersArrivalAction_SendToPlayer : TransportersArrival
 
     public override void Arrived(List<ActiveTransporterInfo> transporters, PlanetTile tile)
     {
+        var shuttles = Shuttles.TakeOut(transporters);
+        try
+        {
+            Deliver(transporters);
+        }
+        finally
+        {
+            Shuttles.SendHome(shuttles);
+        }
+    }
+
+    private void Deliver(List<ActiveTransporterInfo> transporters)
+    {
         var things = transporters.SelectMany(t => t.innerContainer).Where(ThingPackage.CanSend).ToList();
         if (Parcels.Send(_target.OwnerSteamId, _target.OwnerName, _target.Tile, things))
         {

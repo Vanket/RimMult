@@ -573,4 +573,19 @@ If these are Workshop mods, the host probably has a newer version than the Works
   <RimMult.MissileIncomingLabel>Missile from {0}!</RimMult.MissileIncomingLabel>
   <RimMult.MissileIncomingText>{0} launched a missile at your colony: {1}. It is on its way — your air defence may shoot it down.</RimMult.MissileIncomingText>
   <RimMult.Chronicle.MissileStrike>{0} launched a missile at {1}: {5}.</RimMult.Chronicle.MissileStrike>
+  <RimMult.OrbitalStrike>Orbital strike</RimMult.OrbitalStrike>
+  <RimMult.OrbitalStrikeDesc>Call an orbital strike (a royal permit of one of your titled colonists) on {0}'s colony. It lands on their base in their game.</RimMult.OrbitalStrikeDesc>
+  <RimMult.OrbitalStrikeNone>No colonist holds a strike permit (aerodrone strike or salvo).</RimMult.OrbitalStrikeNone>
+  <RimMult.OrbitalStrikeNoFavor>{0} favor needed</RimMult.OrbitalStrikeNoFavor>
+  <RimMult.OrbitalStrikeFree>free</RimMult.OrbitalStrikeFree>
+  <RimMult.OrbitalStrikeCost>{0} favor</RimMult.OrbitalStrikeCost>
+  <RimMult.OrbitalStrikeSent>{0} called on {1}'s colony.</RimMult.OrbitalStrikeSent>
+  <RimMult.OrbitalStrikeLostLabel>Strike called off</RimMult.OrbitalStrikeLostLabel>
+  <RimMult.OrbitalStrikeLostText>{0}: the target is no longer in the world, or you're not at war anymore.</RimMult.OrbitalStrikeLostText>
+  <RimMult.OrbitalStrikeIncomingLabel>Orbital strike from {0}!</RimMult.OrbitalStrikeIncomingLabel>
+  <RimMult.OrbitalStrikeIncomingText>{0} called an orbital strike on your colony: {1}. Get your people under a thick roof!</RimMult.OrbitalStrikeIncomingText>
+  <RimMult.Chronicle.OrbitalStrike>{0} called an orbital strike on {1}: {5}.</RimMult.Chronicle.OrbitalStrike>
+  <RimMult.ShuttleBackHome>The shuttle dropped off its passengers and flew back home.</RimMult.ShuttleBackHome>
+  <RimMult.HelpVehiclesWait>The crew went in to help {0}; the vehicles wait by the colony. They'll get back in when they come out.</RimMult.HelpVehiclesWait>
+  <RimMult.HelpBackVehiclesText>Your people are back from {0} and in their vehicles by {0}'s colony: {1}.</RimMult.HelpBackVehiclesText>
 </LanguageData>

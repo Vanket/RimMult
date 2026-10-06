@@ -375,13 +375,13 @@ public sealed partial class GameServer
             Payload = parcel.Payload,
         };
 
-        if (ParcelAddress.IsRaid(parcel.ToTile) || ParcelAddress.IsMissile(parcel.ToTile))
+        if (ParcelAddress.IsRaid(parcel.ToTile) || ParcelAddress.IsStrike(parcel.ToTile))
         {
             // A war party (or a missile) only goes to an enemy who is playing right now; otherwise it comes back
             // (a missile as news that it hit nothing).
             if (RaidRefusal(from, parcel.ToOwner) is { } refusal)
             {
-                _log($"{(ParcelAddress.IsMissile(parcel.ToTile) ? "Missile" : "Raid")} by {player.Name} refused: {refusal}");
+                _log($"{(ParcelAddress.IsStrike(parcel.ToTile) ? "Strike" : "Raid")} by {player.Name} refused: {refusal}");
                 item.ToOwner = from;
                 item.Returned = true;
             }

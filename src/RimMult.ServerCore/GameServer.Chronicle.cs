@@ -140,10 +140,10 @@ public sealed partial class GameServer
         {
             Record(ChronicleKind.ResearchShared, item.FromOwner, item.ToOwner, a: points, text: item.Summary);
         }
-        else if (ParcelAddress.IsMissile(address))
+        else if (ParcelAddress.IsStrike(address))
         {
             if (!item.Returned)
-                Record(ChronicleKind.MissileStrike, item.FromOwner, item.ToOwner, text: item.Summary);
+                Record(ParcelAddress.IsMissile(address) ? ChronicleKind.MissileStrike : ChronicleKind.OrbitalStrike, item.FromOwner, item.ToOwner, text: item.Summary);
         }
         else if (ParcelAddress.IsTribute(address))
         {
