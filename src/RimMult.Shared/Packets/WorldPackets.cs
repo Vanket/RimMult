@@ -158,15 +158,85 @@ public sealed class WorldClock : IPacket
     /// <summary>The server knows the world's NPC settlements (they follow as <see cref="NpcLayout"/>); if not, it asks for them.</summary>
     public bool HasNpcLayout { get; set; }
 
+    /// <summary>Fingerprint of the world's planet the server keeps (<see cref="WorldTerrain"/>); empty while it has none.</summary>
+    public string TerrainHash { get; set; } = "";
+
+    /// <summary>The server has no planet yet and would take this player's: send it.</summary>
+    public bool WantsTerrain { get; set; }
+
     public PacketType Type => PacketType.WorldClock;
 
     public void Write(ByteWriter writer)
     {
         writer.WriteVarInt(Tick);
         writer.WriteBool(HasNpcLayout);
+        writer.WriteString(TerrainHash);
+        writer.WriteBool(WantsTerrain);
     }
 
-    public static WorldClock Read(ByteReader reader) => new() { Tick = reader.ReadVarInt(), HasNpcLayout = reader.ReadBool() };
+    public static WorldClock Read(ByteReader reader) => new()
+    {
+        Tick = reader.ReadVarInt(),
+        HasNpcLayout = reader.ReadBool(),
+        TerrainHash = reader.ReadRequiredString(),
+        WantsTerrain = reader.ReadBool(),
+    };
+}
+
+/// <summary>Client → server: send me the world's planet (<see cref="WorldTerrain"/>), if you have it.</summary>
+public sealed class TerrainRequest : IPacket
+{
+    public PacketType Type => PacketType.TerrainRequest;
+
+    public void Write(ByteWriter writer)
+    {
+    }
+
+    public static TerrainRequest Read(ByteReader reader) => new();
+}
+
+/// <summary>
+/// The world's planet as its creator's game has it: every tile's biome, height, hills, climate, rivers, roads and
+/// features, packed by the game (opaque to the server). Each game generates the planet from the seed itself, and mods
+/// can make that come out differently, so the creator's planet is sent and every game takes it over.
+/// Client → server: from the world's creator (or the in-game host), taken only while the server has none yet.
+/// Server → client: the planet, on request; with empty <see cref="Data"/> just the news that it is there
+/// (<see cref="Hash"/>), so a game that already has it doesn't download it again.
+/// </summary>
+public sealed class WorldTerrain : IPacket
+{
+    public const int MaxDataBytes = 32 * 1024 * 1024;
+
+    public string Hash { get; set; } = "";
+
+    public byte[] Data { get; set; } = System.Array.Empty<byte>();
+
+    public PacketType Type => PacketType.WorldTerrain;
+
+    public void Write(ByteWriter writer)
+    {
+        writer.WriteString(Hash);
+        writer.WriteBytes(Data);
+    }
+
+    public static WorldTerrain Read(ByteReader reader)
+    {
+        var terrain = new WorldTerrain { Hash = reader.ReadRequiredString(), Data = reader.ReadBytes() };
+        if (terrain.Data.Length > MaxDataBytes)
+            throw new ProtocolException("Planet data too large");
+        return terrain;
+    }
+
+    /// <summary>The fingerprint of packed planet data: the same bytes, the same hash, in every game and on the server.</summary>
+    public static string HashOf(byte[] data)
+    {
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        var hash = sha.ComputeHash(data);
+        var hex = new System.Text.StringBuilder(32);
+        for (var i = 0; i < 16; i++)
+            hex.Append(hash[i].ToString("x2"));
+        return hex.ToString();
+    }
 }
 
 /// <summary>

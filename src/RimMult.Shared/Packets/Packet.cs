@@ -20,6 +20,8 @@ public enum PacketType : ushort
     WorldClock = 34,
     MyColonies = 35,
     NpcLayout = 36,
+    TerrainRequest = 37,
+    WorldTerrain = 38,
     ParcelSend = 40,
     ParcelDeliver = 41,
     ParcelAck = 42,

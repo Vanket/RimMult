@@ -35,6 +35,8 @@ public static class PacketCodec
             PacketType.WorldClock => WorldClock.Read(reader),
             PacketType.MyColonies => MyColonies.Read(reader),
             PacketType.NpcLayout => NpcLayout.Read(reader),
+            PacketType.TerrainRequest => TerrainRequest.Read(reader),
+            PacketType.WorldTerrain => WorldTerrain.Read(reader),
             PacketType.ParcelSend => ParcelSend.Read(reader),
             PacketType.ParcelDeliver => ParcelDeliver.Read(reader),
             PacketType.ParcelAck => ParcelAck.Read(reader),

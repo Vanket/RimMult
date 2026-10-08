@@ -166,9 +166,9 @@ public class NpcLayoutTests
         Assert.Equal(["10", "20"], copy.NpcSettlements.Select(s => s.Tile));
         Assert.Equal(76561198000000001UL, copy.CreatorOwner);
 
-        // Format 5: without them (empty list: one zero, creator: 8 bytes) and formats 7-9 (treaties, market, prices: nine bytes).
+        // Format 5: without them (empty list: one zero, creator: 8 bytes) and formats 7-10 (treaties, market, prices, planet: eleven bytes).
         var bytes = World().Serialize();
-        var old = bytes.Take(bytes.Length - 1 - 8 - 2 - 3 - 4).ToArray();
+        var old = bytes.Take(bytes.Length - 1 - 8 - 2 - 3 - 4 - 2).ToArray();
         old[0] = 5;
         var five = WorldState.Deserialize(old);
         Assert.Empty(five.NpcSettlements);
