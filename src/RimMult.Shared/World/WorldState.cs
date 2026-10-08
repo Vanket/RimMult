@@ -5,9 +5,9 @@ using RimMult.Shared.Serialization;
 namespace RimMult.Shared.World;
 
 /// <summary>
-/// Everything needed to generate the same planet on every machine. RimWorld's world generation is deterministic
-/// for a given seed, parameters and mod list (the mod list is enforced at handshake), so this is sent instead of
-/// the planet itself.
+/// Everything needed to generate the planet on every machine: the seed and parameters. Mods (or a planet generated
+/// long ago with other mods) can still make it come out differently, so the creator's planet itself follows
+/// (<see cref="WorldState.TerrainData"/>) and every game takes it over.
 /// </summary>
 public sealed class WorldDefinition
 {
@@ -171,8 +171,9 @@ public sealed class WorldState
     /// 1: world, clock, colonies, mods. 2: + parcels in transit. 3: + player colors, destroyed NPC settlements.
     /// 4: + relations between players. 5: + the chronicle and players' stats. 6: + the NPC settlements and the creator.
     /// 7: + treaties, players' reputation. 8: + the market (lots and orders). 9: + NPC deals on the market, the world's prices.
+    /// 10: + the planet (the creator's tiles, rivers and roads).
     /// </summary>
-    private const byte FormatVersion = 9;
+    private const byte FormatVersion = 10;
 
     /// <summary>Null until the first player creates the world (picks the planet when starting their colony).</summary>
     public WorldDefinition? Definition { get; set; }
@@ -231,7 +232,15 @@ public sealed class WorldState
     /// <summary>The world's prices (moved by deals with NPC factions and by news).</summary>
     public MarketPrices Prices { get; set; } = new();
 
-    public void Write(ByteWriter writer)
+    /// <summary>The planet as the world's creator has it (packed by the game; see <see cref="Packets.WorldTerrain"/>); empty until it is sent.</summary>
+    public byte[] TerrainData { get; set; } = Array.Empty<byte>();
+
+    /// <summary>Fingerprint of <see cref="TerrainData"/>; empty while there is none.</summary>
+    public string TerrainHash { get; set; } = "";
+
+    public void Write(ByteWriter writer) => Write(writer, withTerrain: true);
+
+    private void Write(ByteWriter writer, bool withTerrain)
     {
         writer.WriteBool(Definition != null);
         Definition?.Write(writer);
@@ -261,6 +270,8 @@ public sealed class WorldState
         MarketOrder.WriteList(writer, MarketOrders, withPayload: true);
         writer.WriteVarInt(NextMarketId);
         Prices.Write(writer);
+        writer.WriteString(withTerrain ? TerrainHash : "");
+        writer.WriteBytes(withTerrain ? TerrainData : Array.Empty<byte>());
     }
 
     public static void WriteStrings(ByteWriter writer, IReadOnlyList<string> values)
@@ -335,15 +346,23 @@ public sealed class WorldState
         }
         if (version >= 9)
             state.Prices = MarketPrices.Read(reader);
+        if (version >= 10)
+        {
+            state.TerrainHash = reader.ReadRequiredString();
+            state.TerrainData = reader.ReadBytes();
+        }
         return state;
     }
 
-    /// <summary>Standalone file/save format, with a version byte in front.</summary>
-    public byte[] Serialize()
+    /// <summary>
+    /// Standalone file/save format, with a version byte in front. Without the planet for an in-game host's save: its
+    /// game is the planet, and sends it again when it hosts next time.
+    /// </summary>
+    public byte[] Serialize(bool withTerrain = true)
     {
         var writer = new ByteWriter();
         writer.WriteByte(FormatVersion);
-        Write(writer);
+        Write(writer, withTerrain);
         return writer.ToArray();
     }
 

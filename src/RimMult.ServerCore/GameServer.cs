@@ -146,6 +146,14 @@ public sealed partial class GameServer
             case NpcLayout layout:
                 HandleNpcLayout(player, layout);
                 break;
+            case TerrainRequest:
+                // Also before entering: a new colony takes the planet over before its site is picked.
+                if (World.Definition != null && World.TerrainData.Length > 0)
+                    Send(session, new WorldTerrain { Hash = World.TerrainHash, Data = World.TerrainData });
+                break;
+            case WorldTerrain terrain:
+                HandleWorldTerrain(player, terrain);
+                break;
             case ParcelSend parcel:
                 HandleParcelSend(player, parcel);
                 break;
@@ -297,6 +305,40 @@ public sealed partial class GameServer
         BroadcastPlayerList();
     }
 
+    /// <summary>
+    /// Whether the world's planet and NPC settlements are taken from this player: the in-game host, or (dedicated
+    /// server) the world's creator — the first player in the world for worlds that don't remember their creator.
+    /// </summary>
+    private bool GivesWorldShape(PlayerInfo player) =>
+        Settings.HostCreatesWorld
+            ? player.IsHost
+            : World.CreatorOwner == 0 || World.CreatorOwner == OwnerKey(player);
+
+    /// <summary>
+    /// The world's planet, from the one whose planet it is (see <see cref="GivesWorldShape"/>). Taken once; everyone in
+    /// the world hears it is there and fetches it if theirs differs.
+    /// </summary>
+    private void HandleWorldTerrain(PlayerInfo player, WorldTerrain terrain)
+    {
+        if (World.Definition == null || !player.InWorld || World.TerrainData.Length > 0 || terrain.Data.Length == 0)
+            return;
+        if (!GivesWorldShape(player))
+            return;
+
+        World.TerrainData = terrain.Data;
+        World.TerrainHash = WorldTerrain.HashOf(terrain.Data);
+        if (World.CreatorOwner == 0)
+            World.CreatorOwner = OwnerKey(player);
+        WorldChanged?.Invoke();
+        _log($"{player.Name} set the world's planet ({terrain.Data.Length / 1024} KB)");
+        var notice = new WorldTerrain { Hash = World.TerrainHash };
+        foreach (var session in _sessions.Values)
+        {
+            if (session.Player is { InWorld: true } other && other != player)
+                Send(session, notice);
+        }
+    }
+
     private void HandleWorldCreate(Session session, PlayerInfo player, WorldCreate create)
     {
         // Someone was faster (or it is not this player's call): tell them what the world really is.
@@ -330,7 +372,13 @@ public sealed partial class GameServer
         var tick = Time.SlowestTick ?? World.Tick;
         player.InWorld = true;
         Time.ReportAuthority(player.Id, tick, float.MaxValue);
-        Send(session, new WorldClock { Tick = tick, HasNpcLayout = World.NpcSettlements.Count > 0 });
+        Send(session, new WorldClock
+        {
+            Tick = tick,
+            HasNpcLayout = World.NpcSettlements.Count > 0,
+            TerrainHash = World.TerrainHash,
+            WantsTerrain = World.TerrainData.Length == 0 && GivesWorldShape(player),
+        });
         if (World.NpcSettlements.Count > 0)
             Send(session, new NpcLayout { Settlements = World.NpcSettlements });
         BroadcastPlayerList();
@@ -451,10 +499,7 @@ public sealed partial class GameServer
     {
         if (World.Definition == null || !player.InWorld || World.NpcSettlements.Count > 0 || layout.Settlements.Count == 0)
             return;
-        var allowed = Settings.HostCreatesWorld
-            ? player.IsHost
-            : World.CreatorOwner == 0 || World.CreatorOwner == OwnerKey(player);
-        if (!allowed)
+        if (!GivesWorldShape(player))
             return;
 
         World.NpcSettlements = layout.Settlements;

@@ -40,6 +40,8 @@
   своими бойцами (отступить, похитить, украсть, вернуться домой), пока он обороняется. Выжившие возвращаются
   караваном с добычей и пленными.
 - **Помощь союзнику лично** — в его квестах или против рейда; **посмотреть колонию** союзника вживую (без управления).
+- **Одна планета у всех**: реки, дороги, рельеф, биомы, названия гор и морей — как у создателя мира, даже если у
+  кого-то планета сгенерировалась иначе (другие моды, старый сейв).
 - **Общий мир NPC**: поселения NPC стоят в одних и тех же местах у всех (расстановку задаёт создатель мира);
   разгромленное поселение исчезает у всех. Отношения с фракциями и торговцы у каждой колонии свои.
 - **Админ-панель** у хоста и админов: предметы, серебро и исследования любому игроку, отношения между игроками,
@@ -163,8 +165,8 @@ chat channel and whispers, research shared with allies, prisoner ransom in warti
 in trades, a **world market** (lots that sell while you're away, orders with a reward and a deadline, NPC factions trading
 there too, shared dynamic prices and market news), raids led by the AI or
 **in person** (you load the defender's game and command your fighters), helping an ally in person, watching an ally's
-colony live, a shared NPC
-world (settlements in the same places for everyone), and a **world chronicle** with players' stats — kept by the host's save or the dedicated server.
+colony live, one identical planet for everyone (rivers, roads, hills and biomes as the world's creator has them),
+a shared NPC world (settlements in the same places for everyone), and a **world chronicle** with players' stats — kept by the host's save or the dedicated server.
 
 **Co-op** — everyone plays the host's colony live: any orders (designations, building, drafting, right-click with
 Shift queue, targeted attacks and abilities, priorities, research, quests), bills, storage, schedules, policies,

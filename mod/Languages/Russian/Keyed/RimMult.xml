@@ -346,6 +346,7 @@
   <RimMult.ModSyncQueued>в очереди</RimMult.ModSyncQueued>
   <RimMult.ModSyncDone>готово</RimMult.ModSyncDone>
   <RimMult.NpcLayoutApplied>Поселения NPC приведены к общему миру: поставлено {0}, убрано {1}.</RimMult.NpcLayoutApplied>
+  <RimMult.PlanetTakenOver>Планета приведена к общему миру: реки, дороги, рельеф и биомы теперь как у создателя мира.</RimMult.PlanetTakenOver>
   <RimMult.StatusBoost>×2 (у всех всё спокойно)</RimMult.StatusBoost>
   <RimMult.You>вы</RimMult.You>
   <RimMult.ProposePact>Предложить пакт о ненападении</RimMult.ProposePact>

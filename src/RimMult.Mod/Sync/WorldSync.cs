@@ -37,6 +37,15 @@ internal static class WorldSync
     /// <summary>The world's NPC settlements, received and waiting to be put in place (on the next frame in the world).</summary>
     private static List<NpcSettlement>? _pendingLayout;
 
+    /// <summary>The world's planet, received and waiting to be taken over (on the next frame with a planet to take it).</summary>
+    private static (string Hash, byte[] Data)? _pendingTerrain;
+
+    /// <summary>The planet fingerprint already asked for, so repeats of the news don't fetch it twice.</summary>
+    private static string? _terrainAsked;
+
+    /// <summary>The new colony's freshly generated planet the world's planet was asked for.</summary>
+    private static RimWorld.Planet.World? _terrainAskedFor;
+
     public static void Attach(ClientSession session)
     {
         session.ClockReceived += OnClock;
@@ -47,6 +56,33 @@ internal static class WorldSync
                 session.SendNpcLayout(NpcLayoutSync.Capture());
         };
         session.NpcLayoutReceived += layout => _pendingLayout = layout;
+        // The same for the planet itself: the creator's game sends it, every other game takes it over.
+        session.TerrainWanted += () =>
+        {
+            if (Current.ProgramState != ProgramState.Playing || Find.World == null || !CurrentGameIsInWorld(session))
+                return;
+            try
+            {
+                var data = WorldTerrainSync.Capture();
+                session.SendTerrain(data);
+                RimMultGameComp.Instance!.TerrainHash = Shared.Packets.WorldTerrain.HashOf(data);
+                Log.Message($"[RimMult] Sent this planet as the world's ({data.Length / 1024} KB)");
+            }
+            catch (Exception e)
+            {
+                Log.Error($"[RimMult] Could not pack the planet for the world: {e}");
+            }
+        };
+        session.TerrainAnnounced += hash =>
+        {
+            if (hash == RimMultGameComp.Instance?.TerrainHash || hash == _terrainAsked)
+                return;
+            if (!CurrentGameIsInWorld(session) && !(NewColonyFlowActive && Current.Game?.World != null))
+                return;
+            _terrainAsked = hash;
+            session.RequestTerrain();
+        };
+        session.TerrainReceived += (hash, data) => _pendingTerrain = (hash, data);
         // Any world answer settles a pending create: accepted, beaten by someone else, or refused.
         session.WorldChanged += () => WorldCreatePending = false;
     }
@@ -58,6 +94,9 @@ internal static class WorldSync
         _lastColoniesKey = "";
         _lastStatsReport = float.NegativeInfinity;
         _pendingLayout = null;
+        _pendingTerrain = null;
+        _terrainAsked = null;
+        _terrainAskedFor = null;
         NewColonyFlowActive = false;
         WorldCreatePending = false;
         TimeSync.End();
@@ -107,6 +146,19 @@ internal static class WorldSync
             TimeSync.End();
         }
 
+        // A new colony takes the world's planet over as soon as its planet is generated, before the site is picked.
+        var newColonyPlanet = NewColonyFlowActive && session.World != null && Current.Game?.World != null && !LongEventHandler.AnyEventNowOrWaiting;
+        if (newColonyPlanet && !ReferenceEquals(_terrainAskedFor, Current.Game!.World))
+        {
+            _terrainAskedFor = Current.Game.World;
+            session.RequestTerrain();
+        }
+        if (_pendingTerrain is { } terrain && (InWorld || newColonyPlanet))
+        {
+            _pendingTerrain = null;
+            TakeOverPlanet(terrain.Hash, terrain.Data);
+        }
+
         if (InWorld && _pendingLayout is { } layout)
         {
             _pendingLayout = null;
@@ -134,6 +186,24 @@ internal static class WorldSync
         // Show other players' colonies while playing this world, and on the planet picked for a new colony.
         var showColonies = shouldBeIn || (!coopGuest && NewColonyFlowActive && session.World != null && Current.Game?.World != null);
         RemoteColonies.Reconcile(session, showColonies);
+    }
+
+    private static void TakeOverPlanet(string hash, byte[] data)
+    {
+        if (hash == RimMultGameComp.Instance?.TerrainHash)
+            return;
+        try
+        {
+            if (!WorldTerrainSync.Apply(data))
+                return;
+            if (RimMultGameComp.Instance is { } comp)
+                comp.TerrainHash = hash;
+            Messages.Message("RimMult.PlanetTakenOver".Translate(), MessageTypeDefOf.NeutralEvent, historical: false);
+        }
+        catch (Exception e)
+        {
+            Log.Error($"[RimMult] Could not take over the world's planet: {e}");
+        }
     }
 
     /// <summary>Leaves the world right now (before this player loads another player's game for a live raid).</summary>

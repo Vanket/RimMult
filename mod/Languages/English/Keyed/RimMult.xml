@@ -346,6 +346,7 @@ If these are Workshop mods, the host probably has a newer version than the Works
   <RimMult.ModSyncQueued>queued</RimMult.ModSyncQueued>
   <RimMult.ModSyncDone>done</RimMult.ModSyncDone>
   <RimMult.NpcLayoutApplied>NPC settlements now match the shared world: {0} placed, {1} removed.</RimMult.NpcLayoutApplied>
+  <RimMult.PlanetTakenOver>The planet now matches the shared world: rivers, roads, hills and biomes as the world's creator has them.</RimMult.PlanetTakenOver>
   <RimMult.StatusBoost>×2 (all quiet everywhere)</RimMult.StatusBoost>
   <RimMult.You>you</RimMult.You>
   <RimMult.ProposePact>Propose a non-aggression pact</RimMult.ProposePact>

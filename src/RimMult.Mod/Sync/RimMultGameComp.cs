@@ -16,6 +16,9 @@ public sealed class RimMultGameComp : GameComponent
     /// </summary>
     public string? HostedWorld;
 
+    /// <summary>Fingerprint of the world's planet this save has taken over (or sent, as the world's creator).</summary>
+    public string? TerrainHash;
+
     /// <summary>Parcels packed (pods landed, caravan unloaded) but not yet handed to the server.</summary>
     public List<ParcelRecord> Outbox = new();
 
@@ -43,10 +46,11 @@ public sealed class RimMultGameComp : GameComponent
     public override void ExposeData()
     {
         if (Scribe.mode == LoadSaveMode.Saving && WorldId != null && Multiplayer.HostedWorldState(WorldId) is { } state)
-            HostedWorld = Convert.ToBase64String(state.Serialize());
+            HostedWorld = Convert.ToBase64String(state.Serialize(withTerrain: false));
 
         Scribe_Values.Look(ref WorldId, "worldId");
         Scribe_Values.Look(ref HostedWorld, "hostedWorld");
+        Scribe_Values.Look(ref TerrainHash, "terrainHash");
         Scribe_Collections.Look(ref Outbox, "parcelOutbox", LookMode.Deep);
         Scribe_Collections.Look(ref Inbox, "parcelInbox", LookMode.Deep);
         Scribe_Collections.Look(ref ReceivedParcels, "receivedParcels", LookMode.Value);

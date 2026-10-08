@@ -412,8 +412,8 @@ public class MarketTests
     public void Version8WorldFilesLoad()
     {
         var bytes = World().Serialize();
-        // Format 8 is the current one without the world's prices at the end (two empty lists and two zero ticks).
-        var old = bytes.Take(bytes.Length - 4).ToArray();
+        // Format 8 is the current one without the world's prices at the end (two empty lists and two zero ticks) and the planet (two bytes).
+        var old = bytes.Take(bytes.Length - 4 - 2).ToArray();
         old[0] = 8;
         var state = WorldState.Deserialize(old);
         Assert.Equal(2, state.Colonies.Count);

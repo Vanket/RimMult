@@ -85,6 +85,15 @@ public sealed class ClientSession
     /// <summary>The world's NPC settlements (on entering the world, or when its creator first sends them).</summary>
     public event Action<List<NpcSettlement>>? NpcLayoutReceived;
 
+    /// <summary>The server has no planet for the world yet and takes it from this player: send it (<see cref="SendTerrain"/>).</summary>
+    public event Action? TerrainWanted;
+
+    /// <summary>The server has the world's planet with this fingerprint (fetch it with <see cref="RequestTerrain"/> if yours differs).</summary>
+    public event Action<string>? TerrainAnnounced;
+
+    /// <summary>The world's planet: its fingerprint and the packed data.</summary>
+    public event Action<string, byte[]>? TerrainReceived;
+
     /// <summary>A parcel for this player; acknowledge with <see cref="AckParcel"/> once it is safely in the game.</summary>
     public event Action<MailItem>? ParcelReceived;
 
@@ -312,6 +321,20 @@ public sealed class ClientSession
             Send(new NpcLayout { Settlements = settlements });
     }
 
+    /// <summary>This game's planet, as the world's (the server keeps the first one it may take).</summary>
+    public void SendTerrain(byte[] data)
+    {
+        if (State == ClientState.Connected)
+            Send(new WorldTerrain { Data = data });
+    }
+
+    /// <summary>Asks for the world's planet; it comes as <see cref="TerrainReceived"/> if the server has one.</summary>
+    public void RequestTerrain()
+    {
+        if (State == ClientState.Connected)
+            Send(new TerrainRequest());
+    }
+
     public void SendColonies(List<ColonyInfo> colonies)
     {
         if (State == ClientState.Connected)
@@ -387,6 +410,16 @@ public sealed class ClientSession
                 ClockReceived?.Invoke(clock.Tick);
                 if (!clock.HasNpcLayout)
                     NpcLayoutWanted?.Invoke();
+                if (clock.WantsTerrain)
+                    TerrainWanted?.Invoke();
+                else if (clock.TerrainHash.Length > 0)
+                    TerrainAnnounced?.Invoke(clock.TerrainHash);
+                break;
+            case WorldTerrain terrain:
+                if (terrain.Data.Length == 0)
+                    TerrainAnnounced?.Invoke(terrain.Hash);
+                else
+                    TerrainReceived?.Invoke(terrain.Hash, terrain.Data);
                 break;
             case NpcLayout layout:
                 NpcLayoutReceived?.Invoke(layout.Settlements);

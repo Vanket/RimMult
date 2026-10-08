@@ -9,8 +9,9 @@ using Verse;
 namespace RimMult.Sync;
 
 /// <summary>
-/// The NPC settlements of the shared world sit in the same places for everyone. The planet itself is generated alike
-/// from the seed, but where the factions' settlements end up also depends on mods' settings, which aren't compared; so
+/// The NPC settlements of the shared world sit in the same places for everyone. The planet itself comes from the
+/// world's creator (<see cref="WorldTerrainSync"/>), and where the factions' settlements end up also depends on mods'
+/// settings, which aren't compared; so
 /// the world's creator sends its layout and every game entering the world moves its NPC settlements to match: same
 /// tiles, same factions (by def, and which one of that def), same names. Relations, traders and quests stay each
 /// colony's own.
